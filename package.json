@@ -1,0 +1,11 @@
+{
+  "name": "threejs-simple-starter",
+  "version": "1.0.0",
+  "description": "A simple Three.js starter without build tools",
+  "main": "src/main.js",
+  "dependencies": {
+    "@types/three": "^0.180.0",
+    "three": "^0.162.0",
+    "three-stdlib": "^2.36.0"
+  }
+}
