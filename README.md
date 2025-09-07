@@ -6,11 +6,11 @@ Un proyecto base para comenzar con Three.js sin herramientas de construcción co
 
 El proyecto utiliza las siguientes dependencias con sus versiones específicas:
 
-| Dependencia | Versión |
-|-------------|---------|
-| three | ^0.162.0 |
-| @types/three | ^0.180.0 |
-| three-stdlib | ^2.36.0 |
+| Dependencia | Versión | Comando de instalación |
+|-------------|---------|------------------------|
+| three | ^0.162.0 | `npm install three` |
+| @types/three | ^0.180.0 | `npm install --save-dev @types/three` |
+| three-stdlib | ^2.36.0 | `npm install three-stdlib` |
 
 ## 🚀 Instalación
 
@@ -35,7 +35,7 @@ Sigue estos pasos para configurar el proyecto en tu máquina local:
    npx serve
    ```
 
-4. Abre tu navegador en `http://localhost:3000` para ver la aplicación.
+4. Abre tu navegador en `http://localhost:3000` para ver la aplicación o bien usar la extension de visual studio code Live Server.
 
 ## 📁 Estructura del Proyecto
 
