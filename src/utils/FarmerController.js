@@ -17,6 +17,13 @@ export class FarmerController {
             moveSpeed: 0.1,
             rotationSpeed: 0.05,
             runMultiplier: 1.5,
+            // Límites del terreno (ajustar según el tamaño real del terreno)
+            bounds: {
+                minX: -250,  // -size/2
+                maxX: 250,   // size/2
+                minZ: -250,  // -size/2
+                maxZ: 250    // size/2
+            },
             ...config
         };
         
@@ -143,9 +150,27 @@ export class FarmerController {
                 moveZ = (moveZ / length) * currentMoveSpeed;
             }
             
-            // Aplicar movimiento
-            this.model.position.x += moveX;
-            this.model.position.z += moveZ;
+            // Calcular nueva posición con límites
+            let newX = this.model.position.x;
+            let newZ = this.model.position.z;
+            
+            // Aplicar movimiento en X si no excede los límites
+            if (moveX > 0 && this.model.position.x < this.config.bounds.maxX) {
+                newX = Math.min(this.model.position.x + moveX, this.config.bounds.maxX);
+            } else if (moveX < 0 && this.model.position.x > this.config.bounds.minX) {
+                newX = Math.max(this.model.position.x + moveX, this.config.bounds.minX);
+            }
+            
+            // Aplicar movimiento en Z si no excede los límites
+            if (moveZ > 0 && this.model.position.z < this.config.bounds.maxZ) {
+                newZ = Math.min(this.model.position.z + moveZ, this.config.bounds.maxZ);
+            } else if (moveZ < 0 && this.model.position.z > this.config.bounds.minZ) {
+                newZ = Math.max(this.model.position.z + moveZ, this.config.bounds.minZ);
+            }
+            
+            // Aplicar la nueva posición
+            this.model.position.setX(newX);
+            this.model.position.setZ(newZ);
         }
         
         // Rotación del personaje con Q y E
