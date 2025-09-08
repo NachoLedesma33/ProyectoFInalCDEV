@@ -44,6 +44,15 @@ export class ControlsManager {
   updateCameraPosition() {
     if (!this.target) return;
 
+    // Límites del terreno (deben coincidir con los del FarmerController)
+    const bounds = {
+      minX: -250,
+      maxX: 250,
+      minZ: -250,
+      maxZ: 250
+    };
+    const cameraMargin = 50; // Margen para evitar que la cámara se acerque demasiado al borde
+
     // Obtener la posición objetivo de la cámara
     const targetPosition = new THREE.Vector3();
     targetPosition.copy(this.target.position);
@@ -56,20 +65,50 @@ export class ControlsManager {
     const sinAngle = Math.sin(angle);
     const cosAngle = Math.cos(angle);
 
-    const rotatedX = offset.x * cosAngle - offset.z * sinAngle;
-    const rotatedZ = offset.x * sinAngle + offset.z * cosAngle;
+    let rotatedX = offset.x * cosAngle - offset.z * sinAngle;
+    let rotatedZ = offset.x * sinAngle + offset.z * cosAngle;
 
+    // Calcular la posición objetivo de la cámara
+    let newCamX = targetPosition.x + rotatedX;
+    let newCamZ = targetPosition.z + rotatedZ;
+
+    // Ajustar la posición de la cámara para que no se salga de los límites
+    if (newCamX > bounds.maxX - cameraMargin) {
+      const diff = (bounds.maxX - cameraMargin) - newCamX;
+      rotatedX += diff;
+      newCamX = bounds.maxX - cameraMargin;
+    } else if (newCamX < bounds.minX + cameraMargin) {
+      const diff = (bounds.minX + cameraMargin) - newCamX;
+      rotatedX += diff;
+      newCamX = bounds.minX + cameraMargin;
+    }
+
+    if (newCamZ > bounds.maxZ - cameraMargin) {
+      const diff = (bounds.maxZ - cameraMargin) - newCamZ;
+      rotatedZ += diff;
+      newCamZ = bounds.maxZ - cameraMargin;
+    } else if (newCamZ < bounds.minZ + cameraMargin) {
+      const diff = (bounds.minZ + cameraMargin) - newCamZ;
+      rotatedZ += diff;
+      newCamZ = bounds.minZ + cameraMargin;
+    }
+
+    // Aplicar la posición ajustada
     targetPosition.x += rotatedX;
-    targetPosition.y += offset.y;
     targetPosition.z += rotatedZ;
+    targetPosition.y += offset.y;
 
     // Aplicar suavizado al movimiento de la cámara
     this.camera.position.lerp(targetPosition, this.smoothness);
 
-    // Hacer que la cámara mire ligeramente por encima del objetivo
+    // Calcular el punto de mira (ligeramente por encima del objetivo)
     const lookAtPosition = new THREE.Vector3();
     lookAtPosition.copy(this.target.position);
-    lookAtPosition.y += 1.2; // Reducida la altura de la mirada para un ángulo más pronunciado
+    lookAtPosition.y += 1.2;
+
+    // Asegurarse de que el punto de mira no se salga de los límites
+    lookAtPosition.x = Math.max(bounds.minX + 1, Math.min(bounds.maxX - 1, lookAtPosition.x));
+    lookAtPosition.z = Math.max(bounds.minZ + 1, Math.min(bounds.maxZ - 1, lookAtPosition.z));
 
     // Aplicar suavizado al punto de mira
     this.currentLookAt.lerp(lookAtPosition, this.smoothness);
