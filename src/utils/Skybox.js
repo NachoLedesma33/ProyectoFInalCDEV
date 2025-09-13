@@ -38,12 +38,20 @@ export class Skybox {
       });
 
       // Crear geometría de esfera para el skybox
-      const geometry = new THREE.SphereGeometry(this.size, 32, 32, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5);
-      
+      const geometry = new THREE.SphereGeometry(
+        this.size,
+        32,
+        32,
+        0,
+        Math.PI * 2,
+        Math.PI * 0.5,
+        Math.PI * 0.5
+      );
+
       // Crear y añadir skybox a la escena
       this.skybox = new THREE.Mesh(geometry, material);
       this.skybox.renderOrder = -1000;
-      
+
       // Posicionar el skybox para que comience desde el nivel del suelo
       this.skybox.position.y = this.size / 2 + this.groundLevel;
       this.scene.add(this.skybox);

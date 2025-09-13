@@ -32,7 +32,7 @@ export class CameraManager {
   }
 
   /**
-   * Crea una cámara perspectiva
+   * Crea una cámara perspectiva con vista isométrica
    * @returns {THREE.PerspectiveCamera} - Instancia de la cámara
    */
   createCamera() {
@@ -44,10 +44,19 @@ export class CameraManager {
       this.options.far
     );
 
-    // Posición y orientación inicial
-    camera.position.set(0, 2.5, -3);
-    camera.rotation.x = -0.3;
-    camera.lookAt(0, 1.8, 5);
+    // Configuración isométrica - ángulo fijo de 45 grados en ambos ejes
+    const distance = 50; // Distancia inicial de la cámara (lejos para iniciar la animación de zoom)
+    const angle = Math.PI / 4; // 45 grados
+    
+    // Posición isométrica: 45 grados en XY y 45 grados en XZ
+    camera.position.set(
+      distance * Math.cos(angle), // X
+      distance * Math.sin(angle), // Y (altura)
+      distance * Math.cos(angle)  // Z
+    );
+    
+    // Mirar al centro del mundo
+    camera.lookAt(0, 0, 0);
 
     return camera;
   }
@@ -79,20 +88,15 @@ export class CameraManager {
   }
 
   /**
-   * Configura los controles de la cámara
+   * Configura los controles de la cámara para vista isométrica
    * @param {HTMLElement} domElement - Elemento del DOM para los controles
    */
   setupControls(domElement) {
     if (!this.controls) {
-      this.controls = new ControlsManager(this.camera, { domElement });
+      // Pasar configuración isométrica al ControlsManager
+      this.controls = new ControlsManager(this.camera, { domElement, isometric: true });
 
-      // Configuración de restricciones de movimiento
-      this.controls.controls.minDistance = 1;
-      this.controls.controls.maxDistance = 50;
-      this.controls.controls.maxPolarAngle = Math.PI / 2;
-      this.controls.controls.minPolarAngle = 0.1;
-
-      console.log("Controles de cámara configurados");
+      console.log("Controles de cámara isométrica configurados");
     }
   }
 

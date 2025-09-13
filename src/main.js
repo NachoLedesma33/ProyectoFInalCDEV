@@ -3,27 +3,27 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.m
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/controls/OrbitControls.js";
 
 // Módulos personalizados
-import { Terrain } from "./utils/terrain.js";        // Manejo del terreno
-import { Lighting } from "./utils/lighting.js";      // Sistema de iluminación
+import { Terrain } from "./utils/Terrain.js"; // Manejo del terreno
+import { Lighting } from "./utils/lighting.js"; // Sistema de iluminación
 import { ControlsManager } from "./utils/controls.js"; // Controles de cámara
-import { ModelLoader } from "./utils/modelLoader.js";  // Carga de modelos 3D
-import { Skybox } from "./utils/Skybox.js";           // Fondo 360°
-import modelConfig from "./config/modelConfig.js";    // Configuración de modelos
+import { ModelLoader } from "./utils/modelLoader.js"; // Carga de modelos 3D
+import { Skybox } from "./utils/Skybox.js"; // Fondo 360°
+import modelConfig from "./config/modelConfig.js"; // Configuración de modelos
 import { CameraManager } from "./utils/CameraManager.js"; // Gestor de cámara
 import { FarmerController } from "./utils/FarmerController.js"; // Controlador del granjero
 
 // Variables globales principales de Three.js
-let scene,      // Escena 3D que contiene todos los objetos
-    renderer,   // Motor de renderizado WebGL
-    cameraManager, // Gestor de cámara
-    camera,     // Cámara que define la vista del usuario (accesible a través de cameraManager)
-    controls;   // Controles de la cámara (accesibles a través de cameraManager)
+let scene, // Escena 3D que contiene todos los objetos
+  renderer, // Motor de renderizado WebGL
+  cameraManager, // Gestor de cámara
+  camera, // Cámara que define la vista del usuario (accesible a través de cameraManager)
+  controls; // Controles de la cámara (accesibles a través de cameraManager)
 
 // Componentes personalizados
-let terrain,    // Gestor del terreno
-    lighting,   // Sistema de iluminación
-    clock,      // Reloj para animaciones
-    skybox;     // Fondo 360°
+let terrain, // Gestor del terreno
+  lighting, // Sistema de iluminación
+  clock, // Reloj para animaciones
+  skybox; // Fondo 360°
 
 // Cargador de modelos
 let modelLoader; // Maneja la carga y animación de modelos 3D
@@ -31,12 +31,11 @@ let modelLoader; // Maneja la carga y animación de modelos 3D
 // Instancia del controlador del granjero
 let farmerController;
 
-// Configuración de la cámara
-const cameraOffset = new THREE.Vector3(0, 15, -20); // Posición relativa al personaje (x,y,z)
-let targetY = 0; // Para suavizado de movimiento vertical
+// Configuración de la cámara isométrica
+// La cámara ahora es manejada por el CameraManager en modo isométrico
 
 // Configuración de controles de movimiento
-const moveSpeed = 0.1;      // Velocidad de movimiento base
+const moveSpeed = 0.1; // Velocidad de movimiento base
 const rotationSpeed = 0.05; // Velocidad de rotación
 
 // Estado de las teclas (para controles WASD)
@@ -57,10 +56,10 @@ init().catch(console.error);
 async function init() {
   // Crear y configurar la escena 3D
   scene = new THREE.Scene();
-  
+
   // Fondo temporal hasta cargar el skybox
   scene.background = new THREE.Color(0x000000);
-  
+
   // Configurar niebla para dar profundidad (color, near, far)
   scene.fog = new THREE.Fog(0x5e5d5d, 100, 500);
 
@@ -69,33 +68,33 @@ async function init() {
 
   // Configuración avanzada del renderizador WebGL
   renderer = new THREE.WebGLRenderer({
-    antialias: true,      // Suavizado de bordes
-    alpha: true,          // Permitir transparencia
+    antialias: true, // Suavizado de bordes
+    alpha: true, // Permitir transparencia
     powerPreference: "high-performance", // Optimización de rendimiento
-    stencil: false,       // No se usa búfer de stencil
-    depth: true,          // Habilitar búfer de profundidad
+    stencil: false, // No se usa búfer de stencil
+    depth: true, // Habilitar búfer de profundidad
   });
   // Configuración del renderizador
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimizar para pantallas de alta densidad
-  renderer.setSize(window.innerWidth, window.innerHeight);      // Tamaño completo de la ventana
-  renderer.shadowMap.enabled = true;                            // Habilitar sombras
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;             // Sombras suaves
-  renderer.physicallyCorrectLights = true;                      // Iluminación realista
-  renderer.outputEncoding = THREE.sRGBEncoding;                 // Mejor representación de colores
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;           // Mapeo de tonos cinematográfico
-  renderer.toneMappingExposure = 1.0;                           // Exposición del mapeo de tonos
+  renderer.setSize(window.innerWidth, window.innerHeight); // Tamaño completo de la ventana
+  renderer.shadowMap.enabled = true; // Habilitar sombras
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Sombras suaves
+  renderer.physicallyCorrectLights = true; // Iluminación realista
+  renderer.outputEncoding = THREE.sRGBEncoding; // Mejor representación de colores
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; // Mapeo de tonos cinematográfico
+  renderer.toneMappingExposure = 1.0; // Exposición del mapeo de tonos
   document.getElementById("container").appendChild(renderer.domElement); // Añadir al DOM
 
   // Inicializar el gestor de cámara
   cameraManager = new CameraManager(scene, {
     fov: 75,
     near: 0.5,
-    far: 2000
+    far: 2000,
   });
-  
+
   // Obtener la cámara para compatibilidad con el código existente
   camera = cameraManager.getCamera();
-  
+
   // Inicializar reloj para animaciones
   clock = new THREE.Clock();
 
@@ -103,14 +102,14 @@ async function init() {
   (async () => {
     try {
       console.log("Cargando textura del skybox...");
-      
+
       // Rutas alternativas para cargar el skybox
       const skyboxPaths = [
-        "src/assets/fondo6.png",     // Ruta relativa desde la raíz del proyecto
-        "./src/assets/fondo6.png",   // Ruta relativa al directorio actual
-        "/src/assets/fondo6.png",    // Ruta absoluta desde la raíz del servidor
-        "assets/fondo6.png",         // Ruta alternativa 1
-        "./assets/fondo6.png",       // Ruta alternativa 2
+        "src/assets/fondo6.png", // Ruta relativa desde la raíz del proyecto
+        "./src/assets/fondo6.png", // Ruta relativa al directorio actual
+        "/src/assets/fondo6.png", // Ruta absoluta desde la raíz del servidor
+        "assets/fondo6.png", // Ruta alternativa 1
+        "./assets/fondo6.png", // Ruta alternativa 2
       ];
 
       // Intentar cargar el skybox desde diferentes rutas
@@ -133,8 +132,8 @@ async function init() {
       }
 
       // Configuración adicional del renderizado
-      renderer.setClearColor(0x000000, 1);  // Color de fondo negro
-      renderer.outputEncoding = THREE.sRGBEncoding;  // Codificación de color sRGB
+      renderer.setClearColor(0x000000, 1); // Color de fondo negro
+      renderer.outputEncoding = THREE.sRGBEncoding; // Codificación de color sRGB
 
       console.log("Skybox inicializado correctamente");
     } catch (error) {
@@ -163,7 +162,7 @@ async function init() {
 
   // Configuración de sombras
   if (renderer.shadowMap) {
-    renderer.shadowMap.autoUpdate = true;  // Actualización automática de sombras
+    renderer.shadowMap.autoUpdate = true; // Actualización automática de sombras
     renderer.shadowMap.needsUpdate = true; // Forzar actualización inicial
     console.log("Sistema de sombras configurado");
   }
@@ -178,26 +177,29 @@ async function init() {
   for (const [animName, animPath] of Object.entries(farmerConfig.animations)) {
     // Usar el método getPath para obtener la ruta completa del archivo
     animationPaths[animName] = modelConfig.getPath(animPath);
-    console.log(`Animación '${animName}' configurada en:`, animationPaths[animName]);
+    console.log(
+      `Animación '${animName}' configurada en:`,
+      animationPaths[animName]
+    );
   }
 
   // Cargar el modelo 3D con sus animaciones
   try {
     console.log("Iniciando carga del modelo 3D...");
-    
+
     // Cargar el modelo principal con sus animaciones
     await modelLoader.load(
-      modelConfig.getPath(farmerConfig.model),  // Ruta al archivo del modelo
-      animationPaths,                          // Diccionario de animaciones
+      modelConfig.getPath(farmerConfig.model), // Ruta al archivo del modelo
+      animationPaths, // Diccionario de animaciones
       (instance) => {
         console.log("✅ Modelo 3D y animaciones cargados exitosamente");
 
-        // Configurar la cámara para seguir al modelo
+        // Configurar la cámara isométrica para seguir al modelo
         if (instance.model) {
-          // Configurar el objetivo de la cámara para seguir al modelo
-          cameraManager.setTarget(instance.model, new THREE.Vector3(0, 2, -5));
-          console.log("Cámara configurada para seguir al personaje");
-            
+          // Configurar el objetivo de la cámara para seguir al modelo en modo isométrico
+          cameraManager.setTarget(instance.model);
+          console.log("Cámara isométrica configurada para seguir al personaje");
+
           // Obtener la cámara actualizada
           camera = cameraManager.getCamera();
           console.log("Posición de cámara ajustada:", camera.position);
@@ -206,7 +208,7 @@ async function init() {
           farmerController = new FarmerController(instance.model, modelLoader, {
             moveSpeed: 0.1,
             rotationSpeed: 0.05,
-            runMultiplier: 1.5
+            runMultiplier: 1.5,
           });
           console.log("Controlador del granjero inicializado");
 
@@ -218,7 +220,7 @@ async function init() {
           // Mostrar las animaciones disponibles en consola
           const availableAnims = Object.keys(instance.actions);
           console.log("🎬 Animaciones disponibles:", availableAnims);
-            
+
           if (availableAnims.length === 0) {
             console.warn("⚠️ No se encontraron animaciones para este modelo");
           }
@@ -242,16 +244,18 @@ async function init() {
  * @deprecated Esta función ya no es necesaria, usar CameraManager en su lugar
  */
 function setupOrbitControls() {
-  console.warn("setupOrbitControls() está obsoleto. Usa CameraManager en su lugar.");
-  
+  console.warn(
+    "setupOrbitControls() está obsoleto. Usa CameraManager en su lugar."
+  );
+
   if (cameraManager) {
     const controls = cameraManager.getControls();
     if (controls) {
-      controls.minDistance = 1;        // Distancia mínima de acercamiento
-      controls.maxDistance = 50;       // Distancia máxima de alejamiento
-      controls.maxPolarAngle = Math.PI / 2;  // Ángulo máximo de inclinación (90°)
-      controls.minPolarAngle = 0.1;    // Ángulo mínimo de inclinación (casi 0°)
-      
+      controls.minDistance = 1; // Distancia mínima de acercamiento
+      controls.maxDistance = 50; // Distancia máxima de alejamiento
+      controls.maxPolarAngle = Math.PI / 2; // Ángulo máximo de inclinación (90°)
+      controls.minPolarAngle = 0.1; // Ángulo mínimo de inclinación (casi 0°)
+
       console.log("Controles de órbita configurados a través de CameraManager");
     }
   }
@@ -275,11 +279,13 @@ function onWindowResize() {
   if (cameraManager) {
     cameraManager.onWindowResize();
   }
-  
+
   // Ajustar el tamaño del renderizador
   renderer.setSize(window.innerWidth, window.innerHeight);
-  
-  console.log(`Ventana redimensionada: ${window.innerWidth}x${window.innerHeight}`);
+
+  console.log(
+    `Ventana redimensionada: ${window.innerWidth}x${window.innerHeight}`
+  );
 }
 
 /**
@@ -288,7 +294,9 @@ function onWindowResize() {
  * ahora se maneja en la clase FarmerController
  */
 function updateAnimationState() {
-  console.warn("updateAnimationState() está obsoleto. Usa FarmerController en su lugar.");
+  console.warn(
+    "updateAnimationState() está obsoleto. Usa FarmerController en su lugar."
+  );
 }
 
 /**
@@ -297,7 +305,9 @@ function updateAnimationState() {
  * ahora se maneja en la clase FarmerController
  */
 function handleMovement(delta) {
-  console.warn("handleMovement() está obsoleto. Usa FarmerController en su lugar.");
+  console.warn(
+    "handleMovement() está obsoleto. Usa FarmerController en su lugar."
+  );
 }
 
 // Variables para el control de FPS
@@ -306,31 +316,8 @@ const targetFPS = 60;
 const frameTime = 1000 / targetFPS;
 
 function animate(currentTime = 0) {
-  // Actualizar posición de la cámara para seguir al personaje
-  if (modelLoader && modelLoader.model) {
-    const model = modelLoader.model;
-    const targetPosition = new THREE.Vector3();
-    model.getWorldPosition(targetPosition);
-
-    // Calcular posición objetivo de la cámara (sin modificar la posición Y del terreno)
-    const idealPosition = new THREE.Vector3(
-      targetPosition.x + cameraOffset.x,
-      camera.position.y, // Mantener la altura fija
-      targetPosition.z + cameraOffset.z
-    );
-
-    // Suavizar el movimiento de la cámara solo en X y Z
-    camera.position.x += (idealPosition.x - camera.position.x) * 0.1;
-    camera.position.z += (idealPosition.z - camera.position.z) * 0.1;
-
-    // Hacer que la cámara mire al personaje
-    const lookAtPosition = new THREE.Vector3(
-      targetPosition.x,
-      targetPosition.y + 1.5, // Mirar a la altura del pecho del personaje
-      targetPosition.z
-    );
-    camera.lookAt(lookAtPosition);
-  }
+  // La cámara isométrica ahora es manejada automáticamente por el CameraManager
+  // No se necesita lógica adicional de seguimiento aquí
 
   requestAnimationFrame(animate);
 
@@ -345,7 +332,7 @@ function animate(currentTime = 0) {
     // Actualizar cámara y controles
     if (cameraManager) {
       cameraManager.update(delta);
-    }  
+    }
 
     // Actualizar animaciones del modelo
     if (modelLoader) {
@@ -363,6 +350,11 @@ function animate(currentTime = 0) {
     // Actualizar el skybox para que siga a la cámara
     if (skybox) {
       skybox.update(camera.position);
+    }
+
+    // Actualizar los efectos de fuego
+    if (terrain && terrain.animateFires) {
+      terrain.animateFires();
     }
 
     // Actualizar la iluminación

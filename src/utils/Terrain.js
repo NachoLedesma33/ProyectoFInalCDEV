@@ -9,6 +9,7 @@ export class Terrain {
     this.size = 500; // Tamaño del plano base
     this.repeat = 20; // Repetición de la textura
     this.floorDecale = 0;
+    this.walls = []; // Array para almacenar las paredes
 
     // Configuración del terreno procedural
     this.chunkSize = 64;
@@ -69,6 +70,9 @@ export class Terrain {
     });
 
     this.floorDecale = (this.size / this.repeat) * 4;
+    
+    // Crear las paredes alrededor del terreno
+    this.createBoundaryWalls();
   }
 
   generateHeight(x, z) {
@@ -233,9 +237,80 @@ export class Terrain {
   }
 
   /**
+   * Crea paredes alrededor de los límites del terreno
+   */
+  createBoundaryWalls() {
+    const wallHeight = 20; // Altura de las paredes
+    const wallThickness = 2; // Grosor de las paredes
+    const halfSize = this.size / 2;
+
+    // Cargar la textura del contorno
+    const contornoTexture = new THREE.TextureLoader().load('./src/assets/Contorno.png');
+    contornoTexture.colorSpace = THREE.SRGBColorSpace;
+    contornoTexture.wrapS = contornoTexture.wrapT = THREE.RepeatWrapping;
+
+    // Material para las paredes
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      map: contornoTexture,
+      color: 0xffffff,
+      roughness: 0.8,
+      metalness: 0.2,
+      side: THREE.DoubleSide
+    });
+
+    // Crear las cuatro paredes
+    
+    // Pared norte (frontal)
+    const northWallGeometry = new THREE.BoxGeometry(this.size, wallHeight, wallThickness);
+    const northWall = new THREE.Mesh(northWallGeometry, wallMaterial);
+    northWall.position.set(0, wallHeight / 2, -halfSize);
+    northWall.castShadow = true;
+    northWall.receiveShadow = true;
+    this.scene.add(northWall);
+    this.walls.push(northWall);
+
+    // Pared sur (trasera)
+    const southWallGeometry = new THREE.BoxGeometry(this.size, wallHeight, wallThickness);
+    const southWall = new THREE.Mesh(southWallGeometry, wallMaterial);
+    southWall.position.set(0, wallHeight / 2, halfSize);
+    southWall.castShadow = true;
+    southWall.receiveShadow = true;
+    this.scene.add(southWall);
+    this.walls.push(southWall);
+
+    // Pared este (derecha)
+    const eastWallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, this.size);
+    const eastWall = new THREE.Mesh(eastWallGeometry, wallMaterial);
+    eastWall.position.set(halfSize, wallHeight / 2, 0);
+    eastWall.castShadow = true;
+    eastWall.receiveShadow = true;
+    this.scene.add(eastWall);
+    this.walls.push(eastWall);
+
+    // Pared oeste (izquierda)
+    const westWallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, this.size);
+    const westWall = new THREE.Mesh(westWallGeometry, wallMaterial);
+    westWall.position.set(-halfSize, wallHeight / 2, 0);
+    westWall.castShadow = true;
+    westWall.receiveShadow = true;
+    this.scene.add(westWall);
+    this.walls.push(westWall);
+
+    console.log('Paredes de contorno creadas:', this.walls.length, 'paredes');
+  }
+
+  /**
    * Limpia todos los recursos del terreno
    */
   dispose() {
+    // Limpiar las paredes
+    for (const wall of this.walls) {
+      this.scene.remove(wall);
+      if (wall.geometry) wall.geometry.dispose();
+      if (wall.material) wall.material.dispose();
+    }
+    this.walls = [];
+
     for (const chunk of this.chunks.values()) {
       this.scene.remove(chunk.mesh);
       chunk.mesh.geometry.dispose();
