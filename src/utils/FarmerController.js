@@ -183,9 +183,23 @@ export class FarmerController {
             this.isRotating = false;
             this.targetRotation = null;
             
-            // Después de rotar, verificar si todavía se presiona 's' para mover hacia adelante
-            if (this.keys.s || this.keys.ArrowDown) {
-                this.modelLoader.play(this.keys.shift ? "run" : "walk", 0.1);
+            // Después de rotar, verificar si todavía se presiona alguna tecla de movimiento
+            const isMoving = this.keys.w || this.keys.a || this.keys.s || this.keys.d || 
+                            this.keys.ArrowUp || this.keys.ArrowDown || this.keys.ArrowLeft || this.keys.ArrowRight;
+            
+            if (isMoving) {
+                // Si se presiona 's' o flecha abajo, mover hacia adelante en la nueva dirección
+                if (this.keys.s || this.keys.ArrowDown) {
+                    this.modelLoader.play(this.keys.shift ? "run" : "walk", 0.1);
+                } else if (this.keys.w || this.keys.ArrowUp) {
+                    this.modelLoader.play(this.keys.shift ? "run" : "walk", 0.1);
+                } else {
+                    // Para movimiento lateral, actualizar el estado de animación
+                    this.updateAnimationState();
+                }
+            } else {
+                // Si no se presiona ninguna tecla de movimiento, volver a animación idle
+                this.modelLoader.play("idle", 0.15);
             }
         } else {
             // Continuar rotando
