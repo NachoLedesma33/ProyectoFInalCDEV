@@ -11,6 +11,7 @@ import { Skybox } from "./utils/Skybox.js"; // Fondo 360°
 import modelConfig from "./config/modelConfig.js"; // Configuración de modelos
 import { CameraManager } from "./utils/CameraManager.js"; // Gestor de cámara
 import { FarmerController } from "./utils/FarmerController.js"; // Controlador del granjero
+import { Corral } from "./utils/Corral.js"; // Corral con sistema de colisiones
 
 // Variables globales principales de Three.js
 let scene, // Escena 3D que contiene todos los objetos
@@ -30,6 +31,9 @@ let modelLoader; // Maneja la carga y animación de modelos 3D
 
 // Instancia del controlador del granjero
 let farmerController;
+
+// Instancia del corral
+let corral;
 
 // Configuración de la cámara isométrica
 // La cámara ahora es manejada por el CameraManager en modo isométrico
@@ -155,6 +159,10 @@ async function init() {
   modelLoader = new ModelLoader(scene);
   console.log("Cargador de modelos inicializado");
 
+  // Crear el corral para vacas
+  corral = new Corral(scene, { x: 15, y: 0, z: 15 }, { width: 20, height: 2, depth: 20 });
+  console.log("Corral creado");
+
   // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
   controls = cameraManager.getControls();
@@ -205,17 +213,31 @@ async function init() {
           console.log("Posición de cámara ajustada:", camera.position);
 
           // Inicializar el controlador del granjero
-          farmerController = new FarmerController(instance.model, modelLoader, camera, {
-            moveSpeed: 0.1,
-            rotationSpeed: 0.05,
-            runMultiplier: 1.5,
-          });
+          farmerController = new FarmerController(
+            instance.model,
+            modelLoader,
+            camera,
+            {
+              moveSpeed: 0.1,
+              rotationSpeed: 0.05,
+              runMultiplier: 1.5,
+            }
+          );
+          
+          // Conectar el corral con el controlador del granjero
+          if (corral) {
+            farmerController.setCorral(corral);
+            console.log("Corral conectado al controlador del granjero");
+          }
+          
           console.log("Controlador del granjero inicializado");
 
           // Hacer el modelo accesible desde la consola para depuración
           window.farmer = instance;
           window.farmerController = farmerController; // Para depuración
+          window.corral = corral; // Para depuración del corral
           console.log("Modelo disponible como 'window.farmer' para depuración");
+          console.log("Corral disponible como 'window.corral' para depuración");
 
           // Mostrar las animaciones disponibles en consola
           const availableAnims = Object.keys(instance.actions);
@@ -342,6 +364,11 @@ function animate(currentTime = 0) {
     // Actualizar el controlador del granjero
     if (farmerController) {
       farmerController.update(delta);
+    }
+
+    // Actualizar el corral (para animaciones de puerta, etc.)
+    if (corral && farmerController && farmerController.model) {
+      corral.update(delta, farmerController.model.position);
     }
 
     // Actualizar el terreno

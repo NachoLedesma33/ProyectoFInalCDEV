@@ -67,7 +67,7 @@ export class Lighting {
   update(delta) {
     // Actualizar la posición de la luz direccional para simular movimiento del sol
     if (this.dirLight) {
-      const time = Date.now() * 0.0005;
+      const time = Date.now() * 0.00002;
       this.dirLight.position.x = Math.sin(time) * 20;
       this.dirLight.position.z = Math.cos(time) * 20;
 
