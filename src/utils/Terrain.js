@@ -34,19 +34,19 @@ export class Terrain {
   init() {
     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
 
-    // Cargar textura de pasto
-    const grassTexture = new THREE.TextureLoader().load(
-      "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/terrain/grasslight-big.jpg"
+    // Cargar textura de suelo rojo
+    const redSoilTexture = new THREE.TextureLoader().load(
+      "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/red_laterite_soil_stones/red_laterite_soil_stones_diff_4k.jpg"
     );
-    grassTexture.colorSpace = THREE.SRGBColorSpace;
-    grassTexture.repeat.set(this.repeat, this.repeat);
-    grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping;
-    grassTexture.anisotropy = maxAnisotropy;
+    redSoilTexture.colorSpace = THREE.SRGBColorSpace;
+    redSoilTexture.repeat.set(this.repeat, this.repeat);
+    redSoilTexture.wrapS = redSoilTexture.wrapT = THREE.RepeatWrapping;
+    redSoilTexture.anisotropy = maxAnisotropy;
 
     // Material para el plano base
     const mat = new THREE.MeshStandardMaterial({
-      map: grassTexture,
-      color: 0x336622, // Color más oscuro
+      map: redSoilTexture,
+      color: 0x8B4513, // Tinte marrón
       roughness: 0.9,
       metalness: 0.1,
     });
@@ -61,8 +61,8 @@ export class Terrain {
 
     // Material para el terreno procedural
     this.terrainMaterial = new THREE.MeshStandardMaterial({
-      map: grassTexture.clone(),
-      color: 0x336622, // Color más oscuro para coincidir con el plano base
+      map: redSoilTexture.clone(),
+      color: 0x8B4513, // Tinte marrón
       roughness: 0.9,
       metalness: 0.1,
       side: THREE.DoubleSide,
@@ -70,9 +70,9 @@ export class Terrain {
     });
 
     this.floorDecale = (this.size / this.repeat) * 4;
-    
+
     // Crear las paredes alrededor del terreno
-    this.createBoundaryWalls();
+    // this.createBoundaryWalls();
   }
 
   generateHeight(x, z) {
@@ -245,7 +245,9 @@ export class Terrain {
     const halfSize = this.size / 2;
 
     // Cargar la textura del contorno
-    const contornoTexture = new THREE.TextureLoader().load('./src/assets/Contorno.png');
+    const contornoTexture = new THREE.TextureLoader().load(
+      "./src/assets/Contorno.png"
+    );
     contornoTexture.colorSpace = THREE.SRGBColorSpace;
     contornoTexture.wrapS = contornoTexture.wrapT = THREE.RepeatWrapping;
 
@@ -255,13 +257,17 @@ export class Terrain {
       color: 0xffffff,
       roughness: 0.8,
       metalness: 0.2,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
     });
 
     // Crear las cuatro paredes
-    
+
     // Pared norte (frontal)
-    const northWallGeometry = new THREE.BoxGeometry(this.size, wallHeight, wallThickness);
+    const northWallGeometry = new THREE.BoxGeometry(
+      this.size,
+      wallHeight,
+      wallThickness
+    );
     const northWall = new THREE.Mesh(northWallGeometry, wallMaterial);
     northWall.position.set(0, wallHeight / 2, -halfSize);
     northWall.castShadow = true;
@@ -270,7 +276,11 @@ export class Terrain {
     this.walls.push(northWall);
 
     // Pared sur (trasera)
-    const southWallGeometry = new THREE.BoxGeometry(this.size, wallHeight, wallThickness);
+    const southWallGeometry = new THREE.BoxGeometry(
+      this.size,
+      wallHeight,
+      wallThickness
+    );
     const southWall = new THREE.Mesh(southWallGeometry, wallMaterial);
     southWall.position.set(0, wallHeight / 2, halfSize);
     southWall.castShadow = true;
@@ -279,7 +289,11 @@ export class Terrain {
     this.walls.push(southWall);
 
     // Pared este (derecha)
-    const eastWallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, this.size);
+    const eastWallGeometry = new THREE.BoxGeometry(
+      wallThickness,
+      wallHeight,
+      this.size
+    );
     const eastWall = new THREE.Mesh(eastWallGeometry, wallMaterial);
     eastWall.position.set(halfSize, wallHeight / 2, 0);
     eastWall.castShadow = true;
@@ -288,7 +302,11 @@ export class Terrain {
     this.walls.push(eastWall);
 
     // Pared oeste (izquierda)
-    const westWallGeometry = new THREE.BoxGeometry(wallThickness, wallHeight, this.size);
+    const westWallGeometry = new THREE.BoxGeometry(
+      wallThickness,
+      wallHeight,
+      this.size
+    );
     const westWall = new THREE.Mesh(westWallGeometry, wallMaterial);
     westWall.position.set(-halfSize, wallHeight / 2, 0);
     westWall.castShadow = true;
@@ -296,7 +314,7 @@ export class Terrain {
     this.scene.add(westWall);
     this.walls.push(westWall);
 
-    console.log('Paredes de contorno creadas:', this.walls.length, 'paredes');
+    console.log("Paredes de contorno creadas:", this.walls.length, "paredes");
   }
 
   /**
