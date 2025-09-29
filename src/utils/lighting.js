@@ -14,14 +14,14 @@ export class Lighting {
 
   addAmbientLight() {
     // Luz ambiental general con temperatura de color cálida
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    this.ambientLight.intensity = 0.5;
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+    this.ambientLight.intensity = 0.2;
     this.scene.add(this.ambientLight);
   }
 
   addDirectionalLight() {
     // Luz direccional (simula el sol)
-    this.dirLight = new THREE.DirectionalLight(0xfff4e6, 1.0);
+    this.dirLight = new THREE.DirectionalLight(0xff8c00, 0.8); // Color naranja/ámbar
     this.dirLight.position.set(5, 20, 10);
     this.dirLight.castShadow = true;
 

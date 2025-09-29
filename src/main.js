@@ -105,11 +105,11 @@ async function init() {
 
       // Rutas alternativas para cargar el skybox
       const skyboxPaths = [
-        "src/assets/fondo6.png", // Ruta relativa desde la raíz del proyecto
-        "./src/assets/fondo6.png", // Ruta relativa al directorio actual
-        "/src/assets/fondo6.png", // Ruta absoluta desde la raíz del servidor
-        "assets/fondo6.png", // Ruta alternativa 1
-        "./assets/fondo6.png", // Ruta alternativa 2
+        "src/assets/FondoDiaEstrellado3.png", // Ruta relativa desde la raíz del proyecto
+        "./src/assets/FondoDiaEstrellado3.png", // Ruta relativa al directorio actual
+        "/src/assets/FondoDiaEstrellado3.png", // Ruta absoluta desde la raíz del servidor
+        "assets/FondoDiaEstrellado3.png", // Ruta alternativa 1
+        "./assets/FondoDiaEstrellado3.png", // Ruta alternativa 2
       ];
 
       // Intentar cargar el skybox desde diferentes rutas

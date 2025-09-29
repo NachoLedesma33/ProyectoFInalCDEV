@@ -12,17 +12,16 @@ export class ControlsManager {
     // Configuración para vista isométrica con seguimiento
     if (this.isometric) {
       // Configuración isométrica
-      this.baseDistance = 15; // Reducido de 30
-      this.minDistance = 8;   // Reducido de 15
-      this.maxDistance = 40;  // Reducido de 80
-      this.smoothness = 0.05;
+      this.baseDistance = 8; // Más cercano al personaje
+      this.minDistance = 6;   // Distancia mínima más cercana
+      this.maxDistance = 12;  // Distancia máxima limitada para evitar alejamiento
+      this.smoothness = 0.1;
       this.currentLookAt = new THREE.Vector3(0, 0, 0);
-      this.currentDistance = 40; // Ajustado al nuevo maxDistance
+      this.currentDistance = 8; // Fija la distancia inicial
       this.targetDistance = this.baseDistance;
-      this.zoomAnimationDuration = 3.0;
-      this.zoomAnimationStartTime = Date.now();
-      this.isZoomAnimating = true;
-      this.autoZoomEnabled = true;
+      this.zoomAnimationDuration = 0; // Sin animación de zoom
+      this.isZoomAnimating = false;
+      this.autoZoomEnabled = false; // Desactivar auto zoom para mantener cámara fija
       this.lastTargetPosition = new THREE.Vector3();
       this.targetVelocity = new THREE.Vector3();
     } else {
@@ -194,38 +193,9 @@ export class ControlsManager {
   updateIsometricPosition() {
     if (!this.target) return;
     
-    // Calcular velocidad del objetivo para ajuste automático de zoom
-    if (this.lastTargetPosition) {
-      this.targetVelocity.subVectors(this.target.position, this.lastTargetPosition);
-      this.lastTargetPosition.copy(this.target.position);
-    } else {
-      this.lastTargetPosition.copy(this.target.position);
-    }
     
-    // Animación de zoom automático
-    if (this.isZoomAnimating) {
-      const elapsed = (Date.now() - this.zoomAnimationStartTime) / 1000;
-      if (elapsed < this.zoomAnimationDuration) {
-        // Animación suave de zoom
-        const progress = elapsed / this.zoomAnimationDuration;
-        const easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
-        this.currentDistance = 40 + (this.baseDistance - 40) * easeProgress; // Ajustado al nuevo maxDistance
-      } else {
-        this.currentDistance = this.baseDistance;
-        this.isZoomAnimating = false;
-      }
-    }
-    
-    // Ajuste automático de zoom basado en la velocidad del objetivo
-    if (this.autoZoomEnabled && !this.isZoomAnimating) {
-      const speed = this.targetVelocity.length();
-      const speedFactor = Math.min(speed * 10, 1); // Normalizar velocidad
-      const dynamicDistance = this.baseDistance + speedFactor * 15;
-      this.currentDistance += (dynamicDistance - this.currentDistance) * 0.02;
-    }
-    
-    // Aplicar límites de distancia
-    this.currentDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.currentDistance));
+    // Mantener distancia fija sin auto-zoom
+    this.currentDistance = this.baseDistance;
     
     // Calcular posición isométrica relativa al objetivo
     const angle = Math.PI / 4; // 45 grados

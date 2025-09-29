@@ -115,7 +115,7 @@ export class CameraManager {
    * @param {THREE.Object3D} target - Objeto a seguir
    * @param {THREE.Vector3} [offset] - Desplazamiento de la cámara respecto al objetivo
    */
-  setTarget(target, offset = new THREE.Vector3(0, 2.5, -3)) {
+  setTarget(target, offset = new THREE.Vector3(0, 2, -2)) {
     if (this.controls) {
       this.controls.setTarget(target, offset);
     } else {
