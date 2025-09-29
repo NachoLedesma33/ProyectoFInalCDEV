@@ -205,7 +205,7 @@ async function init() {
           console.log("Posición de cámara ajustada:", camera.position);
 
           // Inicializar el controlador del granjero
-          farmerController = new FarmerController(instance.model, modelLoader, {
+          farmerController = new FarmerController(instance.model, modelLoader, camera, {
             moveSpeed: 0.1,
             rotationSpeed: 0.05,
             runMultiplier: 1.5,

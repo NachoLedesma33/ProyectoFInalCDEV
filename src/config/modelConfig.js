@@ -13,14 +13,18 @@ export const modelConfig = {
       animations: {
         // Animación de reposo
         idle: "characters/farmer/Neutral_Idle.fbx",
-        // Animación de caminar/correr hacia adelante (usando RunningFront.fbx)
+        // Animación de correr hacia adelante
+        run: "characters/farmer/RunningFront.fbx",
+        // Animación de caminar hacia adelante (usando animación de correr)
         walk: "characters/farmer/RunningFront.fbx",
-        // Animación de caminar hacia atrás
-        walkBackward: "characters/farmer/Running_backwar.fbx",
+        // Animación de giro de 180 grados
+        turn180: "characters/farmer/Running Turn 180.fbx",
         // Animación de caminar hacia la izquierda
         strafeLeft: "characters/farmer/Left_Strafe.fbx",
         // Animación de caminar hacia la derecha
         strafeRight: "characters/farmer/Right_Strafe.fbx",
+        // Animación de correr hacia atrás (opcional)
+        runBackward: "characters/farmer/Running_backwar.fbx",
       },
 
       // Ajustes específicos

@@ -10,9 +10,10 @@ export class FarmerController {
      * @param {THREE.Object3D} model - Modelo 3D del granjero
      * @param {Object} modelLoader - Instancia del cargador de modelos
      */
-    constructor(model, modelLoader, config = {}) {
+    constructor(model, modelLoader, camera, config = {}) {
         this.model = model;
         this.modelLoader = modelLoader;
+        this.camera = camera;
         this.config = {
             moveSpeed: 0.1,
             rotationSpeed: 0.05,
@@ -34,8 +35,40 @@ export class FarmerController {
             shift: false
         };
         
+        // Estado de rotación
+        this.isRotating = false;
+        this.targetRotation = null;
+        this.rotationSpeed = Math.PI; // 180 grados por segundo
+        
         // Inicializar el controlador
         this.setupEventListeners();
+    }
+    
+    /**
+     * Determina si el personaje está de frente a la cámara
+     * @returns {boolean} - True si el personaje está de frente a la cámara
+     */
+    isFacingCamera() {
+        if (!this.camera || !this.model) return false;
+        
+        // Obtener la dirección del personaje (hacia adelante)
+        const characterDirection = new THREE.Vector3(
+            Math.sin(this.model.rotation.y),
+            0,
+            Math.cos(this.model.rotation.y)
+        );
+        
+        // Obtener la dirección de la cámara al personaje
+        const cameraToCharacter = new THREE.Vector3()
+            .subVectors(this.model.position, this.camera.position)
+            .normalize();
+        cameraToCharacter.y = 0; // Ignorar la altura
+        
+        // Calcular el producto punto para determinar si están mirando en direcciones similares
+        const dotProduct = characterDirection.dot(cameraToCharacter);
+        
+        // Si el producto punto es positivo, el personaje está de frente a la cámara
+        return dotProduct <= 0;
     }
     
     /**
@@ -76,6 +109,11 @@ export class FarmerController {
             return;
         }
         
+        // Si está rotando, no cambiar la animación
+        if (this.isRotating) {
+            return;
+        }
+        
         // Determinar el estado actual del movimiento
         const isMoving = this.keys.w || this.keys.a || this.keys.s || this.keys.d || 
                         this.keys.ArrowUp || this.keys.ArrowDown || this.keys.ArrowLeft || this.keys.ArrowRight;
@@ -90,11 +128,68 @@ export class FarmerController {
         if (this.keys.w || this.keys.ArrowUp) {
             this.modelLoader.play(isRunning ? "run" : "walk", 0.1);
         } else if (this.keys.s || this.keys.ArrowDown) {
-            this.modelLoader.play("walkBackward", 0.15);
-        } else if ((this.keys.a || this.keys.ArrowLeft) && !(this.keys.d || this.keys.ArrowRight)) {
-            this.modelLoader.play("strafeLeft", 0.15);
-        } else if ((this.keys.d || this.keys.ArrowRight) && !(this.keys.a || this.keys.ArrowLeft)) {
-            this.modelLoader.play("strafeRight", 0.15);
+            // Iniciar rotación de 180 grados
+            this.start180Rotation();
+        } else {
+            // Movimiento lateral - invertir animaciones según orientación a la cámara
+            const shouldInvertControls = this.isFacingCamera();
+            
+            if ((this.keys.a || this.keys.ArrowLeft) && !(this.keys.d || this.keys.ArrowRight)) {
+                // Si está de frente a la cámara, A/D se invierten, así que A muestra animación de derecha
+                const animation = shouldInvertControls ? "strafeRight" : "strafeLeft";
+                this.modelLoader.play(animation, 0.15);
+            } else if ((this.keys.d || this.keys.ArrowRight) && !(this.keys.a || this.keys.ArrowLeft)) {
+                // Si está de frente a la cámara, A/D se invierten, así que D muestra animación de izquierda
+                const animation = shouldInvertControls ? "strafeLeft" : "strafeRight";
+                this.modelLoader.play(animation, 0.15);
+            }
+        }
+    }
+    
+    /**
+     * Inicia la rotación de 180 grados
+     */
+    start180Rotation() {
+        if (this.isRotating) return;
+        
+        this.isRotating = true;
+        // Calcular el objetivo de rotación (180 grados desde la rotación actual)
+        this.targetRotation = this.model.rotation.y + Math.PI;
+        
+        // Reproducir animación de giro
+        this.modelLoader.play("turn180", 0.2);
+    }
+    
+    /**
+     * Actualiza la rotación del modelo
+     * @param {number} delta - Tiempo transcurrido desde el último fotograma
+     */
+    updateRotation(delta) {
+        if (!this.isRotating || this.targetRotation === null) return;
+        
+        const rotationStep = this.rotationSpeed * delta;
+        const currentRotation = this.model.rotation.y;
+        
+        // Calcular la diferencia más corta al objetivo
+        let diff = this.targetRotation - currentRotation;
+        
+        // Normalizar la diferencia al rango [-PI, PI]
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        
+        if (Math.abs(diff) <= rotationStep) {
+            // Llegamos al objetivo
+            this.model.rotation.y = this.targetRotation;
+            this.isRotating = false;
+            this.targetRotation = null;
+            
+            // Después de rotar, verificar si todavía se presiona 's' para mover hacia adelante
+            if (this.keys.s || this.keys.ArrowDown) {
+                this.modelLoader.play(this.keys.shift ? "run" : "walk", 0.1);
+            }
+        } else {
+            // Continuar rotando
+            this.model.rotation.y += Math.sign(diff) * rotationStep;
         }
     }
     
@@ -104,6 +199,14 @@ export class FarmerController {
      */
     update(delta) {
         if (!this.model || !this.modelLoader?.model) {
+            return;
+        }
+        
+        // Actualizar rotación primero
+        this.updateRotation(delta);
+        
+        // Si está rotando, no permitir movimiento
+        if (this.isRotating) {
             return;
         }
         
@@ -118,27 +221,34 @@ export class FarmerController {
         let moveZ = 0;
         let moved = false;
         
-        // Movimiento hacia adelante/atrás
+        // Movimiento hacia adelante (W y flecha arriba)
         if (this.keys.w || this.keys.ArrowUp) {
             moveX += Math.sin(this.model.rotation.y);
             moveZ += Math.cos(this.model.rotation.y);
             moved = true;
         }
+        
+        // Después de rotar 180 grados, 's' ahora mueve hacia adelante en la nueva dirección
         if (this.keys.s || this.keys.ArrowDown) {
-            moveX -= Math.sin(this.model.rotation.y);
-            moveZ -= Math.cos(this.model.rotation.y);
+            moveX += Math.sin(this.model.rotation.y);
+            moveZ += Math.cos(this.model.rotation.y);
             moved = true;
         }
         
-        // Movimiento lateral
+        // Movimiento lateral (A/D y flechas laterales)
+        // Invertir controles si el personaje está de frente a la cámara
+        const shouldInvertControls = this.isFacingCamera();
+        
         if (this.keys.a || this.keys.ArrowLeft) {
-            moveX += Math.cos(this.model.rotation.y);
-            moveZ -= Math.sin(this.model.rotation.y);
+            const directionMultiplier = shouldInvertControls ? -1 : 1;
+            moveX += Math.cos(this.model.rotation.y) * directionMultiplier;
+            moveZ -= Math.sin(this.model.rotation.y) * directionMultiplier;
             moved = true;
         }
         if (this.keys.d || this.keys.ArrowRight) {
-            moveX -= Math.cos(this.model.rotation.y);
-            moveZ += Math.sin(this.model.rotation.y);
+            const directionMultiplier = shouldInvertControls ? -1 : 1;
+            moveX -= Math.cos(this.model.rotation.y) * directionMultiplier;
+            moveZ += Math.sin(this.model.rotation.y) * directionMultiplier;
             moved = true;
         }
         
@@ -173,12 +283,14 @@ export class FarmerController {
             this.model.position.setZ(newZ);
         }
         
-        // Rotación del personaje con Q y E
-        if (this.keys.q) {
-            this.model.rotation.y += this.config.rotationSpeed * 2;
-        }
-        if (this.keys.e) {
-            this.model.rotation.y -= this.config.rotationSpeed * 2;
+        // Rotación del personaje con Q y E (solo si no está rotando automáticamente)
+        if (!this.isRotating) {
+            if (this.keys.q) {
+                this.model.rotation.y += this.config.rotationSpeed * 2;
+            }
+            if (this.keys.e) {
+                this.model.rotation.y -= this.config.rotationSpeed * 2;
+            }
         }
     }
     
