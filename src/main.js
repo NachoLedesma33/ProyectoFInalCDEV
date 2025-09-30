@@ -13,6 +13,7 @@ import { CameraManager } from "./utils/CameraManager.js"; // Gestor de cámara
 import { FarmerController } from "./utils/FarmerController.js"; // Controlador del granjero
 import { Corral } from "./utils/Corral.js"; // Corral con sistema de colisiones
 import { SpaceShuttle } from "./utils/SpaceShuttle.js"; // Space Shuttle Orbiter
+import { Cow } from "./utils/Cow.js"; // Modelo de vaca
 
 // Variables globales principales de Three.js
 let scene, // Escena 3D que contiene todos los objetos
@@ -39,6 +40,9 @@ let corral;
 // Instancia del Space Shuttle Orbiter
 let spaceShuttle;
 
+// Array de vacas en el corral
+let cows = [];
+
 // Configuración de la cámara isométrica
 // La cámara ahora es manejada por el CameraManager en modo isométrico
 
@@ -56,6 +60,38 @@ const keys = {
 
 // Iniciar la aplicación y manejar errores
 init().catch(console.error);
+
+/**
+ * Crear 6 vacas dentro del corral
+ */
+function createCows() {
+  console.log("Creando 6 vacas dentro del corral...");
+  
+  // Posiciones para las 6 vacas dentro del corral
+  // El corral está en x: 15, z: 15 con dimensiones 20x20
+  // Posiciones distribuidas dentro del corral con buen margen de los bordes
+  const cowPositions = [
+    { x: 12, y: 0, z: 12 }, // Posición interior inferior izquierda
+    { x: 18, y: 0, z: 12 }, // Posición interior inferior derecha
+    { x: 12, y: 0, z: 18 }, // Posición interior superior izquierda
+    { x: 18, y: 0, z: 18 }, // Posición interior superior derecha
+    { x: 15, y: 0, z: 10 }, // Posición central inferior
+    { x: 15, y: 0, z: 20 }  // Posición central superior
+  ];
+  
+  // Crear cada vaca
+  cowPositions.forEach((position, index) => {
+    const cow = new Cow(scene, position); // La escala se calcula automáticamente para coincidir con el farmer
+    cows.push(cow);
+    console.log(`Vaca ${index + 1} creada en posición:`, position);
+  });
+  
+  // Hacer las vacas accesibles para depuración
+  window.cows = cows;
+  console.log("Vacas disponibles como 'window.cows' para depuración");
+  
+  console.log("✅ 6 vacas creadas exitosamente dentro del corral");
+}
 
 /**
  * Función de inicialización principal
@@ -178,6 +214,9 @@ async function init() {
     0.1 // Escala mucho más reducida para que no sea tan grande
   );
   console.log("Space Shuttle Orbiter creado");
+
+  // Crear 4 vacas dentro del corral
+  createCows();
 
   // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
@@ -397,6 +436,11 @@ function animate(currentTime = 0) {
     if (spaceShuttle) {
       spaceShuttle.update(delta);
     }
+
+    // Actualizar las vacas
+    cows.forEach(cow => {
+      cow.update(delta);
+    });
 
     // Actualizar el terreno
     terrain.update(camera.position);
