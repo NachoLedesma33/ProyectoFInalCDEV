@@ -95,7 +95,10 @@ export class FarmerController {
 
     if (this.checkCorralCollision(newPosition)) {
       // Hay colisión, intentar ajustar el movimiento
-      const collisionInfo = this.corral.getClosestCollisionPoint(currentPosition, movementVector.clone().normalize());
+      const collisionInfo = this.corral.getClosestCollisionPoint(
+        currentPosition,
+        movementVector.clone().normalize()
+      );
 
       if (collisionInfo) {
         // Calcular el componente del movimiento que es perpendicular a la normal de colisión
@@ -105,7 +108,9 @@ export class FarmerController {
         if (dotProduct < 0) {
           // El movimiento es hacia la superficie de colisión
           // Proyectar el movimiento sobre el plano de la superficie
-          const adjustedMovement = movementVector.clone().sub(normal.clone().multiplyScalar(dotProduct));
+          const adjustedMovement = movementVector
+            .clone()
+            .sub(normal.clone().multiplyScalar(dotProduct));
 
           // Escalar el movimiento ajustado para mantener la velocidad
           const originalLength = movementVector.length();
@@ -385,18 +390,31 @@ export class FarmerController {
       const movementVector = new THREE.Vector3(moveX, 0, moveZ);
 
       // Ajustar movimiento según colisiones con el corral
-      const adjustedMovement = this.getAdjustedMovement(this.model.position, movementVector);
+      const adjustedMovement = this.getAdjustedMovement(
+        this.model.position,
+        movementVector
+      );
 
       // Calcular nueva posición con límites y colisiones
       let newX = this.model.position.x + adjustedMovement.x;
       let newZ = this.model.position.z + adjustedMovement.z;
 
       // Aplicar límites del terreno
-      newX = Math.max(this.config.bounds.minX, Math.min(newX, this.config.bounds.maxX));
-      newZ = Math.max(this.config.bounds.minZ, Math.min(newZ, this.config.bounds.maxZ));
+      newX = Math.max(
+        this.config.bounds.minX,
+        Math.min(newX, this.config.bounds.maxX)
+      );
+      newZ = Math.max(
+        this.config.bounds.minZ,
+        Math.min(newZ, this.config.bounds.maxZ)
+      );
 
       // Verificación final de colisiones antes de aplicar el movimiento
-      const finalPosition = new THREE.Vector3(newX, this.model.position.y, newZ);
+      const finalPosition = new THREE.Vector3(
+        newX,
+        this.model.position.y,
+        newZ
+      );
       if (!this.checkCorralCollision(finalPosition)) {
         // Aplicar la nueva posición solo si no hay colisión
         this.model.position.setX(newX);
@@ -405,9 +423,9 @@ export class FarmerController {
 
       // Si hay colisión, detener el movimiento y mostrar advertencia
       if (this.checkCorralCollision(finalPosition)) {
-        console.warn('Movimiento bloqueado por colisión con el corral');
+        console.warn("Movimiento bloqueado por colisión con el corral");
         // Detener animación de movimiento
-        this.modelLoader.play('idle', 0.15);
+        this.modelLoader.play("idle", 0.15);
       }
     }
 

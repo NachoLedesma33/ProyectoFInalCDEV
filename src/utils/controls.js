@@ -13,8 +13,8 @@ export class ControlsManager {
     if (this.isometric) {
       // Configuración isométrica
       this.baseDistance = 8; // Más cercano al personaje
-      this.minDistance = 6;   // Distancia mínima más cercana
-      this.maxDistance = 12;  // Distancia máxima limitada para evitar alejamiento
+      this.minDistance = 6; // Distancia mínima más cercana
+      this.maxDistance = 12; // Distancia máxima limitada para evitar alejamiento
       this.smoothness = 0.1;
       this.currentLookAt = new THREE.Vector3(0, 0, 0);
       this.currentDistance = 8; // Fija la distancia inicial
@@ -192,36 +192,35 @@ export class ControlsManager {
    */
   updateIsometricPosition() {
     if (!this.target) return;
-    
-    
+
     // Mantener distancia fija sin auto-zoom
     this.currentDistance = this.baseDistance;
-    
+
     // Calcular posición isométrica relativa al objetivo
     const angle = Math.PI / 4; // 45 grados
     const height = this.currentDistance * 0.7; // Altura proporcional a la distancia
-    
+
     // Posición isométrica: 45 grados en XY y 45 grados en XZ
     const offsetX = this.currentDistance * Math.cos(angle);
     const offsetZ = this.currentDistance * Math.cos(angle);
-    
+
     // Posicionar cámara relativa al objetivo
     const targetPosition = this.target.position;
     const cameraX = targetPosition.x + offsetX;
     const cameraY = targetPosition.y + height;
     const cameraZ = targetPosition.z + offsetZ;
-    
+
     // Suavizar movimiento de cámara
     const targetCameraPosition = new THREE.Vector3(cameraX, cameraY, cameraZ);
     this.camera.position.lerp(targetCameraPosition, this.smoothness);
-    
+
     // Calcular punto de mira (ligeramente por encima del objetivo)
     const lookAtPosition = new THREE.Vector3(
       targetPosition.x,
       targetPosition.y + 1.5,
       targetPosition.z
     );
-    
+
     // Suavizar punto de mira
     this.currentLookAt.lerp(lookAtPosition, this.smoothness);
     this.camera.lookAt(this.currentLookAt);

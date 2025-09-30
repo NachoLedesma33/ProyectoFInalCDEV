@@ -47,14 +47,14 @@ export class CameraManager {
     // Configuración isométrica - ángulo fijo de 45 grados en ambos ejes
     const distance = 50; // Distancia inicial de la cámara (lejos para iniciar la animación de zoom)
     const angle = Math.PI / 4; // 45 grados
-    
+
     // Posición isométrica: 45 grados en XY y 45 grados en XZ
     camera.position.set(
       distance * Math.cos(angle), // X
       distance * Math.sin(angle), // Y (altura)
-      distance * Math.cos(angle)  // Z
+      distance * Math.cos(angle) // Z
     );
-    
+
     // Mirar al centro del mundo
     camera.lookAt(0, 0, 0);
 
@@ -94,7 +94,10 @@ export class CameraManager {
   setupControls(domElement) {
     if (!this.controls) {
       // Pasar configuración isométrica al ControlsManager
-      this.controls = new ControlsManager(this.camera, { domElement, isometric: true });
+      this.controls = new ControlsManager(this.camera, {
+        domElement,
+        isometric: true,
+      });
 
       console.log("Controles de cámara isométrica configurados");
     }

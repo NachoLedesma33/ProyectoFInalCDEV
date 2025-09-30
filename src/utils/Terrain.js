@@ -46,7 +46,7 @@ export class Terrain {
     // Material para el plano base
     const mat = new THREE.MeshStandardMaterial({
       map: redSoilTexture,
-      color: 0x8B4513, // Tinte marrón
+      color: 0x8b4513, // Tinte marrón
       roughness: 0.9,
       metalness: 0.1,
     });
@@ -62,7 +62,7 @@ export class Terrain {
     // Material para el terreno procedural
     this.terrainMaterial = new THREE.MeshStandardMaterial({
       map: redSoilTexture.clone(),
-      color: 0x8B4513, // Tinte marrón
+      color: 0x8b4513, // Tinte marrón
       roughness: 0.9,
       metalness: 0.1,
       side: THREE.DoubleSide,

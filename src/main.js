@@ -160,7 +160,11 @@ async function init() {
   console.log("Cargador de modelos inicializado");
 
   // Crear el corral para vacas
-  corral = new Corral(scene, { x: 15, y: 0, z: 15 }, { width: 20, height: 2, depth: 20 });
+  corral = new Corral(
+    scene,
+    { x: 15, y: 0, z: 15 },
+    { width: 20, height: 2, depth: 20 }
+  );
   console.log("Corral creado");
 
   // Configurar los controles de la cámara
@@ -223,13 +227,13 @@ async function init() {
               runMultiplier: 1.5,
             }
           );
-          
+
           // Conectar el corral con el controlador del granjero
           if (corral) {
             farmerController.setCorral(corral);
             console.log("Corral conectado al controlador del granjero");
           }
-          
+
           console.log("Controlador del granjero inicializado");
 
           // Hacer el modelo accesible desde la consola para depuración
