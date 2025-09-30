@@ -30,6 +30,9 @@ export class FarmerController {
 
     // Referencia al corral para detección de colisiones
     this.corral = null;
+    
+    // Referencia al Space Shuttle para detección de colisiones
+    this.spaceShuttle = null;
 
     // Estado de las teclas
     this.keys = {
@@ -62,6 +65,14 @@ export class FarmerController {
   }
 
   /**
+   * Establece la referencia al Space Shuttle para detección de colisiones
+   * @param {SpaceShuttle} spaceShuttle - Instancia del Space Shuttle
+   */
+  setSpaceShuttle(spaceShuttle) {
+    this.spaceShuttle = spaceShuttle;
+  }
+
+  /**
    * Verifica si el personaje colisiona con el corral
    * @param {THREE.Vector3} newPosition - Nueva posición a verificar
    * @returns {boolean} - True si hay colisión
@@ -82,57 +93,39 @@ export class FarmerController {
   }
 
   /**
+   * Verifica si el personaje colisiona con el Space Shuttle
+   * @param {THREE.Vector3} newPosition - Nueva posición a verificar
+   * @returns {boolean} - True si hay colisión
+   */
+  checkSpaceShuttleCollision(newPosition) {
+    if (!this.spaceShuttle || !this.model) return false;
+
+    return this.spaceShuttle.checkCollision(newPosition);
+  }
+
+  /**
    * Obtiene la posición de colisión más cercana y ajusta el movimiento
    * @param {THREE.Vector3} currentPosition - Posición actual
    * @param {THREE.Vector3} movementVector - Vector de movimiento
    * @returns {THREE.Vector3} - Vector de movimiento ajustado
    */
   getAdjustedMovement(currentPosition, movementVector) {
-    if (!this.corral) return movementVector;
-
     // Probar la nueva posición
     const newPosition = currentPosition.clone().add(movementVector);
 
-    if (this.checkCorralCollision(newPosition)) {
-      // Hay colisión, intentar ajustar el movimiento
-      const collisionInfo = this.corral.getClosestCollisionPoint(
-        currentPosition,
-        movementVector.clone().normalize()
-      );
+    // Verificar colisión con el corral
+    if (this.corral && this.checkCorralCollision(newPosition)) {
+      // Hay colisión con el corral, intentar ajustar el movimiento
+      const adjustedMovement = this.corral.getAdjustedMovement(currentPosition, movementVector);
+      return adjustedMovement;
+    }
 
-      if (collisionInfo) {
-        // Calcular el componente del movimiento que es perpendicular a la normal de colisión
-        const normal = collisionInfo.normal;
-        const dotProduct = movementVector.dot(normal);
-
-        if (dotProduct < 0) {
-          // El movimiento es hacia la superficie de colisión
-          // Proyectar el movimiento sobre el plano de la superficie
-          const adjustedMovement = movementVector
-            .clone()
-            .sub(normal.clone().multiplyScalar(dotProduct));
-
-          // Escalar el movimiento ajustado para mantener la velocidad
-          const originalLength = movementVector.length();
-          const adjustedLength = adjustedMovement.length();
-
-          if (adjustedLength > 0) {
-            adjustedMovement.multiplyScalar(originalLength / adjustedLength);
-          }
-
-          // Verificar si el movimiento ajustado todavía causa colisión
-          const finalPosition = currentPosition.clone().add(adjustedMovement);
-          if (!this.checkCorralCollision(finalPosition)) {
-            return adjustedMovement;
-          }
-        }
-      }
-
-      // Si no se puede ajustar el movimiento, detenerlo completamente
+    // Verificar colisión con el Space Shuttle
+    if (this.spaceShuttle && this.checkSpaceShuttleCollision(newPosition)) {
+      // Hay colisión con el Space Shuttle, detener el movimiento
       return new THREE.Vector3(0, 0, 0);
     }
 
-    // No hay colisión, devolver el movimiento original
     return movementVector;
   }
 

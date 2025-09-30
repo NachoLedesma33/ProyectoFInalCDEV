@@ -12,6 +12,7 @@ import modelConfig from "./config/modelConfig.js"; // Configuración de modelos
 import { CameraManager } from "./utils/CameraManager.js"; // Gestor de cámara
 import { FarmerController } from "./utils/FarmerController.js"; // Controlador del granjero
 import { Corral } from "./utils/Corral.js"; // Corral con sistema de colisiones
+import { SpaceShuttle } from "./utils/SpaceShuttle.js"; // Space Shuttle Orbiter
 
 // Variables globales principales de Three.js
 let scene, // Escena 3D que contiene todos los objetos
@@ -34,6 +35,9 @@ let farmerController;
 
 // Instancia del corral
 let corral;
+
+// Instancia del Space Shuttle Orbiter
+let spaceShuttle;
 
 // Configuración de la cámara isométrica
 // La cámara ahora es manejada por el CameraManager en modo isométrico
@@ -167,6 +171,14 @@ async function init() {
   );
   console.log("Corral creado");
 
+  // Crear el Space Shuttle Orbiter
+  spaceShuttle = new SpaceShuttle(
+    scene,
+    { x: 50, y: 0, z: -30 }, // Posición: a un lado, sobre la superficie del terreno
+    0.1 // Escala mucho más reducida para que no sea tan grande
+  );
+  console.log("Space Shuttle Orbiter creado");
+
   // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
   controls = cameraManager.getControls();
@@ -232,6 +244,12 @@ async function init() {
           if (corral) {
             farmerController.setCorral(corral);
             console.log("Corral conectado al controlador del granjero");
+          }
+
+          // Conectar el Space Shuttle con el controlador del granjero
+          if (spaceShuttle) {
+            farmerController.setSpaceShuttle(spaceShuttle);
+            console.log("Space Shuttle conectado al controlador del granjero");
           }
 
           console.log("Controlador del granjero inicializado");
@@ -373,6 +391,11 @@ function animate(currentTime = 0) {
     // Actualizar el corral (para animaciones de puerta, etc.)
     if (corral && farmerController && farmerController.model) {
       corral.update(delta, farmerController.model.position);
+    }
+
+    // Actualizar el Space Shuttle Orbiter
+    if (spaceShuttle) {
+      spaceShuttle.update(delta);
     }
 
     // Actualizar el terreno
