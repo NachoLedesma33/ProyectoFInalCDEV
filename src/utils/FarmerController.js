@@ -34,6 +34,9 @@ export class FarmerController {
     // Referencia al Space Shuttle para detección de colisiones
     this.spaceShuttle = null;
 
+    // Referencia a las piedras para detección de colisiones
+    this.stones = null;
+
     // Estado de las teclas
     this.keys = {
       w: false,
@@ -54,6 +57,65 @@ export class FarmerController {
 
     // Inicializar el controlador
     this.setupEventListeners();
+
+    // Crear HUD de coordenadas
+    this.createCoordinateDisplay();
+  }
+
+  /**
+   * Crea un HUD rectangular HTML para mostrar coordenadas del farmer
+   */
+  createCoordinateDisplay() {
+    // Crear elemento HTML para el HUD
+    this.coordinateHUD = document.createElement('div');
+    this.coordinateHUD.id = 'farmer-coordinate-hud';
+    
+    // Estilo del HUD tipo D2 rectangular
+    this.coordinateHUD.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      min-width: 250px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid #00ff00;
+      border-radius: 8px;
+      color: #00ff00;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 1000;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+      text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    `;
+    
+    // Contenido inicial del HUD
+    this.coordinateHUD.innerHTML = `
+      <div style="margin-bottom: 8px; color: #ffffff; font-size: 12px;">FARMER COORDINATES</div>
+      <div id="coord-values">X: 0.0  Y: 0.0  Z: 0.0</div>
+    `;
+    
+    // Añadir el HUD al documento
+    document.body.appendChild(this.coordinateHUD);
+    
+    // Guardar referencia al elemento de valores
+    this.coordValuesElement = document.getElementById('coord-values');
+    
+    // Actualizar coordenadas inicialmente
+    this.updateCoordinateDisplay();
+  }
+
+  /**
+   * Actualiza el texto del HUD de coordenadas
+   */
+  updateCoordinateDisplay() {
+    if (!this.coordValuesElement || !this.model) return;
+    
+    const position = this.model.position;
+    const text = `X: ${position.x.toFixed(1)}  Y: ${position.y.toFixed(1)}  Z: ${position.z.toFixed(1)}`;
+    
+    // Actualizar el contenido del HUD
+    this.coordValuesElement.textContent = text;
   }
 
   /**
@@ -70,6 +132,37 @@ export class FarmerController {
    */
   setSpaceShuttle(spaceShuttle) {
     this.spaceShuttle = spaceShuttle;
+  }
+
+  /**
+   * Establece la referencia a las piedras para detección de colisiones
+   * @param {Array} stones - Array de instancias de piedras
+   */
+  setStones(stones) {
+    if (!stones || stones.length === 0) {
+      console.warn("⚠️ No se proporcionaron piedras válidas");
+      return;
+    }
+    
+    this.stones = stones;
+    
+    // Verificar que las piedras tengan el método de colisión
+    const validStones = stones.filter(stone => {
+      const hasCheckCollision = typeof stone.checkCollision === 'function';
+      if (!hasCheckCollision) {
+        console.warn("⚠️ Piedra sin método checkCollision:", stone);
+      }
+      return hasCheckCollision;
+    });
+    
+    if (validStones.length === 0) {
+      console.warn("⚠️ Ninguna piedra tiene método checkCollision");
+      this.stones = null;
+      return;
+    }
+    
+    this.stones = validStones;
+    console.log(`✅ Conectadas ${validStones.length} piedras al farmerController`);
   }
 
   /**
@@ -99,8 +192,34 @@ export class FarmerController {
    */
   checkSpaceShuttleCollision(newPosition) {
     if (!this.spaceShuttle || !this.model) return false;
+    
+    // Tamaño del bounding box del farmer para detección de colisiones
+    const characterSize = new THREE.Vector3(2, 2, 2);
+    
+    // Verificar colisión con el Space Shuttle
+    return this.spaceShuttle.checkCollision(newPosition, characterSize);
+  }
 
-    return this.spaceShuttle.checkCollision(newPosition);
+  /**
+   * Verifica si el personaje colisiona con las piedras
+   * @param {THREE.Vector3} position - Posición a verificar
+   * @returns {boolean} - True si hay colisión con alguna piedra
+   */
+  checkStonesCollision(position) {
+    if (!this.stones || !this.model) return false;
+    
+    // Tamaño del bounding box del farmer para detección de colisiones
+    const characterSize = new THREE.Vector3(4, 4, 4);
+    
+    // Verificar colisión con cada piedra
+    for (const stone of this.stones) {
+      if (stone.checkCollision(position, characterSize)) {
+        console.log(" Colisión detectada con piedra en posición:", position);
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -116,13 +235,16 @@ export class FarmerController {
     // Verificar colisión con el corral
     if (this.corral && this.checkCorralCollision(newPosition)) {
       // Hay colisión con el corral, intentar deslizamiento suave
-      const adjustedMovement = this.getSlidingMovement(currentPosition, movementVector);
-      
-      // Si el deslizamiento no funciona, usar el sistema del corral como fallback
+      const adjustedMovement = this.getSlidingMovement(
+        currentPosition,
+        movementVector
+      );
+
+      // Si el deslizamiento no funciona, detener el movimiento completamente
       if (adjustedMovement.length() === 0) {
-        return this.corral.getAdjustedMovement(currentPosition, movementVector);
+        return new THREE.Vector3(0, 0, 0);
       }
-      
+
       return adjustedMovement;
     }
 
@@ -132,6 +254,13 @@ export class FarmerController {
       return this.getSlidingMovement(currentPosition, movementVector);
     }
 
+    // Verificar colisión con las piedras
+    if (this.stones && this.checkStonesCollision(newPosition)) {
+      // Hay colisión con las piedras, intentar deslizamiento suave
+      return this.getSlidingMovement(currentPosition, movementVector);
+    }
+
+    // Si no hay colisiones, permitir el movimiento
     return movementVector;
   }
 
@@ -145,19 +274,19 @@ export class FarmerController {
     // Intentar movimiento solo en el eje X
     const xMovement = new THREE.Vector3(movementVector.x, 0, 0);
     const xPosition = currentPosition.clone().add(xMovement);
-    
+
     if (this.isPositionValid(xPosition)) {
       return xMovement;
     }
-    
+
     // Intentar movimiento solo en el eje Z
     const zMovement = new THREE.Vector3(0, 0, movementVector.z);
     const zPosition = currentPosition.clone().add(zMovement);
-    
+
     if (this.isPositionValid(zPosition)) {
       return zMovement;
     }
-    
+
     // Si ambos ejes tienen colisión, detener el movimiento
     return new THREE.Vector3(0, 0, 0);
   }
@@ -172,12 +301,18 @@ export class FarmerController {
     if (this.corral && this.checkCorralCollision(position)) {
       return false;
     }
-    
+
     // Verificar colisión con el Space Shuttle
     if (this.spaceShuttle && this.checkSpaceShuttleCollision(position)) {
       return false;
     }
-    
+
+    // Verificar colisión con las piedras
+    if (this.stones && this.checkStonesCollision(position)) {
+      return false;
+    }
+
+    // Si no hay colisiones, la posición es válida
     return true;
   }
 
@@ -483,14 +618,22 @@ export class FarmerController {
         this.model.rotation.y -= this.config.rotationSpeed * 2;
       }
     }
+
+    // Actualizar el cartel de coordenadas
+    this.updateCoordinateDisplay();
   }
 
   /**
-   * Limpia los event listeners
+   * Limpia los event listeners y el HUD
    */
   dispose() {
     document.removeEventListener("keydown", this.handleKeyDown);
     document.removeEventListener("keyup", this.handleKeyUp);
+    
+    // Limpiar el HUD de coordenadas
+    if (this.coordinateHUD && this.coordinateHUD.parentNode) {
+      this.coordinateHUD.parentNode.removeChild(this.coordinateHUD);
+    }
   }
 }
 

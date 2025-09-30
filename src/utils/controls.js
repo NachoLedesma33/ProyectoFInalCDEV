@@ -240,4 +240,14 @@ export class ControlsManager {
       this.controls.update();
     }
   }
+
+  /**
+   * Maneja el redimensionamiento de la ventana
+   */
+  handleResize() {
+    // Actualizar OrbitControls si existen
+    if (this.controls) {
+      this.controls.update();
+    }
+  }
 }

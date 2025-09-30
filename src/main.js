@@ -14,6 +14,7 @@ import { FarmerController } from "./utils/FarmerController.js"; // Controlador d
 import { Corral } from "./utils/Corral.js"; // Corral con sistema de colisiones
 import { SpaceShuttle } from "./utils/SpaceShuttle.js"; // Space Shuttle Orbiter
 import { Cow } from "./utils/Cow.js"; // Modelo de vaca
+import { Stone } from "./utils/Stone.js"; // Modelo de piedra
 
 // Variables globales principales de Three.js
 let scene, // Escena 3D que contiene todos los objetos
@@ -43,6 +44,9 @@ let spaceShuttle;
 // Array de vacas en el corral
 let cows = [];
 
+// Array de piedras en el terreno
+let stones = [];
+
 // Configuración de la cámara isométrica
 // La cámara ahora es manejada por el CameraManager en modo isométrico
 
@@ -66,7 +70,7 @@ init().catch(console.error);
  */
 function createCows() {
   console.log("Creando 6 vacas dentro del corral...");
-  
+
   // Posiciones para las 6 vacas dentro del corral
   // El corral está en x: 15, z: 15 con dimensiones 20x20
   // Posiciones distribuidas dentro del corral con buen margen de los bordes
@@ -76,21 +80,95 @@ function createCows() {
     { x: 12, y: 0, z: 18 }, // Posición interior superior izquierda
     { x: 18, y: 0, z: 18 }, // Posición interior superior derecha
     { x: 15, y: 0, z: 10 }, // Posición central inferior
-    { x: 15, y: 0, z: 20 }  // Posición central superior
+    { x: 15, y: 0, z: 20 }, // Posición central superior
   ];
-  
+
   // Crear cada vaca
   cowPositions.forEach((position, index) => {
     const cow = new Cow(scene, position); // La escala se calcula automáticamente para coincidir con el farmer
     cows.push(cow);
     console.log(`Vaca ${index + 1} creada en posición:`, position);
   });
-  
+
   // Hacer las vacas accesibles para depuración
   window.cows = cows;
   console.log("Vacas disponibles como 'window.cows' para depuración");
-  
+
   console.log("✅ 6 vacas creadas exitosamente dentro del corral");
+}
+
+/**
+ * Crear 30 piedras con posiciones y modelos fijos
+ */
+function createStones() {
+  console.log("Creando 30 piedras con posiciones y modelos fijos...");
+
+  // Array con posiciones y modelos fijos para las 30 piedras
+  const stonePositions = [
+    // Zona izquierda (lejos del corral)
+    { x: -150, y: 0.2, z: 150, scale: 0.3, modelType: 1 },
+    { x: -120, y: 0.2, z: 180, scale: 0.4, modelType: 2 },
+    { x: -170, y: 0.2, z: 200, scale: 0.25, modelType: 1 },
+    { x: -140, y: 0.2, z: 120, scale: 0.35, modelType: 2 },
+    { x: -160, y: 0.2, z: 170, scale: 0.45, modelType: 1 },
+    { x: -130, y: 0.2, z: 140, scale: 0.3, modelType: 2 },
+    { x: -180, y: 0.2, z: 160, scale: 0.4, modelType: 1 },
+    { x: -110, y: 0.2, z: 190, scale: 0.35, modelType: 2 },
+
+    // Zona centro (evitando área del corral) - mitad superior
+    { x: -20, y: 0.2, z: 120, scale: 0.3, modelType: 1 },
+    { x: 10, y: 0.2, z: 140, scale: 0.4, modelType: 2 },
+    { x: -30, y: 0.2, z: 160, scale: 0.25, modelType: 1 },
+    { x: 20, y: 0.2, z: 100, scale: 0.35, modelType: 2 },
+    { x: 0, y: 0.2, z: 130, scale: 0.45, modelType: 1 },
+    { x: -10, y: 0.2, z: 150, scale: 0.3, modelType: 2 },
+    { x: 30, y: 0.2, z: 110, scale: 0.4, modelType: 1 },
+    { x: -40, y: 0.2, z: 170, scale: 0.35, modelType: 2 },
+
+    // Zona centro - mitad inferior (más lejos de la nave)
+    { x: -20, y: 0.2, z: -150, scale: 0.3, modelType: 1 },
+    { x: 10, y: 0.2, z: -170, scale: 0.4, modelType: 2 },
+    { x: -30, y: 0.2, z: -130, scale: 0.25, modelType: 1 },
+    { x: 20, y: 0.2, z: -160, scale: 0.35, modelType: 2 },
+    { x: 0, y: 0.2, z: -140, scale: 0.45, modelType: 1 },
+    { x: -10, y: 0.2, z: -180, scale: 0.3, modelType: 2 },
+    { x: 30, y: 0.2, z: -120, scale: 0.4, modelType: 1 },
+    { x: -40, y: 0.2, z: -190, scale: 0.35, modelType: 2 },
+
+    // Zona derecha (lejos del corral)
+    { x: 100, y: 0.2, z: 150, scale: 0.3, modelType: 1 },
+    { x: 130, y: 0.2, z: 180, scale: 0.4, modelType: 2 },
+    { x: 80, y: 0.2, z: 200, scale: 0.25, modelType: 1 },
+    { x: 110, y: 0.2, z: 120, scale: 0.35, modelType: 2 },
+    { x: 90, y: 0.2, z: 170, scale: 0.45, modelType: 1 },
+    { x: 120, y: 0.2, z: 140, scale: 0.3, modelType: 2 },
+  ];
+
+  // Crear cada piedra con sus posiciones y modelos fijos
+  stonePositions.forEach((stoneData, index) => {
+    const stone = new Stone(
+      scene,
+      { x: stoneData.x, y: stoneData.y, z: stoneData.z },
+      stoneData.scale,
+      stoneData.modelType
+    );
+    stones.push(stone);
+    console.log(
+      `Piedra ${index + 1} (ST_Stone${
+        stoneData.modelType
+      }.fbx) creada en posición: (${stoneData.x}, ${stoneData.y}, ${
+        stoneData.z
+      }) con escala ${stoneData.scale}`
+    );
+  });
+
+  // Hacer las piedras accesibles para depuración
+  window.stones = stones;
+  console.log("Piedras disponibles como 'window.stones' para depuración");
+
+  console.log(
+    "✅ 30 piedras creadas exitosamente con posiciones y modelos fijos"
+  );
 }
 
 /**
@@ -218,6 +296,9 @@ async function init() {
   // Crear 4 vacas dentro del corral
   createCows();
 
+  // Crear 30 piedras aleatorias en el terreno
+  createStones();
+
   // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
   controls = cameraManager.getControls();
@@ -299,6 +380,16 @@ async function init() {
           window.corral = corral; // Para depuración del corral
           console.log("Modelo disponible como 'window.farmer' para depuración");
           console.log("Corral disponible como 'window.corral' para depuración");
+
+          // Conectar el farmerController con las piedras para detección de colisiones
+          if (farmerController && stones && stones.length > 0) {
+            farmerController.setStones(stones);
+            console.log("✅ FarmerController conectado con las piedras para detección de colisiones");
+          } else {
+            console.warn("⚠️ No se pudo conectar el farmerController con las piedras");
+            console.warn("farmerController:", farmerController);
+            console.warn("stones:", stones);
+          }
 
           // Mostrar las animaciones disponibles en consola
           const availableAnims = Object.keys(instance.actions);
@@ -438,8 +529,13 @@ function animate(currentTime = 0) {
     }
 
     // Actualizar las vacas
-    cows.forEach(cow => {
+    cows.forEach((cow) => {
       cow.update(delta);
+    });
+
+    // Actualizar las piedras
+    stones.forEach((stone) => {
+      stone.update(delta);
     });
 
     // Actualizar el terreno
