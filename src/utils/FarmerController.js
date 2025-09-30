@@ -30,7 +30,7 @@ export class FarmerController {
 
     // Referencia al corral para detección de colisiones
     this.corral = null;
-    
+
     // Referencia al Space Shuttle para detección de colisiones
     this.spaceShuttle = null;
 
@@ -115,18 +115,70 @@ export class FarmerController {
 
     // Verificar colisión con el corral
     if (this.corral && this.checkCorralCollision(newPosition)) {
-      // Hay colisión con el corral, intentar ajustar el movimiento
-      const adjustedMovement = this.corral.getAdjustedMovement(currentPosition, movementVector);
+      // Hay colisión con el corral, intentar deslizamiento suave
+      const adjustedMovement = this.getSlidingMovement(currentPosition, movementVector);
+      
+      // Si el deslizamiento no funciona, usar el sistema del corral como fallback
+      if (adjustedMovement.length() === 0) {
+        return this.corral.getAdjustedMovement(currentPosition, movementVector);
+      }
+      
       return adjustedMovement;
     }
 
     // Verificar colisión con el Space Shuttle
     if (this.spaceShuttle && this.checkSpaceShuttleCollision(newPosition)) {
-      // Hay colisión con el Space Shuttle, detener el movimiento
-      return new THREE.Vector3(0, 0, 0);
+      // Hay colisión con el Space Shuttle, intentar deslizamiento suave
+      return this.getSlidingMovement(currentPosition, movementVector);
     }
 
     return movementVector;
+  }
+
+  /**
+   * Obtiene un movimiento de deslizamiento suave cuando hay colisión
+   * @param {THREE.Vector3} currentPosition - Posición actual
+   * @param {THREE.Vector3} movementVector - Vector de movimiento original
+   * @returns {THREE.Vector3} - Vector de movimiento ajustado para deslizamiento
+   */
+  getSlidingMovement(currentPosition, movementVector) {
+    // Intentar movimiento solo en el eje X
+    const xMovement = new THREE.Vector3(movementVector.x, 0, 0);
+    const xPosition = currentPosition.clone().add(xMovement);
+    
+    if (this.isPositionValid(xPosition)) {
+      return xMovement;
+    }
+    
+    // Intentar movimiento solo en el eje Z
+    const zMovement = new THREE.Vector3(0, 0, movementVector.z);
+    const zPosition = currentPosition.clone().add(zMovement);
+    
+    if (this.isPositionValid(zPosition)) {
+      return zMovement;
+    }
+    
+    // Si ambos ejes tienen colisión, detener el movimiento
+    return new THREE.Vector3(0, 0, 0);
+  }
+
+  /**
+   * Verifica si una posición es válida (sin colisiones)
+   * @param {THREE.Vector3} position - Posición a verificar
+   * @returns {boolean} - True si la posición es válida
+   */
+  isPositionValid(position) {
+    // Verificar colisión con el corral
+    if (this.corral && this.checkCorralCollision(position)) {
+      return false;
+    }
+    
+    // Verificar colisión con el Space Shuttle
+    if (this.spaceShuttle && this.checkSpaceShuttleCollision(position)) {
+      return false;
+    }
+    
+    return true;
   }
 
   /**

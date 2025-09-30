@@ -80,6 +80,27 @@ export class ModelLoader {
 
     // Asegurar que el modelo esté orientado correctamente
     this.model.rotation.set(0, 0, 0);
+    
+    // Configurar sombras para el modelo del farmer
+    this.model.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        
+        // Optimizar materiales
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(mat => {
+              if (mat) {
+                mat.needsUpdate = true;
+              }
+            });
+          } else {
+            child.material.needsUpdate = true;
+          }
+        }
+      }
+    });
   }
 
   async loadAnimations(animationConfig) {
