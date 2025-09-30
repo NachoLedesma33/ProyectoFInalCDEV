@@ -311,9 +311,9 @@ async function init() {
     console.log("Sistema de sombras configurado");
   }
 
-  // Obtener la configuración del personaje granjero
-  const farmerConfig = modelConfig.characters.farmer;
-  console.log("Configuración del personaje cargada:", farmerConfig);
+  // Obtener la configuración del personaje granjero2
+  const farmerConfig = modelConfig.characters.farmer2;
+  console.log("Configuración del personaje Granjero2 cargada:", farmerConfig);
 
   // Preparar las rutas de las animaciones
   // Creamos un objeto que mapea nombres de animación a sus rutas completas
@@ -399,7 +399,8 @@ async function init() {
             console.warn("⚠️ No se encontraron animaciones para este modelo");
           }
         }
-      }
+      },
+      farmerConfig // Pasar la configuración completa del modelo
     );
   } catch (error) {
     console.error("Error al cargar el modelo o animaciones:", error);

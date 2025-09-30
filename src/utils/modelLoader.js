@@ -12,10 +12,14 @@ export class ModelLoader {
     this.activeAction = null;
     this.animationLoader = new FBXLoader();
     this.modelLoader = new FBXLoader();
+    this.config = null; // Almacenar la configuración del modelo
   }
 
-  async load(modelPath, animationConfig = {}, onLoad) {
+  async load(modelPath, animationConfig = {}, onLoad, config = null) {
     try {
+      // Establecer la configuración del modelo
+      this.config = config;
+      
       // Cargar el modelo principal
       const model = await this.loadModel(modelPath);
       this.model = model;
@@ -59,15 +63,34 @@ export class ModelLoader {
     });
   }
 
+  /**
+   * Establece la configuración del modelo
+   * @param {Object} config - Configuración del modelo
+   */
+  setConfig(config) {
+    this.config = config;
+  }
+
   setupModel() {
     // Calcular el bounding box para obtener las dimensiones
     const box = new THREE.Box3().setFromObject(this.model);
     const size = new THREE.Vector3();
     box.getSize(size);
 
-    // Calcular la escala para que el modelo tenga una altura de 1.8 unidades
-    const targetHeight = 1.8;
-    const scaleFactor = targetHeight / size.y;
+    // Usar la configuración si está disponible
+    let targetHeight = 1.8; // Valor por defecto
+    let customScale = 1.0; // Valor por defecto
+    
+    if (this.config && this.config.settings) {
+      targetHeight = this.config.settings.height || 1.8;
+    }
+    
+    if (this.config && this.config.scale) {
+      customScale = this.config.scale;
+    }
+    
+    // Calcular la escala para que el modelo tenga la altura deseada
+    const scaleFactor = (targetHeight / size.y) * customScale;
     this.model.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
     // Recalcular el bounding box después de escalar

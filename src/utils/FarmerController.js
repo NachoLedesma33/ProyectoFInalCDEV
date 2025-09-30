@@ -404,13 +404,30 @@ export class FarmerController {
     }
 
     // Determinar la animación basada en la dirección del movimiento
-    if (this.keys.w || this.keys.ArrowUp) {
+    
+    // Movimiento diagonal adelante-izquierda (W + A)
+    if ((this.keys.w || this.keys.ArrowUp) && (this.keys.a || this.keys.ArrowLeft)) {
+      const shouldInvertControls = this.isFacingCamera();
+      const animation = shouldInvertControls ? "diagonalForwardRight" : "diagonalForwardLeft";
+      this.modelLoader.play(animation, 0.1);
+    } 
+    // Movimiento diagonal adelante-derecha (W + D)
+    else if ((this.keys.w || this.keys.ArrowUp) && (this.keys.d || this.keys.ArrowRight)) {
+      const shouldInvertControls = this.isFacingCamera();
+      const animation = shouldInvertControls ? "diagonalForwardLeft" : "diagonalForwardRight";
+      this.modelLoader.play(animation, 0.1);
+    }
+    // Movimiento hacia adelante
+    else if (this.keys.w || this.keys.ArrowUp) {
       this.modelLoader.play(isRunning ? "run" : "walk", 0.1);
-    } else if (this.keys.s || this.keys.ArrowDown) {
+    } 
+    // Movimiento hacia atrás (rotación 180)
+    else if (this.keys.s || this.keys.ArrowDown) {
       // Iniciar rotación de 180 grados
       this.start180Rotation();
-    } else {
-      // Movimiento lateral - invertir animaciones según orientación a la cámara
+    } 
+    // Movimiento lateral - invertir animaciones según orientación a la cámara
+    else {
       const shouldInvertControls = this.isFacingCamera();
 
       if (
