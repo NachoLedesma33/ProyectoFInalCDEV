@@ -118,7 +118,15 @@ function createStones() {
     { x: -130, y: 0.2, z: 140, scale: 0.3, modelType: 2 },
     { x: -180, y: 0.2, z: 160, scale: 0.4, modelType: 1 },
     { x: -110, y: 0.2, z: 190, scale: 0.35, modelType: 2 },
-
+    
+    // Piedra adicional solicitada
+    { x: -112.0, y: 0.0, z: 14.3, scale: 0.35, modelType: 1 },
+    { x: -164.1, y: 0.0, z: -29.7, scale: 0.3, modelType: 1 },
+    { x: -210, y: 0.0, z: 80.2, scale: 0.35, modelType: 2 },
+    
+    // Piedra adicional 3 solicitada
+    { x: -101.3, y: 0.0, z: -192.5, scale: 0.35, modelType: 1 },
+    
     // Zona centro (evitando área del corral) - mitad superior
     { x: -20, y: 0.2, z: 120, scale: 0.3, modelType: 1 },
     { x: 10, y: 0.2, z: 140, scale: 0.4, modelType: 2 },
