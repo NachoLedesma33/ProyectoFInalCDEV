@@ -11,7 +11,25 @@ export class Cow {
     this.heightOffset = (Math.random() - 0.5) * 0.1; // Variación de -0.05 a +0.05
 
     // Generar una pequeña variación de rotación para orientación diversa
-    this.rotationOffset = Math.random() * Math.PI * 2; // Rotación aleatoria completa
+    this.rotationOffset = Math.random() * Math.PI * 2; // Rotación aleatoria completo
+
+    // Propiedades para animación
+    this.animationTime = Math.random() * Math.PI * 2; // Tiempo de animación aleatorio para desincronizar
+    this.bobAmount = 0.05; // Cantidad de balanceo vertical
+    this.bobSpeed = 1.5; // Velocidad de balanceo
+    this.breatheAmount = 0.02; // Cantidad de respiración (escala)
+    this.breatheSpeed = 2.0; // Velocidad de respiración
+    this.headBobAmount = 0.03; // Balanceo de cabeza
+    this.headBobSpeed = 1.8; // Velocidad de balanceo de cabeza
+    
+    // Propiedades para movimiento aleatorio
+    this.moveTimer = 0; // Tiempo acumulado para el movimiento
+    this.nextMoveTime = Math.random() * 10 + 5; // Próximo movimiento en 5-15 segundos
+    this.isMoving = false; // Si está en movimiento actualmente
+    this.moveDuration = 0; // Duración del movimiento actual
+    this.moveDirection = new THREE.Vector3(); // Dirección del movimiento
+    this.moveSpeed = 0.02; // Velocidad de movimiento (centímetros por segundo)
+    this.originalPosition = new THREE.Vector3(); // Posición original antes del movimiento
 
     this.init();
   }
@@ -105,16 +123,100 @@ export class Cow {
       }
     });
 
-    // Las vacas están quietas, no se reproducen animaciones
-    // Eliminamos cualquier animación existente para asegurar que estén estáticas
-    if (this.model.animations) {
-      this.model.animations = [];
+    // Guardar la posición original para las animaciones
+    this.originalY = this.model.position.y;
+    this.originalScale = this.model.scale.clone();
+    this.originalPosition.copy(this.model.position);
+    
+    // Buscar el grupo de cabeza para animación específica
+    this.headGroup = null;
+    this.model.traverse((child) => {
+      if (child.isMesh && (child.name.toLowerCase().includes('head') || child.name.toLowerCase().includes('cabeza'))) {
+        this.headGroup = child;
+      }
+    });
+    
+    // Si no se encuentra la cabeza por nombre, usar el primer mesh que podría ser la cabeza
+    if (!this.headGroup) {
+      this.model.traverse((child) => {
+        if (child.isMesh && child.position.y > this.model.position.y + 0.5) {
+          this.headGroup = child;
+        }
+      });
     }
+  }
+  
+  // Iniciar un movimiento aleatorio
+  startRandomMovement() {
+    this.isMoving = true;
+    this.moveDuration = Math.random() * 3 + 1; // Mover durante 1-4 segundos
+    
+    // Generar dirección aleatoria en el plano XZ
+    const angle = Math.random() * Math.PI * 2;
+    this.moveDirection.set(
+      Math.cos(angle),
+      0,
+      Math.sin(angle)
+    );
+    
+    // Guardar la posición actual como punto de inicio del movimiento
+    this.moveStartPosition = this.model.position.clone();
+  }
+  
+  // Detener el movimiento y regresar a la posición original
+  stopMovement() {
+    this.isMoving = false;
+    this.moveTimer = 0;
+    this.nextMoveTime = Math.random() * 15 + 10; // Próximo movimiento en 10-25 segundos
+    
+    // Regresar suavemente a la posición original
+    this.model.position.copy(this.originalPosition);
   }
 
   update(delta) {
-    // Las vacas están quietas, no se necesitan actualizaciones de animación
-    // Este método se mantiene para compatibilidad con el bucle principal
+    if (!this.model) return;
+    
+    // Actualizar el tiempo de animación
+    this.animationTime += delta;
+    
+    // Lógica de movimiento aleatorio
+    this.moveTimer += delta;
+    
+    if (!this.isMoving) {
+      // Esperar el tiempo aleatorio para el próximo movimiento
+      if (this.moveTimer >= this.nextMoveTime) {
+        this.startRandomMovement();
+      }
+    } else {
+      // Realizar movimiento durante la duración especificada
+      if (this.moveTimer >= this.moveDuration) {
+        this.stopMovement();
+      } else {
+        // Mover centímetros en la dirección aleatoria
+        const moveDistance = this.moveSpeed * delta;
+        this.model.position.add(
+          this.moveDirection.clone().multiplyScalar(moveDistance)
+        );
+      }
+    }
+    
+    // Animación de balanceo vertical (simulando movimiento natural)
+    const bobOffset = Math.sin(this.animationTime * this.bobSpeed) * this.bobAmount;
+    this.model.position.y = this.originalY + bobOffset;
+    
+    // Animación de respiración (cambio sutil de escala)
+    const breatheScale = 1 + Math.sin(this.animationTime * this.breatheSpeed) * this.breatheAmount;
+    this.model.scale.copy(this.originalScale).multiplyScalar(breatheScale);
+    
+    // Animación de cabeza (si se encontró el grupo de cabeza)
+    if (this.headGroup) {
+      const headBob = Math.sin(this.animationTime * this.headBobSpeed + Math.PI / 4) * this.headBobAmount;
+      this.headGroup.rotation.x = headBob;
+      
+      // Pequeño movimiento de cabeza de lado a lado
+      const headSway = Math.sin(this.animationTime * this.headBobSpeed * 0.7) * this.headBobAmount * 0.5;
+      this.headGroup.rotation.z = headSway;
+    }
   }
 
   // Obtener referencia al modelo
