@@ -15,6 +15,7 @@ import { Corral } from "./utils/Corral.js"; // Corral con sistema de colisiones
 import { SpaceShuttle } from "./utils/SpaceShuttle.js"; // Space Shuttle Orbiter
 import { Cow } from "./utils/Cow.js"; // Modelo de vaca
 import { Stone } from "./utils/Stone.js"; // Modelo de piedra
+import { House } from "./utils/House.js"; // Casa con puerta interactiva
 
 // Variables globales principales de Three.js
 let scene, // Escena 3D que contiene todos los objetos
@@ -46,6 +47,9 @@ let cows = [];
 
 // Array de piedras en el terreno
 let stones = [];
+
+// Instancia de la casa
+let house;
 
 // Configuración de la cámara isométrica
 // La cámara ahora es manejada por el CameraManager en modo isométrico
@@ -169,6 +173,28 @@ function createStones() {
   console.log(
     "✅ 30 piedras creadas exitosamente con posiciones y modelos fijos"
   );
+}
+
+/**
+ * Crear la casa con textura de piedra y puerta interactiva
+ */
+function createHouse() {
+  console.log("Creando casa con puerta interactiva...");
+
+  // Crear la casa en las coordenadas especificadas
+  house = new House(
+    scene,
+    { x: -23.5, y: 0.0, z: -5.0 }, // Posición ajustada para mejor orientación de la puerta
+    { width: 20, height: 8, depth: 15 } // Tamaño rectangular más ancho y profundo
+  );
+
+  // La conexión con el farmerController se hará después de que se cree el controlador
+
+  // Hacer la casa accesible desde la consola para depuración
+  window.house = house;
+  console.log("Casa disponible como 'window.house' para depuración");
+
+  console.log("✅ Casa creada exitosamente con textura de piedra y puerta interactiva");
 }
 
 /**
@@ -299,6 +325,9 @@ async function init() {
   // Crear 30 piedras aleatorias en el terreno
   createStones();
 
+  // Crear la casa con puerta interactiva
+  createHouse();
+
   // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
   controls = cameraManager.getControls();
@@ -389,6 +418,16 @@ async function init() {
             console.warn("⚠️ No se pudo conectar el farmerController con las piedras");
             console.warn("farmerController:", farmerController);
             console.warn("stones:", stones);
+          }
+
+          // Conectar el farmerController con la casa para detección de colisiones
+          if (farmerController && house) {
+            farmerController.setHouse(house);
+            console.log("✅ FarmerController conectado con la casa para detección de colisiones");
+          } else {
+            console.warn("⚠️ No se pudo conectar el farmerController con la casa");
+            console.warn("farmerController:", farmerController);
+            console.warn("house:", house);
           }
 
           // Mostrar las animaciones disponibles en consola
@@ -522,6 +561,11 @@ function animate(currentTime = 0) {
     // Actualizar el corral (para animaciones de puerta, etc.)
     if (corral && farmerController && farmerController.model) {
       corral.update(delta, farmerController.model.position);
+    }
+
+    // Actualizar la casa (para animaciones de puerta, etc.)
+    if (house && farmerController && farmerController.model) {
+      house.update(delta, farmerController.model.position);
     }
 
     // Actualizar el Space Shuttle Orbiter

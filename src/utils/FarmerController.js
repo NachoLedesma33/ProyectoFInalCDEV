@@ -37,6 +37,9 @@ export class FarmerController {
     // Referencia a las piedras para detección de colisiones
     this.stones = null;
 
+    // Referencia a la casa para detección de colisiones
+    this.house = null;
+
     // Estado de las teclas
     this.keys = {
       w: false,
@@ -166,6 +169,29 @@ export class FarmerController {
   }
 
   /**
+   * Establece la referencia a la casa para detección de colisiones
+   * @param {House} house - Instancia de la casa
+   */
+  setHouse(house) {
+    if (!house) {
+      console.warn("⚠️ No se proporcionó una casa válida");
+      return;
+    }
+    
+    this.house = house;
+    
+    // Verificar que la casa tenga el método de colisión
+    const hasCheckCollision = typeof house.checkCollision === 'function';
+    if (!hasCheckCollision) {
+      console.warn("⚠️ La casa no tiene método checkCollision:", house);
+      this.house = null;
+      return;
+    }
+    
+    console.log("✅ Casa conectada al farmerController para detección de colisiones");
+  }
+
+  /**
    * Verifica si el personaje colisiona con el corral
    * @param {THREE.Vector3} newPosition - Nueva posición a verificar
    * @returns {boolean} - True si hay colisión
@@ -223,7 +249,34 @@ export class FarmerController {
   }
 
   /**
-   * Obtiene la posición de colisión más cercana y ajusta el movimiento
+   * Verifica si el personaje colisiona con la casa
+   * @param {THREE.Vector3} newPosition - Nueva posición a verificar
+   * @returns {boolean} - True si hay colisión con la casa
+   */
+  checkHouseCollision(newPosition) {
+    if (!this.house || !this.model) return false;
+
+    // Tamaño del bounding box del farmer para detección de colisiones
+    const characterSize = new THREE.Vector3(2, 2, 2);
+
+    // Crear una caja de colisión temporal para el personaje en la nueva posición
+    const characterBox = new THREE.Box3().setFromCenterAndSize(
+      newPosition,
+      characterSize
+    );
+
+    // Verificar colisión con la casa
+    const collision = this.house.checkCollision(characterBox);
+    if (collision) {
+      console.log("Colisión detectada con la casa en posición:", newPosition);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Obtiene el movimiento ajustado para evitar colisiones más cercana y ajusta el movimiento
    * @param {THREE.Vector3} currentPosition - Posición actual
    * @param {THREE.Vector3} movementVector - Vector de movimiento
    * @returns {THREE.Vector3} - Vector de movimiento ajustado
@@ -257,6 +310,12 @@ export class FarmerController {
     // Verificar colisión con las piedras
     if (this.stones && this.checkStonesCollision(newPosition)) {
       // Hay colisión con las piedras, intentar deslizamiento suave
+      return this.getSlidingMovement(currentPosition, movementVector);
+    }
+
+    // Verificar colisión con la casa
+    if (this.house && this.checkHouseCollision(newPosition)) {
+      // Hay colisión con la casa, intentar deslizamiento suave
       return this.getSlidingMovement(currentPosition, movementVector);
     }
 
@@ -309,6 +368,11 @@ export class FarmerController {
 
     // Verificar colisión con las piedras
     if (this.stones && this.checkStonesCollision(position)) {
+      return false;
+    }
+
+    // Verificar colisión con la casa
+    if (this.house && this.checkHouseCollision(position)) {
       return false;
     }
 
