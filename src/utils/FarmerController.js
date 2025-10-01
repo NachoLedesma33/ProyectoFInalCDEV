@@ -58,6 +58,12 @@ export class FarmerController {
     this.targetRotation = null;
     this.rotationSpeed = Math.PI; // 180 grados por segundo
 
+    // Tamaño unificado del bounding box del personaje para todas las colisiones
+    this.characterSize = new THREE.Vector3(1, 1, 1);
+    
+    // Tamaño específico para colisiones con piedras (más pequeño para permitir acercarse más)
+    this.stoneCollisionSize = new THREE.Vector3(0.5, 0.5, 0.5);
+
     // Inicializar el controlador
     this.setupEventListeners();
 
@@ -200,10 +206,9 @@ export class FarmerController {
     if (!this.corral || !this.model) return false;
 
     // Crear una caja de colisión temporal para el personaje en la nueva posición
-    const characterSize = new THREE.Vector3(1, 2, 1); // Tamaño aproximado del personaje
     const characterBox = new THREE.Box3().setFromCenterAndSize(
       newPosition,
-      characterSize
+      this.characterSize
     );
 
     // Verificar colisión con el corral
@@ -219,11 +224,8 @@ export class FarmerController {
   checkSpaceShuttleCollision(newPosition) {
     if (!this.spaceShuttle || !this.model) return false;
     
-    // Tamaño del bounding box del farmer para detección de colisiones
-    const characterSize = new THREE.Vector3(2, 2, 2);
-    
     // Verificar colisión con el Space Shuttle
-    return this.spaceShuttle.checkCollision(newPosition, characterSize);
+    return this.spaceShuttle.checkCollision(newPosition, this.characterSize);
   }
 
   /**
@@ -234,18 +236,65 @@ export class FarmerController {
   checkStonesCollision(position) {
     if (!this.stones || !this.model) return false;
     
-    // Tamaño del bounding box del farmer para detección de colisiones
-    const characterSize = new THREE.Vector3(4, 4, 4);
+    // Usar el tamaño específico para colisiones con piedras (más pequeño)
+    const stoneCharacterSize = this.stoneCollisionSize;
     
     // Verificar colisión con cada piedra
     for (const stone of this.stones) {
-      if (stone.checkCollision(position, characterSize)) {
-        console.log(" Colisión detectada con piedra en posición:", position);
-        return true;
+      if (stone.checkCollision(position, stoneCharacterSize)) {
+        console.log("🚫 Colisión con piedra detectada usando tamaño específico:", {
+          position: position,
+          stoneCharacterSize: stoneCharacterSize,
+          stonePosition: stone.model ? stone.model.position : "No disponible"
+        });
+        return true; // Hay colisión con al menos una piedra
       }
     }
+    return false; // No hay colisión con ninguna piedra
+  }
+
+  /**
+   * Obtiene el movimiento ajustado específicamente para colisiones con piedras
+   * Permite acercamiento más cercano y deslizamiento suave
+   * @param {THREE.Vector3} currentPosition - Posición actual
+   * @param {THREE.Vector3} movementVector - Vector de movimiento original
+   * @returns {THREE.Vector3} - Vector de movimiento ajustado para piedras
+   */
+  getStoneAdjustedMovement(currentPosition, movementVector) {
+    // Primero verificar si hay colisión con el movimiento completo
+    const newPosition = currentPosition.clone().add(movementVector);
     
-    return false;
+    if (!this.checkStonesCollision(newPosition)) {
+      return movementVector; // No hay colisión, permitir movimiento completo
+    }
+    
+    // Si hay colisión, intentar deslizamiento suave
+    // Intentar movimiento solo en X
+    const xMovement = new THREE.Vector3(movementVector.x, 0, 0);
+    const xPosition = currentPosition.clone().add(xMovement);
+    
+    if (!this.checkStonesCollision(xPosition)) {
+      return xMovement; // Permitir movimiento solo en X
+    }
+    
+    // Intentar movimiento solo en Z
+    const zMovement = new THREE.Vector3(0, 0, movementVector.z);
+    const zPosition = currentPosition.clone().add(zMovement);
+    
+    if (!this.checkStonesCollision(zPosition)) {
+      return zMovement; // Permitir movimiento solo en Z
+    }
+    
+    // Si tampoco funciona, intentar movimiento reducido
+    const reducedMovement = movementVector.clone().multiplyScalar(0.5);
+    const reducedPosition = currentPosition.clone().add(reducedMovement);
+    
+    if (!this.checkStonesCollision(reducedPosition)) {
+      return reducedMovement; // Permitir movimiento reducido
+    }
+    
+    // Si todo falla, detener movimiento completamente
+    return new THREE.Vector3(0, 0, 0);
   }
 
   /**
@@ -256,13 +305,10 @@ export class FarmerController {
   checkHouseCollision(newPosition) {
     if (!this.house || !this.model) return false;
 
-    // Tamaño del bounding box del farmer para detección de colisiones
-    const characterSize = new THREE.Vector3(2, 2, 2);
-
     // Crear una caja de colisión temporal para el personaje en la nueva posición
     const characterBox = new THREE.Box3().setFromCenterAndSize(
       newPosition,
-      characterSize
+      this.characterSize
     );
 
     // Verificar colisión con la casa
@@ -309,8 +355,16 @@ export class FarmerController {
 
     // Verificar colisión con las piedras
     if (this.stones && this.checkStonesCollision(newPosition)) {
-      // Hay colisión con las piedras, intentar deslizamiento suave
-      return this.getSlidingMovement(currentPosition, movementVector);
+      // Hay colisión con las piedras, usar el método específico para piedras
+      // que permite acercamiento más cercano y deslizamiento suave
+      const stoneAdjustedMovement = this.getStoneAdjustedMovement(currentPosition, movementVector);
+      
+      // Si el ajuste específico para piedras no funciona, intentar deslizamiento general
+      if (stoneAdjustedMovement.length() === 0) {
+        return this.getSlidingMovement(currentPosition, movementVector);
+      }
+      
+      return stoneAdjustedMovement;
     }
 
     // Verificar colisión con la casa
