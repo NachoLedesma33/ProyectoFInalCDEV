@@ -124,6 +124,7 @@ function createStones() {
     { x: -164.1, y: 0.0, z: -29.7, scale: 0.3, modelType: 1 },
     { x: -231.6, y: 0.0, z: 237.8, scale: 0.2, modelType: 1},
     { x: -210, y: 0.0, z: 80.2, scale: 0.35, modelType: 2 },
+    { x: -225.0, y: 0.0, z: -61.1, scale: 0.35, modelType: 1},
     
     // Piedra adicional 3 solicitada
     { x: -101.3, y: 0.0, z: -192.5, scale: 0.35, modelType: 1 },
