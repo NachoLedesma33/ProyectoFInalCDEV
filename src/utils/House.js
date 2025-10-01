@@ -19,10 +19,6 @@ export class House {
     this.detectionDistance = 4.0; // Distancia de detección del farmer (aumentada)
     this.autoCloseDelay = 5000; // 5 segundos para autocierre
     this.autoCloseTimers = new Map(); // Timers para cada puerta
-    
-    // Propiedades para optimización de rendimiento
-    this.lastFarmerPosition = null;
-    this.lastInteractionCheck = 0;
 
     this.createHouse();
   }
@@ -355,7 +351,6 @@ export class House {
     this.scene.add(doorGroup);
     // No añadir la puerta móvil a las paredes para colisiones, ya que se maneja por separado
 
-    console.log("Puerta principal de la casa creada");
 
     // Añadir caja de colisión inicial para la puerta cerrada
     this.updateSingleGateCollisionBox(gateData);
@@ -407,7 +402,6 @@ export class House {
     // Eliminar la colisión de la puerta
     this.updateSingleGateCollisionBox(gateData);
 
-    console.log(`Puerta ${gateData.side} de la casa abierta`);
 
     // Configurar autocierre
     this.scheduleAutoClose(gateData);
@@ -423,7 +417,6 @@ export class House {
     gateData.open = false;
     gateData.targetRotation = 0;
 
-    console.log(`Puerta ${gateData.side} de la casa cerrada`);
   }
 
   /**
@@ -530,27 +523,6 @@ export class House {
     if (this.gates.length === 0) {
       return;
     }
-
-    // Solo verificar interacción si el farmer se ha movido significativamente
-    // o si ha pasado suficiente tiempo desde la última verificación
-    const currentTime = Date.now();
-    const timeSinceLastCheck = currentTime - (this.lastInteractionCheck || 0);
-    
-    // Verificar cada 100ms como máximo para no afectar rendimiento
-    if (timeSinceLastCheck < 100) {
-      return;
-    }
-    
-    // Guardar la última posición verificada para comparar
-    const hasMoved = !this.lastFarmerPosition || 
-      farmerPosition.distanceTo(this.lastFarmerPosition) > 0.5;
-    
-    if (!hasMoved) {
-      return;
-    }
-    
-    this.lastFarmerPosition = farmerPosition.clone();
-    this.lastInteractionCheck = currentTime;
     
     this.gates.forEach((gateData) => {
       const distance = farmerPosition.distanceTo(gateData.mesh.position);
