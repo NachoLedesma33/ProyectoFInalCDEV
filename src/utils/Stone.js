@@ -66,13 +66,13 @@ export class Stone {
           }
         });
 
-        // Cargar la textura de roca para las piedras
+        // Cargar la textura de roca de lecho de río seco para las piedras
         const textureLoader = new THREE.TextureLoader();
         textureLoader.load(
-          "./src/assets/rock_face_diff_4k.jpg",
+          "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/dry_riverbed_rock/dry_riverbed_rock_diff_4k.jpg",
           (texture) => {
             console.log(
-              `✅ Textura rock_face_diff_4k.jpg cargada para piedra en (${this.position.x}, ${this.position.z})`
+              `✅ Textura dry_riverbed_rock_diff_4k.jpg cargada para piedra en (${this.position.x}, ${this.position.z})`
             );
             this.model.traverse((child) => {
               if (child.isMesh) {
@@ -91,7 +91,7 @@ export class Stone {
           undefined,
           (error) => {
             console.warn(
-              `No se pudo cargar la textura rock_face_diff_4k.jpg para la piedra en (${this.position.x}, ${this.position.z}):`,
+              `No se pudo cargar la textura dry_riverbed_rock_diff_4k.jpg para la piedra en (${this.position.x}, ${this.position.z}):`,
               error
             );
             // Usar material alternativo de piedra

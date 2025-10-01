@@ -34,9 +34,9 @@ export class House {
     const textureLoader = new THREE.TextureLoader();
     
     textureLoader.load(
-      "./src/assets/rock_face_diff_4k.jpg",
+      "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/coral_gravel/coral_gravel_diff_4k.jpg",
       (texture) => {
-        console.log("✅ Textura de piedra cargada para la casa");
+        console.log("✅ Textura de grava de coral cargada para la casa");
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(2, 2); // Repetir la textura para mejor cobertura
@@ -56,11 +56,12 @@ export class House {
           roughness: 0.8
         });
 
-        // Material para el techo (marrón oscuro)
+        // Material para el techo (misma textura de grava de coral)
         const roofMaterial = new THREE.MeshStandardMaterial({
-          color: 0x654321, // Marrón oscuro
+          map: texture.clone(),
           metalness: 0.05,
-          roughness: 0.9
+          roughness: 0.95,
+          color: 0xffffff
         });
 
         // Crear las paredes de la casa
@@ -69,14 +70,14 @@ export class House {
         // Crear el techo
         this.createRoof(roofMaterial);
         
-        // Crear la puerta principal
-        this.createDoor(brownMaterial);
+        // Crear la puerta principal con la misma textura de piedra
+        this.createDoor(stoneMaterial);
         
         console.log("Casa creada con sistema de colisiones y puerta interactiva");
       },
       undefined,
       (error) => {
-        console.warn("No se pudo cargar la textura de piedra, usando materiales alternativos:", error);
+        console.warn("No se pudo cargar la textura de grava de coral, usando materiales alternativos:", error);
         // Usar materiales alternativos si la textura no carga
         this.createHouseWithAlternativeMaterials();
       }
@@ -100,14 +101,14 @@ export class House {
     });
 
     const roofMaterial = new THREE.MeshStandardMaterial({
-      color: 0x654321, // Marrón oscuro
+      color: 0x808080, // Gris piedra (igual que las paredes)
       metalness: 0.05,
-      roughness: 0.9
+      roughness: 0.95
     });
 
     this.createWalls(stoneMaterial, brownMaterial);
     this.createRoof(roofMaterial);
-    this.createDoor(brownMaterial);
+    this.createDoor(stoneMaterial);
     
     console.log("Casa creada con materiales alternativos");
   }
