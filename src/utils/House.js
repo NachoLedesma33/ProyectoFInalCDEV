@@ -19,6 +19,10 @@ export class House {
     this.detectionDistance = 4.0; // Distancia de detección del farmer (aumentada)
     this.autoCloseDelay = 5000; // 5 segundos para autocierre
     this.autoCloseTimers = new Map(); // Timers para cada puerta
+    
+    // Propiedades para optimización de rendimiento
+    this.lastFarmerPosition = null;
+    this.lastInteractionCheck = 0;
 
     this.createHouse();
   }
@@ -386,7 +390,6 @@ export class House {
    */
   isFarmerNearGate(farmerPosition, gateData) {
     const distance = farmerPosition.distanceTo(gateData.mesh.position);
-    console.log(`Verificando distancia a puerta: ${distance.toFixed(2)} (máxima: ${this.detectionDistance})`);
     return distance <= this.detectionDistance;
   }
 
@@ -525,28 +528,38 @@ export class House {
    */
   handleFarmerInteraction(farmerPosition) {
     if (this.gates.length === 0) {
-      console.warn("No hay puertas disponibles para interacción");
       return;
     }
 
-    console.log(`Verificando interacción con ${this.gates.length} puertas. Posición farmer:`, farmerPosition);
+    // Solo verificar interacción si el farmer se ha movido significativamente
+    // o si ha pasado suficiente tiempo desde la última verificación
+    const currentTime = Date.now();
+    const timeSinceLastCheck = currentTime - (this.lastInteractionCheck || 0);
+    
+    // Verificar cada 100ms como máximo para no afectar rendimiento
+    if (timeSinceLastCheck < 100) {
+      return;
+    }
+    
+    // Guardar la última posición verificada para comparar
+    const hasMoved = !this.lastFarmerPosition || 
+      farmerPosition.distanceTo(this.lastFarmerPosition) > 0.5;
+    
+    if (!hasMoved) {
+      return;
+    }
+    
+    this.lastFarmerPosition = farmerPosition.clone();
+    this.lastInteractionCheck = currentTime;
     
     this.gates.forEach((gateData) => {
       const distance = farmerPosition.distanceTo(gateData.mesh.position);
-      console.log(`Puerta ${gateData.side} - Distancia: ${distance.toFixed(2)}, Abierta: ${gateData.open}`);
       
       if (this.isFarmerNearGate(farmerPosition, gateData)) {
-        console.log(
-          `✅ Farmer cerca de puerta ${
-            gateData.side
-          }. Distancia: ${distance.toFixed(2)}`
-        );
         if (!gateData.open) {
-          console.log(`🚪 Abriendo puerta ${gateData.side}`);
           this.openSingleGate(gateData);
         } else {
           // Si el farmer está cerca y la puerta está abierta, reiniciar autocierre
-          console.log(`🔄 Reiniciando autocierre de puerta ${gateData.side}`);
           this.resetAutoClose(gateData);
         }
       }
