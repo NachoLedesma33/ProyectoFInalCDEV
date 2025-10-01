@@ -248,7 +248,7 @@ export class Corral {
       gateX = this.position.x + width / 2 - gateWidth / 2;
       gateZ = this.position.z - depth / 2 - gateThickness / 2;
     }
-    gateGroup.position.set(gateX, this.position.y, gateZ);
+    gateGroup.position.set(gateX, this.position.y + 1, gateZ);
 
     // Configurar el punto de rotación (bisagras)
     const pivotX = side === "left" ? gateWidth / 2 : -gateWidth / 2;
