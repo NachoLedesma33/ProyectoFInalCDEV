@@ -118,17 +118,17 @@ function createStones() {
     { x: -130, y: 0.2, z: 140, scale: 0.3, modelType: 2 },
     { x: -180, y: 0.2, z: 160, scale: 0.4, modelType: 1 },
     { x: -110, y: 0.2, z: 190, scale: 0.35, modelType: 2 },
-    
+
     // Piedra adicional solicitada
     { x: -112.0, y: 0.0, z: 14.3, scale: 0.35, modelType: 1 },
     { x: -164.1, y: 0.0, z: -29.7, scale: 0.3, modelType: 1 },
-    { x: -231.6, y: 0.0, z: 237.8, scale: 0.2, modelType: 1},
+    { x: -231.6, y: 0.0, z: 237.8, scale: 0.2, modelType: 1 },
     { x: -210, y: 0.0, z: 80.2, scale: 0.35, modelType: 2 },
-    { x: -225.0, y: 0.0, z: -61.1, scale: 0.35, modelType: 1},
-    
+    { x: -225.0, y: 0.0, z: -61.1, scale: 0.35, modelType: 1 },
+
     // Piedra adicional 3 solicitada
     { x: -101.3, y: 0.0, z: -192.5, scale: 0.35, modelType: 1 },
-    
+
     // Zona centro (evitando área del corral) - mitad superior
     { x: -20, y: 0.2, z: 120, scale: 0.3, modelType: 1 },
     { x: 10, y: 0.2, z: 140, scale: 0.4, modelType: 2 },
@@ -204,7 +204,9 @@ function createHouse() {
   window.house = house;
   console.log("Casa disponible como 'window.house' para depuración");
 
-  console.log("✅ Casa creada exitosamente con textura de piedra y puerta interactiva");
+  console.log(
+    "✅ Casa creada exitosamente con textura de piedra y puerta interactiva"
+  );
 }
 
 /**
@@ -423,9 +425,13 @@ async function init() {
           // Conectar el farmerController con las piedras para detección de colisiones
           if (farmerController && stones && stones.length > 0) {
             farmerController.setStones(stones);
-            console.log("✅ FarmerController conectado con las piedras para detección de colisiones");
+            console.log(
+              "✅ FarmerController conectado con las piedras para detección de colisiones"
+            );
           } else {
-            console.warn("⚠️ No se pudo conectar el farmerController con las piedras");
+            console.warn(
+              "⚠️ No se pudo conectar el farmerController con las piedras"
+            );
             console.warn("farmerController:", farmerController);
             console.warn("stones:", stones);
           }
@@ -433,11 +439,29 @@ async function init() {
           // Conectar el farmerController con la casa para detección de colisiones
           if (farmerController && house) {
             farmerController.setHouse(house);
-            console.log("✅ FarmerController conectado con la casa para detección de colisiones");
+            console.log(
+              "✅ FarmerController conectado con la casa para detección de colisiones"
+            );
           } else {
-            console.warn("⚠️ No se pudo conectar el farmerController con la casa");
+            console.warn(
+              "⚠️ No se pudo conectar el farmerController con la casa"
+            );
             console.warn("farmerController:", farmerController);
             console.warn("house:", house);
+          }
+
+          // Conectar el farmerController con las vacas para detección de colisiones
+          if (farmerController && cows && cows.length > 0) {
+            farmerController.setCows(cows);
+            console.log(
+              "✅ FarmerController conectado con las vacas para detección de colisiones"
+            );
+          } else {
+            console.warn(
+              "⚠️ No se pudo conectar el farmerController con las vacas"
+            );
+            console.warn("farmerController:", farmerController);
+            console.warn("cows:", cows);
           }
 
           // Mostrar las animaciones disponibles en consola

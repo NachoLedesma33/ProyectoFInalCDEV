@@ -58,6 +58,10 @@ export const modelConfig = {
         diagonalForwardLeft: "characters/farmer/Running_Left_Turn_Granjero2.fbx",
         // Movimiento diagonal adelante-derecha (W + D)
         diagonalForwardRight: "characters/farmer/Running_Right_Turn_Granjero2.fbx",
+        // Animación de colisión con vacas (agacharse)
+        Kneel_Granjero2: "characters/farmer/Kneeling Down.fbx",
+        // Animación de estado final agachado
+        Kneeling: "characters/farmer/Kneeling.fbx",
       },
 
       // Ajustes específicos

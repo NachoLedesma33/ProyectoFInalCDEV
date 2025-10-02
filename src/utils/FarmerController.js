@@ -40,6 +40,9 @@ export class FarmerController {
     // Referencia a la casa para detección de colisiones
     this.house = null;
 
+    // Referencia a las vacas para detección de colisiones
+    this.cows = null;
+
     // Estado de las teclas
     this.keys = {
       w: false,
@@ -58,9 +61,16 @@ export class FarmerController {
     this.targetRotation = null;
     this.rotationSpeed = Math.PI; // 180 grados por segundo
 
+    // Estado de animación de colisión con vacas
+    this.isCollidingWithCow = false;
+    this.cowCollisionState = "none" // none, kneelingDown, kneeling
+    this.cowCollisionStartTime = 0;
+    this.kneelingDownDuration = 2000; // 2 segundos para la animación de transición
+    this.kneelingDuration = 15000; // 15 segundos para la animación final agachada
+
     // Tamaño unificado del bounding box del personaje para todas las colisiones
     this.characterSize = new THREE.Vector3(1, 1, 1);
-    
+
     // Tamaño específico para colisiones con piedras (más pequeño para permitir acercarse más)
     this.stoneCollisionSize = new THREE.Vector3(0.5, 0.5, 0.5);
 
@@ -76,9 +86,9 @@ export class FarmerController {
    */
   createCoordinateDisplay() {
     // Crear elemento HTML para el HUD
-    this.coordinateHUD = document.createElement('div');
-    this.coordinateHUD.id = 'farmer-coordinate-hud';
-    
+    this.coordinateHUD = document.createElement("div");
+    this.coordinateHUD.id = "farmer-coordinate-hud";
+
     // Estilo del HUD tipo D2 rectangular
     this.coordinateHUD.style.cssText = `
       position: fixed;
@@ -97,19 +107,19 @@ export class FarmerController {
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
       text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
     `;
-    
+
     // Contenido inicial del HUD
     this.coordinateHUD.innerHTML = `
       <div style="margin-bottom: 8px; color: #ffffff; font-size: 12px;">FARMER COORDINATES</div>
       <div id="coord-values">X: 0.0  Y: 0.0  Z: 0.0</div>
     `;
-    
+
     // Añadir el HUD al documento
     document.body.appendChild(this.coordinateHUD);
-    
+
     // Guardar referencia al elemento de valores
-    this.coordValuesElement = document.getElementById('coord-values');
-    
+    this.coordValuesElement = document.getElementById("coord-values");
+
     // Actualizar coordenadas inicialmente
     this.updateCoordinateDisplay();
   }
@@ -119,10 +129,12 @@ export class FarmerController {
    */
   updateCoordinateDisplay() {
     if (!this.coordValuesElement || !this.model) return;
-    
+
     const position = this.model.position;
-    const text = `X: ${position.x.toFixed(1)}  Y: ${position.y.toFixed(1)}  Z: ${position.z.toFixed(1)}`;
-    
+    const text = `X: ${position.x.toFixed(1)}  Y: ${position.y.toFixed(
+      1
+    )}  Z: ${position.z.toFixed(1)}`;
+
     // Actualizar el contenido del HUD
     this.coordValuesElement.textContent = text;
   }
@@ -152,26 +164,28 @@ export class FarmerController {
       console.warn("⚠️ No se proporcionaron piedras válidas");
       return;
     }
-    
+
     this.stones = stones;
-    
+
     // Verificar que las piedras tengan el método de colisión
-    const validStones = stones.filter(stone => {
-      const hasCheckCollision = typeof stone.checkCollision === 'function';
+    const validStones = stones.filter((stone) => {
+      const hasCheckCollision = typeof stone.checkCollision === "function";
       if (!hasCheckCollision) {
         console.warn("⚠️ Piedra sin método checkCollision:", stone);
       }
       return hasCheckCollision;
     });
-    
+
     if (validStones.length === 0) {
       console.warn("⚠️ Ninguna piedra tiene método checkCollision");
       this.stones = null;
       return;
     }
-    
+
     this.stones = validStones;
-    console.log(`✅ Conectadas ${validStones.length} piedras al farmerController`);
+    console.log(
+      `✅ Conectadas ${validStones.length} piedras al farmerController`
+    );
   }
 
   /**
@@ -183,18 +197,53 @@ export class FarmerController {
       console.warn("⚠️ No se proporcionó una casa válida");
       return;
     }
-    
+
     this.house = house;
-    
+
     // Verificar que la casa tenga el método de colisión
-    const hasCheckCollision = typeof house.checkCollision === 'function';
+    const hasCheckCollision = typeof house.checkCollision === "function";
     if (!hasCheckCollision) {
       console.warn("⚠️ La casa no tiene método checkCollision:", house);
       this.house = null;
       return;
     }
-    
-    console.log("✅ Casa conectada al farmerController para detección de colisiones");
+
+    console.log(
+      "✅ Casa conectada al farmerController para detección de colisiones"
+    );
+  }
+
+  /**
+   * Establece la referencia a las vacas para detección de colisiones
+   * @param {Array} cows - Array de instancias de vacas
+   */
+  setCows(cows) {
+    if (!cows || cows.length === 0) {
+      console.warn("⚠️ No se proporcionaron vacas válidas");
+      return;
+    }
+
+    this.cows = cows;
+
+    // Verificar que las vacas tengan el método de colisión
+    const validCows = cows.filter((cow) => {
+      const hasCheckCollision = typeof cow.checkCollision === "function";
+      if (!hasCheckCollision) {
+        console.warn("⚠️ Vaca sin método checkCollision:", cow);
+      }
+      return hasCheckCollision;
+    });
+
+    if (validCows.length === 0) {
+      console.warn("⚠️ Ninguna vaca tiene método checkCollision");
+      this.cows = null;
+      return;
+    }
+
+    this.cows = validCows;
+    console.log(
+      `✅ Conectadas ${validCows.length} vacas al farmerController`
+    );
   }
 
   /**
@@ -223,7 +272,7 @@ export class FarmerController {
    */
   checkSpaceShuttleCollision(newPosition) {
     if (!this.spaceShuttle || !this.model) return false;
-    
+
     // Verificar colisión con el Space Shuttle
     return this.spaceShuttle.checkCollision(newPosition, this.characterSize);
   }
@@ -235,22 +284,101 @@ export class FarmerController {
    */
   checkStonesCollision(position) {
     if (!this.stones || !this.model) return false;
-    
+
     // Usar el tamaño específico para colisiones con piedras (más pequeño)
     const stoneCharacterSize = this.stoneCollisionSize;
-    
+
     // Verificar colisión con cada piedra
     for (const stone of this.stones) {
       if (stone.checkCollision(position, stoneCharacterSize)) {
-        console.log("🚫 Colisión con piedra detectada usando tamaño específico:", {
-          position: position,
-          stoneCharacterSize: stoneCharacterSize,
-          stonePosition: stone.model ? stone.model.position : "No disponible"
-        });
+        console.log(
+          "🚫 Colisión con piedra detectada usando tamaño específico:",
+          {
+            position: position,
+            stoneCharacterSize: stoneCharacterSize,
+            stonePosition: stone.model ? stone.model.position : "No disponible",
+          }
+        );
         return true; // Hay colisión con al menos una piedra
       }
     }
     return false; // No hay colisión con ninguna piedra
+  }
+
+  /**
+   * Verifica si el personaje colisiona con alguna vaca
+   * @param {THREE.Vector3} position - Posición a verificar
+   * @returns {boolean} - True si hay colisión con alguna vaca
+   */
+  checkCowsCollision(position) {
+    if (!this.cows || !this.model) return false;
+
+    // Verificar colisión con cada vaca
+    for (const cow of this.cows) {
+      if (cow.checkCollision(position, this.characterSize)) {
+        console.log(
+          "🐄 Colisión con vaca detectada:",
+          {
+            farmerPosition: position,
+            cowPosition: cow.model ? cow.model.position : "No disponible",
+          }
+        );
+        
+        // Activar animación de colisión con vaca
+        this.handleCowCollisionAnimation();
+        
+        return true; // Hay colisión con al menos una vaca
+      }
+    }
+    return false; // No hay colisión con ninguna vaca
+  }
+
+  /**
+   * Maneja la animación de colisión con vacas
+   */
+  handleCowCollisionAnimation() {
+    if (!this.isCollidingWithCow) {
+      this.isCollidingWithCow = true;
+      this.cowCollisionState = "kneelingDown";
+      this.cowCollisionStartTime = Date.now();
+      console.log("🐄 Iniciando secuencia de animación de colisión con vaca");
+      
+      // Actualizar el estado de animación inmediatamente
+      this.updateAnimationState();
+    }
+  }
+
+  /**
+   * Actualiza el estado de la animación de colisión con vacas
+   * @param {number} currentTime - Tiempo actual en milisegundos
+   */
+  updateCowCollisionAnimation(currentTime) {
+    if (this.isCollidingWithCow) {
+      const elapsedTime = currentTime - this.cowCollisionStartTime;
+      
+      if (this.cowCollisionState === "kneelingDown") {
+        // Si ha pasado el tiempo de la animación de transición, cambiar al estado final agachado
+        if (elapsedTime >= this.kneelingDownDuration) {
+          this.cowCollisionState = "kneeling";
+          this.cowCollisionStartTime = Date.now(); // Reiniciar el tiempo para el estado kneeling
+          console.log("🐄 Transición a estado final agachado");
+          
+          // Actualizar el estado de animación para reproducir la animación final
+          this.updateAnimationState();
+        }
+      } else if (this.cowCollisionState === "kneeling") {
+        // Si ha pasado el tiempo de la animación final, terminar la secuencia
+        if (elapsedTime >= this.kneelingDuration) {
+          this.isCollidingWithCow = false;
+          this.cowCollisionState = "none";
+          this.cowCollisionStartTime = 0;
+          console.log("🐄 Secuencia de animación de colisión finalizada");
+          
+          // Actualizar el estado de animación para volver al estado normal
+          this.updateAnimationState();
+        }
+      }
+    }
   }
 
   /**
@@ -263,36 +391,36 @@ export class FarmerController {
   getStoneAdjustedMovement(currentPosition, movementVector) {
     // Primero verificar si hay colisión con el movimiento completo
     const newPosition = currentPosition.clone().add(movementVector);
-    
+
     if (!this.checkStonesCollision(newPosition)) {
       return movementVector; // No hay colisión, permitir movimiento completo
     }
-    
+
     // Si hay colisión, intentar deslizamiento suave
     // Intentar movimiento solo en X
     const xMovement = new THREE.Vector3(movementVector.x, 0, 0);
     const xPosition = currentPosition.clone().add(xMovement);
-    
+
     if (!this.checkStonesCollision(xPosition)) {
       return xMovement; // Permitir movimiento solo en X
     }
-    
+
     // Intentar movimiento solo en Z
     const zMovement = new THREE.Vector3(0, 0, movementVector.z);
     const zPosition = currentPosition.clone().add(zMovement);
-    
+
     if (!this.checkStonesCollision(zPosition)) {
       return zMovement; // Permitir movimiento solo en Z
     }
-    
+
     // Si tampoco funciona, intentar movimiento reducido
     const reducedMovement = movementVector.clone().multiplyScalar(0.5);
     const reducedPosition = currentPosition.clone().add(reducedMovement);
-    
+
     if (!this.checkStonesCollision(reducedPosition)) {
       return reducedMovement; // Permitir movimiento reducido
     }
-    
+
     // Si todo falla, detener movimiento completamente
     return new THREE.Vector3(0, 0, 0);
   }
@@ -328,6 +456,11 @@ export class FarmerController {
    * @returns {THREE.Vector3} - Vector de movimiento ajustado
    */
   getAdjustedMovement(currentPosition, movementVector) {
+    // Si está en animación de colisión con vaca, detener movimiento completamente
+    if (this.isCollidingWithCow) {
+      return new THREE.Vector3(0, 0, 0);
+    }
+
     // Probar la nueva posición
     const newPosition = currentPosition.clone().add(movementVector);
 
@@ -357,13 +490,16 @@ export class FarmerController {
     if (this.stones && this.checkStonesCollision(newPosition)) {
       // Hay colisión con las piedras, usar el método específico para piedras
       // que permite acercamiento más cercano y deslizamiento suave
-      const stoneAdjustedMovement = this.getStoneAdjustedMovement(currentPosition, movementVector);
-      
+      const stoneAdjustedMovement = this.getStoneAdjustedMovement(
+        currentPosition,
+        movementVector
+      );
+
       // Si el ajuste específico para piedras no funciona, intentar deslizamiento general
       if (stoneAdjustedMovement.length() === 0) {
         return this.getSlidingMovement(currentPosition, movementVector);
       }
-      
+
       return stoneAdjustedMovement;
     }
 
@@ -371,6 +507,13 @@ export class FarmerController {
     if (this.house && this.checkHouseCollision(newPosition)) {
       // Hay colisión con la casa, intentar deslizamiento suave
       return this.getSlidingMovement(currentPosition, movementVector);
+    }
+
+    // Verificar colisión con las vacas
+    if (this.cows && this.checkCowsCollision(newPosition)) {
+      // Hay colisión con las vacas, detener movimiento completamente
+      console.log("🐄 Movimiento detenido por colisión con vaca");
+      return new THREE.Vector3(0, 0, 0); // Detener movimiento
     }
 
     // Si no hay colisiones, permitir el movimiento
@@ -504,6 +647,47 @@ export class FarmerController {
       return;
     }
 
+    // Si está colisionando con una vaca, reproducir la animación correspondiente según el estado
+    // pero permitir interrupción si el jugador intenta moverse después de un breve momento
+    if (this.isCollidingWithCow) {
+      // Solo permitir interrupción después de 0.5 segundos de la colisión para evitar interrupciones inmediatas
+      const timeSinceCollision = Date.now() - this.cowCollisionStartTime;
+      const canInterrupt = timeSinceCollision > 500; // 0.5 segundos
+      
+      if (canInterrupt) {
+        // Verificar si el jugador intenta moverse (interrupción)
+        const isTryingToMove = 
+          this.keys.w || this.keys.a || this.keys.s || this.keys.d ||
+          this.keys.ArrowUp || this.keys.ArrowDown || this.keys.ArrowLeft || this.keys.ArrowRight;
+        
+        if (isTryingToMove) {
+          // El jugador quiere interrumpir la animación
+          this.isCollidingWithCow = false;
+          this.cowCollisionState = "none";
+          this.cowCollisionStartTime = 0;
+          console.log("🐄 Animación de colisión interrumpida por el jugador");
+          
+          // No hacer return aquí, dejar que continúe con la lógica normal de movimiento
+        } else {
+          // Reproducir la animación correspondiente según el estado
+          if (this.cowCollisionState === "kneelingDown") {
+            this.modelLoader.play("Kneel_Granjero2", 0.2); // Kneeling Down
+          } else if (this.cowCollisionState === "kneeling") {
+            this.modelLoader.play("Kneeling", 0.2); // Kneeling (estado final)
+          }
+          return;
+        }
+      } else {
+        // Durante los primeros 0.5 segundos, siempre reproducir la animación sin permitir interrupción
+        if (this.cowCollisionState === "kneelingDown") {
+          this.modelLoader.play("Kneel_Granjero2", 0.2); // Kneeling Down
+        } else if (this.cowCollisionState === "kneeling") {
+          this.modelLoader.play("Kneeling", 0.2); // Kneeling (estado final)
+        }
+        return;
+      }
+    }
+
     // Determinar el estado actual del movimiento
     const isMoving =
       this.keys.w ||
@@ -522,28 +706,38 @@ export class FarmerController {
     }
 
     // Determinar la animación basada en la dirección del movimiento
-    
+
     // Movimiento diagonal adelante-izquierda (W + A)
-    if ((this.keys.w || this.keys.ArrowUp) && (this.keys.a || this.keys.ArrowLeft)) {
+    if (
+      (this.keys.w || this.keys.ArrowUp) &&
+      (this.keys.a || this.keys.ArrowLeft)
+    ) {
       const shouldInvertControls = this.isFacingCamera();
-      const animation = shouldInvertControls ? "diagonalForwardRight" : "diagonalForwardLeft";
+      const animation = shouldInvertControls
+        ? "diagonalForwardRight"
+        : "diagonalForwardLeft";
       this.modelLoader.play(animation, 0.1);
-    } 
+    }
     // Movimiento diagonal adelante-derecha (W + D)
-    else if ((this.keys.w || this.keys.ArrowUp) && (this.keys.d || this.keys.ArrowRight)) {
+    else if (
+      (this.keys.w || this.keys.ArrowUp) &&
+      (this.keys.d || this.keys.ArrowRight)
+    ) {
       const shouldInvertControls = this.isFacingCamera();
-      const animation = shouldInvertControls ? "diagonalForwardLeft" : "diagonalForwardRight";
+      const animation = shouldInvertControls
+        ? "diagonalForwardLeft"
+        : "diagonalForwardRight";
       this.modelLoader.play(animation, 0.1);
     }
     // Movimiento hacia adelante
     else if (this.keys.w || this.keys.ArrowUp) {
       this.modelLoader.play(isRunning ? "run" : "walk", 0.1);
-    } 
+    }
     // Movimiento hacia atrás (rotación 180)
     else if (this.keys.s || this.keys.ArrowDown) {
       // Iniciar rotación de 180 grados
       this.start180Rotation();
-    } 
+    }
     // Movimiento lateral - invertir animaciones según orientación a la cámara
     else {
       const shouldInvertControls = this.isFacingCamera();
@@ -642,6 +836,9 @@ export class FarmerController {
     if (!this.model || !this.modelLoader?.model) {
       return;
     }
+
+    // Actualizar estado de animación de colisión con vacas
+    this.updateCowCollisionAnimation(Date.now());
 
     // Actualizar rotación primero
     this.updateRotation(delta);
@@ -764,7 +961,7 @@ export class FarmerController {
   dispose() {
     document.removeEventListener("keydown", this.handleKeyDown);
     document.removeEventListener("keyup", this.handleKeyUp);
-    
+
     // Limpiar el HUD de coordenadas
     if (this.coordinateHUD && this.coordinateHUD.parentNode) {
       this.coordinateHUD.parentNode.removeChild(this.coordinateHUD);
