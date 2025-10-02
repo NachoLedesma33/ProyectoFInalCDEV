@@ -15,6 +15,14 @@
   </head>
   <body>
     <div id="container"></div>
+    <!-- Minimap HUD Plegable -->
+    <div id="minimap-container">
+      <button id="minimap-toggle" type="button">Mapa</button>
+      <div id="minimap" class="minimap-collapsed">
+        <button id="minimap-close" type="button">×</button>
+        <canvas id="minimap-canvas" width="340" height="249"></canvas>
+      </div>
+    </div>
     <!-- Configuración de módulos ES -->
     <script type="importmap">
       {

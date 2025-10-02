@@ -40,3 +40,97 @@
         p {
             line-height: 1.6;
         }
+        
+        /* Minimap HUD Plegable */
+        #minimap-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        #minimap-toggle {
+            background: rgba(0, 0, 0, 0.8);
+            color: #fdbb2d;
+            border: 2px solid #fdbb2d;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            margin-left: auto;
+            display: block;
+        }
+        
+        #minimap-toggle:hover {
+            background: rgba(253, 187, 45, 0.2);
+            transform: scale(1.05);
+        }
+        
+        #minimap {
+            width: 340px;
+            height: 249px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 5px;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        #minimap.minimap-collapsed {
+            height: 0;
+            padding: 0;
+            margin: 0;
+            opacity: 0;
+        }
+        
+        #minimap.minimap-expanded {
+            height: 249px;
+            padding: 5px;
+            margin-top: 10px;
+            opacity: 1;
+        }
+        
+        #minimap-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fdbb2d;
+            border: 1px solid #fdbb2d;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+        
+        #minimap-close:hover {
+            background: rgba(253, 187, 45, 0.3);
+            transform: scale(1.1);
+        }
+        
+        #minimap.minimap-expanded #minimap-close {
+            display: flex;
+        }
+        
+        #minimap-toggle.hidden {
+            display: none;
+        }
+        
+        #minimap-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+            background: rgba(25, 25, 25, 0.9);
+        }
