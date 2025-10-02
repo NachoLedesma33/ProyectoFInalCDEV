@@ -65,6 +65,7 @@ export class FarmerController {
     this.isCollidingWithCow = false;
     this.cowCollisionState = "none" // none, kneelingDown, kneeling
     this.cowCollisionStartTime = 0;
+    this.currentCollidedCow = null; // Vaca con la que se colisionó actualmente
     this.kneelingDownDuration = 2000; // 2 segundos para la animación de transición
     this.kneelingDuration = 15000; // 15 segundos para la animación final agachada
 
@@ -321,11 +322,15 @@ export class FarmerController {
           {
             farmerPosition: position,
             cowPosition: cow.model ? cow.model.position : "No disponible",
+            hasExclamationMark: cow.hasExclamationMarkVisible()
           }
         );
         
-        // Activar animación de colisión con vaca
-        this.handleCowCollisionAnimation();
+        // Solo activar animación de colisión si la vaca tiene el signo de exclamación visible
+        if (cow.hasExclamationMarkVisible()) {
+          // Activar animación de colisión con vaca y pasar la vaca como referencia
+          this.handleCowCollisionAnimation(cow);
+        }
         
         return true; // Hay colisión con al menos una vaca
       }
@@ -335,13 +340,15 @@ export class FarmerController {
 
   /**
    * Maneja la animación de colisión con vacas
+   * @param {Cow} cow - La vaca con la que se colisionó
    */
-  handleCowCollisionAnimation() {
+  handleCowCollisionAnimation(cow) {
     if (!this.isCollidingWithCow) {
       this.isCollidingWithCow = true;
       this.cowCollisionState = "kneelingDown";
       this.cowCollisionStartTime = Date.now();
-      console.log("🐄 Iniciando secuencia de animación de colisión con vaca");
+      this.currentCollidedCow = cow; // Almacenar la vaca con la que se colisionó
+      console.log("🐄 Iniciando secuencia de animación de colisión con vaca que tiene signo de exclamación");
       
       // Actualizar el estado de animación inmediatamente
       this.updateAnimationState();
@@ -367,12 +374,20 @@ export class FarmerController {
           this.updateAnimationState();
         }
       } else if (this.cowCollisionState === "kneeling") {
-        // Si ha pasado el tiempo de la animación final, terminar la secuencia
+        // Si ha pasado el tiempo de la animación final, terminar la secuencia y reiniciar la barra de progreso
         if (elapsedTime >= this.kneelingDuration) {
+          console.log("🐄 Secuencia de animación de colisión finalizada");
+          
+          // Reiniciar la barra de progreso de la vaca con la que se colisionó
+          if (this.currentCollidedCow) {
+            console.log("🐄 Reiniciando barra de progreso de la vaca");
+            this.currentCollidedCow.resetProgressBar();
+          }
+          
           this.isCollidingWithCow = false;
           this.cowCollisionState = "none";
           this.cowCollisionStartTime = 0;
-          console.log("🐄 Secuencia de animación de colisión finalizada");
+          this.currentCollidedCow = null; // Limpiar la referencia a la vaca
           
           // Actualizar el estado de animación para volver al estado normal
           this.updateAnimationState();

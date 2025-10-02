@@ -262,4 +262,22 @@ export class Cow {
       this.progressBar.update();
     }
   }
+  
+  // Verificar si el signo de exclamación está visible
+  hasExclamationMarkVisible() {
+    return this.progressBar && this.progressBar.exclamationMark && this.progressBar.exclamationMark.visible;
+  }
+  
+  // Reiniciar la barra de progreso
+  resetProgressBar() {
+    if (this.progressBar) {
+      // Eliminar la barra de progreso actual
+      this.progressBar.dispose();
+      
+      // Crear una nueva barra de progreso
+      this.progressBar = new ProgressBar(this, this.scene, 75000); // 75 segundos para cargar
+      
+      console.log("🐄 Barra de progreso reiniciada para la vaca");
+    }
+  }
 }
