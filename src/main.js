@@ -75,30 +75,49 @@ init().catch(console.error);
 function createCows() {
   console.log("Creando 6 vacas dentro del corral...");
 
-  // Posiciones para las 6 vacas dentro del corral
-  // El corral está en x: 15, z: 15 con dimensiones 20x20
-  // Posiciones distribuidas dentro del corral con buen margen de los bordes
+  // Posiciones específicas para las 6 vacas dentro del corral
   const cowPositions = [
-    { x: 12, y: 0, z: 12 }, // Posición interior inferior izquierda
-    { x: 18, y: 0, z: 12 }, // Posición interior inferior derecha
-    { x: 12, y: 0, z: 18 }, // Posición interior superior izquierda
-    { x: 18, y: 0, z: 18 }, // Posición interior superior derecha
-    { x: 15, y: 0, z: 10 }, // Posición central inferior
-    { x: 15, y: 0, z: 20 }, // Posición central superior
+    { x: 21.6, y: 0.0, z: 21.0 }, // Vaca 1
+    { x: 21.6, y: 0.0, z: 17.2 }, // Vaca 2
+    { x: 20.9, y: 0.0, z: 11.4 }, // Vaca 3
+    { x: 9.6,  y: 0.0, z: 21.9 }, // Vaca 4 (corregida posición duplicada)
+    { x: 9.6,  y: 0.0, z: 16.7 }, // Vaca 5 (posición adicional)
+    { x: 9.6,  y: 0.0, z: 12.6 }  // Vaca 6
   ];
+
+  // Centro del corral hacia donde deben mirar las vacas
+  const centerPoint = { x: 15.7, y: 0.0, z: 17.9 };
 
   // Crear cada vaca
   cowPositions.forEach((position, index) => {
     const cow = new Cow(scene, position); // La escala se calcula automáticamente para coincidir con el farmer
+    
+    // Esperar a que el modelo se cargue y luego orientar la vaca hacia el centro del corral
+    const orientCow = () => {
+      if (cow.model) {
+        const centerVector = new THREE.Vector3(centerPoint.x, centerPoint.y, centerPoint.z);
+        cow.model.lookAt(centerVector);
+        console.log(`Vaca ${index + 1} orientada hacia el centro:`, centerPoint);
+      } else {
+        console.log(`Vaca ${index + 1} modelo aún no cargado, reintentando...`);
+      }
+    };
+    
+    // Intentar orientar inmediatamente y luego varios reintentos
+    setTimeout(orientCow, 500);  // Primer intento a los 0.5 segundos
+    setTimeout(orientCow, 1000); // Segundo intento a los 1 segundo
+    setTimeout(orientCow, 2000); // Tercer intento a los 2 segundos
+    setTimeout(orientCow, 3000); // Último intento a los 3 segundos
+    
     cows.push(cow);
-    console.log(`Vaca ${index + 1} creada en posición:`, position);
+    console.log(`Vaca ${index + 1} creada en posición:`, position, "mirando hacia:", centerPoint);
   });
 
   // Hacer las vacas accesibles para depuración
   window.cows = cows;
   console.log("Vacas disponibles como 'window.cows' para depuración");
 
-  console.log("✅ 6 vacas creadas exitosamente dentro del corral");
+  console.log("✅ 6 vacas creadas exitosamente dentro del corral y orientadas hacia el centro");
 }
 
 /**

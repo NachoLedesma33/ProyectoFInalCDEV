@@ -10,8 +10,8 @@ export class Cow {
     // Generar una pequeña variación de altura para evitar que las vacas se fusionen
     this.heightOffset = (Math.random() - 0.5) * 0.1; // Variación de -0.05 a +0.05
 
-    // Generar una pequeña variación de rotación para orientación diversa
-    this.rotationOffset = Math.random() * Math.PI * 2; // Rotación aleatoria completo
+    // Sin rotación aleatoria inicial - se orientará desde el código principal
+    this.rotationOffset = 0; // Sin rotación inicial
 
     // Propiedades para animación
     this.animationTime = Math.random() * Math.PI * 2; // Tiempo de animación aleatorio para desincronizar
@@ -100,8 +100,8 @@ export class Cow {
     // Aplicar la variación de altura para evitar fusión con otras vacas
     this.model.position.y = this.position.y - minY + this.heightOffset;
 
-    // Aplicar rotación aleatoria para orientación diversa
-    this.model.rotation.y = this.rotationOffset;
+    // Sin rotación inicial - se orientará desde el código principal
+    // this.model.rotation.y = this.rotationOffset; // Comentado para evitar rotación inicial
 
     // Configurar sombras
     this.model.traverse((child) => {
