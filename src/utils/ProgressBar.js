@@ -127,10 +127,7 @@ export class ProgressBar {
     const elapsed = Date.now() - this.startTime;
     const progress = Math.min(elapsed / this.duration, 1);
     
-    // Depuración: mostrar tiempo transcurrido y progreso (cada 5 segundos para no saturar)
-    if (Math.floor(elapsed / 5000) !== Math.floor((elapsed - 16) / 5000)) { // Mostrar cada 5 segundos
-      console.log(`Tiempo: ${Math.floor(elapsed / 1000)}s, Progreso: ${(progress * 100).toFixed(1)}%`);
-    }
+    // Depuración deshabilitada para mejorar rendimiento
     
     // Actualizar la barra de progreso
     if (this.progressBarFill) {

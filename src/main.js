@@ -209,14 +209,14 @@ function worldToMinimap(x, z) {
 function updateMinimap() {
   if (!minimapCtx || !minimapCanvas) return;
   
-  // Limpiar el canvas
-  minimapCtx.fillStyle = 'rgba(25, 25, 25, 0.9)';
+  // Limpiar el canvas con fondo transparente
+  minimapCtx.fillStyle = 'rgba(25, 25, 25, 0.2)';
   minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight);
   
   
-  // Dibujar cuadrícula de referencia
-  minimapCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-  minimapCtx.lineWidth = 1;
+  // Dibujar cuadrícula de referencia extremadamente sutil
+  minimapCtx.strokeStyle = 'rgba(255, 255, 255, 0.01)';
+  minimapCtx.lineWidth = 0.3;
   
   // Líneas verticales cada 50 unidades
   for (let x = worldBounds.minX; x <= worldBounds.maxX; x += 50) {
@@ -245,9 +245,9 @@ function updateMinimap() {
         
         // Verificar si la piedra está dentro de los límites visibles del minimap
         if (minimapPos.x >= 0 && minimapPos.x <= minimapWidth && minimapPos.y >= 0 && minimapPos.y <= minimapHeight) {
-          minimapCtx.fillStyle = '#8B4513'; // Color marrón para piedras
+          minimapCtx.fillStyle = 'rgba(139, 69, 19, 0.6)'; // Color marrón transparente para piedras
           minimapCtx.beginPath();
-          minimapCtx.arc(minimapPos.x, minimapPos.y, 2, 0, Math.PI * 2);
+          minimapCtx.arc(minimapPos.x, minimapPos.y, 1.5, 0, Math.PI * 2);
           minimapCtx.fill();
         }
       }
@@ -259,8 +259,8 @@ function updateMinimap() {
   if (house && house.position) {
     const minimapPos = worldToMinimap(house.position.x, house.position.z);
     
-    minimapCtx.fillStyle = '#8B4513'; // Color marrón para casa
-    minimapCtx.fillRect(minimapPos.x - 4, minimapPos.y - 4, 8, 8);
+    minimapCtx.fillStyle = 'rgba(139, 69, 19, 0.5)'; // Color marrón transparente para casa
+    minimapCtx.fillRect(minimapPos.x - 3, minimapPos.y - 3, 6, 6);
   }
   
   // Dibujar Space Shuttle
@@ -268,7 +268,7 @@ function updateMinimap() {
     const pos = spaceShuttle.model.position;
     const minimapPos = worldToMinimap(pos.x, pos.z);
     
-    minimapCtx.fillStyle = '#C0C0C0'; // Color plateado para Space Shuttle
+    minimapCtx.fillStyle = 'rgba(192, 192, 192, 0.7)'; // Color plateado transparente para Space Shuttle
     minimapCtx.beginPath();
     minimapCtx.arc(minimapPos.x, minimapPos.y, 4, 0, Math.PI * 2);
     minimapCtx.fill();
@@ -283,8 +283,8 @@ function updateMinimap() {
     const sizeX = (size / (worldBounds.maxX - worldBounds.minX)) * minimapWidth;
     const sizeZ = (size / (worldBounds.maxZ - worldBounds.minZ)) * minimapHeight;
     
-    minimapCtx.strokeStyle = '#8B4513'; // Color marrón para corral
-    minimapCtx.lineWidth = 2;
+    minimapCtx.strokeStyle = 'rgba(139, 69, 19, 0.4)'; // Color marrón transparente para corral
+    minimapCtx.lineWidth = 1;
     minimapCtx.strokeRect(minimapPos.x - sizeX/2, minimapPos.y - sizeZ/2, sizeX, sizeZ);
   }
   
@@ -295,9 +295,9 @@ function updateMinimap() {
         const pos = cow.model.position;
         const minimapPos = worldToMinimap(pos.x, pos.z);
         
-        minimapCtx.fillStyle = '#FFFFFF'; // Color blanco para vacas
+        minimapCtx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // Color blanco transparente para vacas
         minimapCtx.beginPath();
-        minimapCtx.arc(minimapPos.x, minimapPos.y, 3, 0, Math.PI * 2);
+        minimapCtx.arc(minimapPos.x, minimapPos.y, 2, 0, Math.PI * 2);
         minimapCtx.fill();
       }
     });
@@ -309,7 +309,7 @@ function updateMinimap() {
     const minimapPos = worldToMinimap(pos.x, pos.z);
     
     // Dibujar el farmer como un triángulo que apunta en la dirección del personaje
-    minimapCtx.fillStyle = '#00FF00'; // Color verde para el jugador
+    minimapCtx.fillStyle = 'rgba(0, 255, 0, 0.8)'; // Color verde transparente para el jugador
     minimapCtx.save();
     minimapCtx.translate(minimapPos.x, minimapPos.y);
     
@@ -792,6 +792,14 @@ let lastTime = 0;
 const targetFPS = 60;
 const frameTime = 1000 / targetFPS;
 
+// Variables para optimización de actualizaciones
+let minimapUpdateCounter = 0;
+const minimapUpdateInterval = 10; // Actualizar minimap cada 10 frames
+let terrainUpdateCounter = 0;
+const terrainUpdateInterval = 5; // Actualizar terreno cada 5 frames
+let skyboxUpdateCounter = 0;
+const skyboxUpdateInterval = 3; // Actualizar skybox cada 3 frames
+
 function animate(currentTime = 0) {
   // La cámara isométrica ahora es manejada automáticamente por el CameraManager
   // No se necesita lógica adicional de seguimiento aquí
@@ -846,12 +854,18 @@ function animate(currentTime = 0) {
       stone.update(delta);
     });
 
-    // Actualizar el terreno
-    terrain.update(camera.position);
+    // Actualizar el terreno (optimizado - cada 5 frames)
+    terrainUpdateCounter++;
+    if (terrainUpdateCounter >= terrainUpdateInterval) {
+      terrain.update(camera.position);
+      terrainUpdateCounter = 0;
+    }
 
-    // Actualizar el skybox para que siga a la cámara
-    if (skybox) {
+    // Actualizar el skybox para que siga a la cámara (optimizado - cada 3 frames)
+    skyboxUpdateCounter++;
+    if (skyboxUpdateCounter >= skyboxUpdateInterval && skybox) {
       skybox.update(camera.position);
+      skyboxUpdateCounter = 0;
     }
 
     // Actualizar los efectos de fuego
@@ -864,8 +878,12 @@ function animate(currentTime = 0) {
       lighting.update(delta);
     }
 
-    // Actualizar el minimap
-    updateMinimap();
+    // Actualizar el minimap (optimizado - cada 10 frames)
+    minimapUpdateCounter++;
+    if (minimapUpdateCounter >= minimapUpdateInterval) {
+      updateMinimap();
+      minimapUpdateCounter = 0;
+    }
 
     // Renderizar la escena
     renderer.render(scene, camera);
