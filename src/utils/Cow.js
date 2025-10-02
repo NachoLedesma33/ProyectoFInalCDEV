@@ -1,5 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js";
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/loaders/FBXLoader.js";
+import { ProgressBar } from "./ProgressBar.js";
 
 export class Cow {
   constructor(scene, position = { x: 0, y: 0, z: 0 }) {
@@ -30,6 +31,9 @@ export class Cow {
     this.moveDirection = new THREE.Vector3(); // Dirección del movimiento
     this.moveSpeed = 0.02; // Velocidad de movimiento (centímetros por segundo)
     this.originalPosition = new THREE.Vector3(); // Posición original antes del movimiento
+    
+    // Barra de progreso 3D
+    this.progressBar = null;
 
     this.init();
   }
@@ -44,11 +48,13 @@ export class Cow {
         "src/models/characters/animals/Cow.fbx"
       );
 
-      // Configurar el modelo
       this.setupModel();
 
       // Agregar a la escena
       this.scene.add(this.model);
+
+      // Crear la barra de progreso 3D
+      this.progressBar = new ProgressBar(this, this.scene, 75000); // 75 segundos para cargar
 
       console.log("✅ Vaca cargada exitosamente");
     } catch (error) {
@@ -217,6 +223,11 @@ export class Cow {
       const headSway = Math.sin(this.animationTime * this.headBobSpeed * 0.7) * this.headBobAmount * 0.5;
       this.headGroup.rotation.z = headSway;
     }
+    
+    // Actualizar la barra de progreso
+    if (this.progressBar) {
+      this.progressBar.update();
+    }
   }
 
   // Obtener referencia al modelo
@@ -243,5 +254,12 @@ export class Cow {
     );
 
     return cowBox.intersectsBox(characterBox);
+  }
+  
+  // Método para actualizar la barra de progreso (mantenido por compatibilidad)
+  updateProgressBar() {
+    if (this.progressBar) {
+      this.progressBar.update();
+    }
   }
 }
