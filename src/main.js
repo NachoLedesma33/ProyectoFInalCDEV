@@ -77,7 +77,7 @@ function createCows() {
 
   // Posiciones específicas para las 6 vacas dentro del corral
   const cowPositions = [
-    { x: 21.6, y: 0.0, z: 21.0 }, // Vaca 1
+    { x: 21.6, y: 0.0, z: 22.6 }, // Vaca 1
     { x: 21.6, y: 0.0, z: 17.2 }, // Vaca 2
     { x: 20.9, y: 0.0, z: 11.4 }, // Vaca 3
     { x: 9.6,  y: 0.0, z: 21.9 }, // Vaca 4 (corregida posición duplicada)
@@ -85,39 +85,44 @@ function createCows() {
     { x: 9.6,  y: 0.0, z: 12.6 }  // Vaca 6
   ];
 
-  // Centro del corral hacia donde deben mirar las vacas
-  const centerPoint = { x: 15.7, y: 0.0, z: 17.9 };
+  // Línea central del corral (desde z: 24.4 hasta z: 5.6 en x: 15.3)
+  const centerLineStart = { x: 15.3, y: 0.0, z: 24.4 };
+  const centerLineEnd = { x: 15.3, y: 0.0, z: 5.6 };
 
   // Crear cada vaca
   cowPositions.forEach((position, index) => {
     const cow = new Cow(scene, position); // La escala se calcula automáticamente para coincidir con el farmer
     
-    // Esperar a que el modelo se cargue y luego orientar la vaca hacia el centro del corral
+    // Calcular el punto más cercano en la línea central para que la vaca mire hacia adentro
+    const targetZ = Math.max(centerLineEnd.z, Math.min(centerLineStart.z, position.z));
+    const lookAtPoint = { x: centerLineStart.x, y: position.y, z: targetZ };
+    
+    // Orientar la vaca hacia el punto de la línea central
     const orientCow = () => {
       if (cow.model) {
-        const centerVector = new THREE.Vector3(centerPoint.x, centerPoint.y, centerPoint.z);
-        cow.model.lookAt(centerVector);
-        console.log(`Vaca ${index + 1} orientada hacia el centro:`, centerPoint);
+        const targetVector = new THREE.Vector3(lookAtPoint.x, lookAtPoint.y, lookAtPoint.z);
+        cow.model.lookAt(targetVector);
+        console.log(`Vaca ${index + 1} orientada hacia la línea central:`, lookAtPoint);
       } else {
         console.log(`Vaca ${index + 1} modelo aún no cargado, reintentando...`);
       }
     };
     
     // Intentar orientar inmediatamente y luego varios reintentos
-    setTimeout(orientCow, 500);  // Primer intento a los 0.5 segundos
-    setTimeout(orientCow, 1000); // Segundo intento a los 1 segundo
-    setTimeout(orientCow, 2000); // Tercer intento a los 2 segundos
-    setTimeout(orientCow, 3000); // Último intento a los 3 segundos
+    setTimeout(orientCow, 500);
+    setTimeout(orientCow, 1000);
+    setTimeout(orientCow, 2000);
+    setTimeout(orientCow, 3000);
     
     cows.push(cow);
-    console.log(`Vaca ${index + 1} creada en posición:`, position, "mirando hacia:", centerPoint);
+    console.log(`Vaca ${index + 1} creada en posición:`, position, "mirando hacia:", lookAtPoint);
   });
 
   // Hacer las vacas accesibles para depuración
   window.cows = cows;
   console.log("Vacas disponibles como 'window.cows' para depuración");
 
-  console.log("✅ 6 vacas creadas exitosamente dentro del corral y orientadas hacia el centro");
+  console.log("✅ 6 vacas creadas exitosamente dentro del corral");
 }
 
 /**

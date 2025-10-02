@@ -233,7 +233,7 @@ export class Cow {
   }
 
   // Verificar si una posición está en colisión con la vaca
-  checkCollision(position, characterSize = new THREE.Vector3(1, 2, 1)) {
+  checkCollision(position, characterSize = new THREE.Vector3(1, -2, 1)) {
     if (!this.model) return false;
 
     const cowBox = this.getBoundingBox();
