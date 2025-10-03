@@ -43,6 +43,9 @@ export class FarmerController {
     // Referencia a las vacas para detección de colisiones
     this.cows = null;
 
+  // Referencia al inventario (se puede inyectar desde main.js)
+  this.inventory = null;
+
     // Estado de las teclas
     this.keys = {
       w: false,
@@ -80,6 +83,15 @@ export class FarmerController {
 
     // Crear HUD de coordenadas
     this.createCoordinateDisplay();
+  }
+
+  /**
+   * Inyecta una instancia de Inventory para añadir leche al ordeñar
+   * @param {Object} inventory - Instancia de Inventory
+   */
+  setInventory(inventory) {
+    this.inventory = inventory;
+    console.log("Inventory conectado al FarmerController");
   }
 
   /**
@@ -387,6 +399,69 @@ export class FarmerController {
           this.isCollidingWithCow = false;
           this.cowCollisionState = "none";
           this.cowCollisionStartTime = 0;
+          // Al finalizar el kneeling, otorgar leche al inventario si está conectado
+          try {
+            // Generar cantidad aleatoria entre 1.2 y 2.5 litros
+            const min = 1.2;
+            const max = 2.5;
+            const milkAmount = Math.round((Math.random() * (max - min) + min) * 100) / 100; // 2 decimales
+
+            const addAndNotify = (inv) => {
+              inv.addMilk(milkAmount);
+              // Calcular posición en pantalla encima del personaje si es posible
+              let screenPos = null;
+              try {
+                if (this.camera && this.model && typeof window !== 'undefined') {
+                  // proyectar la posición del modelo al espacio de pantalla (NDC)
+                  const vector = this.model.position.clone();
+                  // ajustar altura para mostrar arriba de la cabeza
+                  vector.y += 1.6;
+                  vector.project(this.camera);
+
+                  // Normalized device coords (NDC) -> pixel coords relative to renderer canvas
+                  const ndcX = vector.x;
+                  const ndcY = vector.y;
+
+                  // Preferir calcular respecto al canvas del renderer si está disponible
+                  const rendererEl = (typeof window !== 'undefined' && window.renderer && window.renderer.domElement) ? window.renderer.domElement : null;
+                  if (rendererEl) {
+                    const rect = rendererEl.getBoundingClientRect();
+                    screenPos = {
+                      x: rect.left + (ndcX + 1) / 2 * rect.width,
+                      y: rect.top + (1 - ndcY) / 2 * rect.height,
+                    };
+                  } else {
+                    // Fallback a viewport completo
+                    const halfWidth = window.innerWidth / 2;
+                    const halfHeight = window.innerHeight / 2;
+                    screenPos = {
+                      x: (ndcX * halfWidth) + halfWidth,
+                      y: (-ndcY * halfHeight) + halfHeight,
+                    };
+                  }
+                }
+              } catch (e) {
+                console.warn('No se pudo calcular screenPos para popup:', e);
+                screenPos = null;
+              }
+
+              // Intentar usar popup si existe, si no usar notify
+              if (typeof inv.popup === "function") inv.popup(`+${milkAmount.toFixed(2)} L de leche obtenidos`, 2800, { screenPos });
+              else if (typeof inv.notify === "function") inv.notify(`+${milkAmount.toFixed(2)} L de leche obtenidos`);
+            };
+
+            if (this.inventory && typeof this.inventory.addMilk === "function") {
+              addAndNotify(this.inventory);
+              console.log(`🐄 Ordeñaste y obtuviste ${milkAmount} L de leche`);
+            } else if (window && window.inventory && typeof window.inventory.addMilk === "function") {
+              // Fallback a window.inventory
+              addAndNotify(window.inventory);
+              console.log(`🐄 Ordeñaste y obtuviste ${milkAmount} L de leche (fallback window.inventory)`);
+            }
+          } catch (err) {
+            console.warn("No se pudo añadir leche al inventario:", err);
+          }
+
           this.currentCollidedCow = null; // Limpiar la referencia a la vaca
           
           // Actualizar el estado de animación para volver al estado normal

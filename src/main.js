@@ -16,6 +16,7 @@ import { SpaceShuttle } from "./utils/SpaceShuttle.js"; // Space Shuttle Orbiter
 import { Cow } from "./utils/Cow.js"; // Modelo de vaca
 import { Stone } from "./utils/Stone.js"; // Modelo de piedra
 import { House } from "./utils/House.js"; // Casa con puerta interactiva
+import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
 
 // Variables globales principales de Three.js
 let scene, // Escena 3D que contiene todos los objetos
@@ -627,6 +628,20 @@ async function init() {
             }
           );
 
+          // Crear inventario del personaje (precio por litro configurable)
+          try {
+            const inventory = new Inventory({ pricePerLiter: 5 });
+            // Exponer para depuración y uso desde otros módulos
+            window.inventory = inventory;
+            // Si FarmerController soporta setInventory, conéctalo
+            if (typeof farmerController.setInventory === "function") {
+              farmerController.setInventory(inventory);
+            }
+            console.log("Inventory inicializado y disponible en window.inventory");
+          } catch (e) {
+            console.warn("No se pudo inicializar Inventory:", e);
+          }
+
           // Conectar el corral con el controlador del granjero
           if (corral) {
             farmerController.setCorral(corral);
@@ -745,6 +760,18 @@ function setupEventListeners() {
   // Escuchar cambios en el tamaño de la ventana
   window.addEventListener("resize", onWindowResize);
   console.log("Listener de redimensionamiento configurado");
+  
+  // Tecla 'i' para mostrar/ocultar el inventario
+  window.addEventListener("keydown", (ev) => {
+    // Ignorar si el usuario está escribiendo en un input/textarea
+    const tag = (document.activeElement && document.activeElement.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if (ev.key && ev.key.toLowerCase() === "i") {
+      if (window.inventory && typeof window.inventory.toggle === "function") {
+        window.inventory.toggle();
+      }
+    }
+  });
 }
 
 /**
