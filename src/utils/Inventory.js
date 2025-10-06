@@ -6,8 +6,8 @@ export class Inventory {
     this.pricePerLiter = pricePerLiter;
     this._createUI();
     this._updateUI();
-    // Empezar oculto; se mostrará con la tecla 'i' o inventory.show()
-    this.hide();
+    // Mostrar el inventario por defecto
+    this.show();
   }
 
   addMilk(liters = 0) {
@@ -57,26 +57,39 @@ export class Inventory {
       el = document.createElement("div");
       el.id = id;
       Object.assign(el.style, {
-        position: "absolute",
+        position: "fixed",
         right: "12px",
         top: "12px",
-        width: "220px",
-        padding: "8px",
-        background: "rgba(0,0,0,0.55)",
+        width: "200px",
+        padding: "12px",
+        background: "rgba(0, 0, 0, 0.7)",
         color: "#fff",
-        fontFamily: "Arial, sans-serif",
-        fontSize: "13px",
-        borderRadius: "6px",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        fontSize: "14px",
+        borderRadius: "8px",
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.3)",
         zIndex: 1000,
+        backdropFilter: "blur(4px)",
+        transition: "all 0.3s ease"
       });
       document.body.appendChild(el);
     }
     el.innerHTML = `
-      <div style="font-weight:600;margin-bottom:6px">Inventario</div>
-      <div><strong>Leche:</strong> <span id="inv-milk">0.00</span> L</div>
-      <div><strong>Herramientas:</strong> <span id="inv-tools">-</span></div>
-      <div style="margin-bottom:6px"><strong>Monedas:</strong> <span id="inv-coins">0</span></div>
-      <div id="inv-msg" style="margin-top:6px;font-size:12px;opacity:0.9"></div>
+      <div style="font-weight:600;margin-bottom:8px;font-size:16px;color:#fdbb2d;text-shadow:0 1px 2px rgba(0,0,0,0.5)">INVENTARIO</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span><strong>Leche:</strong></span>
+        <span id="inv-milk" style="font-family:'Courier New', monospace">0.00 L</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span><strong>Monedas:</strong></span>
+        <span id="inv-coins" style="font-family:'Courier New', monospace">0</span>
+      </div>
+      <div style="margin-top:10px;margin-bottom:4px">
+        <div style="font-size:12px;opacity:0.8;margin-bottom:4px"><strong>Herramientas:</strong></div>
+        <div id="inv-tools" style="font-size:12px;color:#a0d8ef">-</div>
+      </div>
+      <div id="inv-msg" style="margin-top:10px;padding:6px;background:rgba(255,255,255,0.1);border-radius:4px;font-size:12px;display:none"></div>
     `;
     this._ui = {
       container: el,
@@ -90,15 +103,25 @@ export class Inventory {
   _updateUI() {
     if (!this._ui) return;
     this._ui.milk.textContent = this.milkLiters.toFixed(2);
-    this._ui.tools.textContent = this.tools.length ? this.tools.join(", ") : "-";
-    this._ui.coins.textContent = this.coins;
   }
 
   _flash(msg, ms = 2200) {
     if (!this._ui) return;
-    this._ui.msg.textContent = msg;
+    const msgEl = this._ui.msg;
+    msgEl.textContent = msg;
+    msgEl.style.display = 'block';
+    msgEl.style.opacity = '1';
     clearTimeout(this._t);
-    this._t = setTimeout(() => (this._ui.msg.textContent = ""), ms);
+    
+    this._t = setTimeout(() => {
+      if (msgEl) {
+        msgEl.style.opacity = '0';
+        // Ocultar después de la transición
+        setTimeout(() => {
+          if (msgEl) msgEl.style.display = 'none';
+        }, 300);
+      }
+    }, ms);
   }
 
   /**
