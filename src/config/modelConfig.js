@@ -68,7 +68,7 @@ export const modelConfig = {
 
       // Ajustes específicos
       settings: {
-        height: 1.8, // Altura objetivo en unidades del mundo (aumentado significativamente)
+        height: 1.9, // Altura objetivo en unidades del mundo (aumentado significativamente)
         castShadow: true,
         receiveShadow: true,
       },
