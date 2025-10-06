@@ -34,7 +34,7 @@ export const modelConfig = {
         receiveShadow: true,
       },
     },
-    
+
     farmer2: {
       // Modelo principal
       model: "characters/farmer/Granjero2.fbx",
@@ -50,14 +50,16 @@ export const modelConfig = {
         // Animación de giro de 180 grados
         turn180: "characters/farmer/Running_Turn_180_Granjero2.fbx",
         // Animación de caminar hacia la izquierda (ahora usa Running_Left_Turn)
-        strafeLeft: "characters/farmer/Running_Left_Turn_Granjero2.fbx",
+        strafeLeft: "characters/farmer/Left_Strafe_Granjero2.fbx",
         // Animación de caminar hacia la derecha (ahora usa Running_Right_Turn)
-        strafeRight: "characters/farmer/Running_Right_Turn_Granjero2.fbx",
+        strafeRight: "characters/farmer/Right_Strafe_Granjero2.fbx",
         // Nuevas animaciones para movimiento diagonal
         // Movimiento diagonal adelante-izquierda (W + A)
-        diagonalForwardLeft: "characters/farmer/Running_Left_Turn_Granjero2.fbx",
+        diagonalForwardLeft:
+          "characters/farmer/Running_Left_Turn_Granjero2.fbx",
         // Movimiento diagonal adelante-derecha (W + D)
-        diagonalForwardRight: "characters/farmer/Running_Right_Turn_Granjero2.fbx",
+        diagonalForwardRight:
+          "characters/farmer/Running_Right_Turn_Granjero2.fbx",
         // Animación de colisión con vacas (agacharse)
         Kneel_Granjero2: "characters/farmer/Kneeling Down.fbx",
         // Animación de estado final agachado
