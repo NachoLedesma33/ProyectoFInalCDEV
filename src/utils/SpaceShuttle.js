@@ -2,7 +2,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.m
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/loaders/FBXLoader.js";
 
 export class SpaceShuttle {
-  constructor(scene, position = { x: 0, y: 0, z: 0 }, scale = 1) {
+  constructor(scene, position = { x: 0, y: 0, z: 0 }, scale = 2) {
     this.scene = scene;
     this.model = null;
     this.position = position;
@@ -157,7 +157,7 @@ export class SpaceShuttle {
   }
 
   // Verificar si una posición está en colisión con el Space Shuttle
-  checkCollision(position, characterSize = new THREE.Vector3(1, 2, 1)) {
+  checkCollision(position, characterSize = new THREE.Vector3(1, -2, -1)) {
     if (!this.model) return false;
     
     const shuttleBox = this.getBoundingBox();
@@ -167,7 +167,7 @@ export class SpaceShuttle {
   }
 
   // Obtener el punto de colisión más cercano y ajustar el movimiento
-  getAdjustedMovement(currentPosition, movementVector, characterSize = new THREE.Vector3(1, 2, 1)) {
+  getAdjustedMovement(currentPosition, movementVector, characterSize = new THREE.Vector3(1, -2, -2)) {
     if (!this.model) return movementVector;
     
     // Probar la nueva posición

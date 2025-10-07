@@ -39,17 +39,15 @@ Sigue estos pasos para configurar el proyecto en tu máquina local:
 
 ## 📁 Estructura del Proyecto
 
-     ```
-     
-     ├── src/               # Código fuente
-     │   ├── assets/       # Recursos (texturas, modelos, etc.)
-     │   ├── config/       # Archivos de configuración
-     │   └── main.js       # Punto de entrada principal
-     ├── index.html        # Página HTML principal
-     └── style.css         # Estilos CSS
+```text
+├── src/               # Código fuente
+│   ├── assets/       # Recursos (texturas, modelos, etc.)
+│   ├── config/       # Archivos de configuración
+│   └── main.js       # Punto de entrada principal
+├── index.html        # Página HTML principal
+└── style.css         # Estilos CSS
+```
 
- ```
- 
 ## 📝 Notas
 
 - Asegúrate de tener Node.js instalado en tu sistema.

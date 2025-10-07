@@ -15,9 +15,9 @@ export class FarmerController {
     this.modelLoader = modelLoader;
     this.camera = camera;
     this.config = {
-      moveSpeed: 0.1,
-      rotationSpeed: 0.05,
-      runMultiplier: 1.5,
+      moveSpeed: 0.3, // Aumentado para mayor velocidad base
+      rotationSpeed: 0.1, // Rotación más rápida
+      runMultiplier: 5.5, // Mayor multiplicador al correr
       // Límites del terreno (ajustar según el tamaño real del terreno)
       bounds: {
         minX: -250, // -size/2
@@ -43,8 +43,8 @@ export class FarmerController {
     // Referencia a las vacas para detección de colisiones
     this.cows = null;
 
-  // Referencia al inventario (se puede inyectar desde main.js)
-  this.inventory = null;
+    // Referencia al inventario (se puede inyectar desde main.js)
+    this.inventory = null;
 
     // Estado de las teclas
     this.keys = {
@@ -66,7 +66,7 @@ export class FarmerController {
 
     // Estado de animación de colisión con vacas
     this.isCollidingWithCow = false;
-    this.cowCollisionState = "none" // none, kneelingDown, kneeling
+    this.cowCollisionState = "none"; // none, kneelingDown, kneeling
     this.cowCollisionStartTime = 0;
     this.currentCollidedCow = null; // Vaca con la que se colisionó actualmente
     this.kneelingDownDuration = 2000; // 2 segundos para la animación de transición
@@ -254,9 +254,7 @@ export class FarmerController {
     }
 
     this.cows = validCows;
-    console.log(
-      `✅ Conectadas ${validCows.length} vacas al farmerController`
-    );
+    console.log(`✅ Conectadas ${validCows.length} vacas al farmerController`);
   }
 
   /**
@@ -329,21 +327,18 @@ export class FarmerController {
     // Verificar colisión con cada vaca
     for (const cow of this.cows) {
       if (cow.checkCollision(position, this.characterSize)) {
-        console.log(
-          "🐄 Colisión con vaca detectada:",
-          {
-            farmerPosition: position,
-            cowPosition: cow.model ? cow.model.position : "No disponible",
-            hasExclamationMark: cow.hasExclamationMarkVisible()
-          }
-        );
-        
+        console.log("🐄 Colisión con vaca detectada:", {
+          farmerPosition: position,
+          cowPosition: cow.model ? cow.model.position : "No disponible",
+          hasExclamationMark: cow.hasExclamationMarkVisible(),
+        });
+
         // Solo activar animación de colisión si la vaca tiene el signo de exclamación visible
         if (cow.hasExclamationMarkVisible()) {
           // Activar animación de colisión con vaca y pasar la vaca como referencia
           this.handleCowCollisionAnimation(cow);
         }
-        
+
         return true; // Hay colisión con al menos una vaca
       }
     }
@@ -360,8 +355,10 @@ export class FarmerController {
       this.cowCollisionState = "kneelingDown";
       this.cowCollisionStartTime = Date.now();
       this.currentCollidedCow = cow; // Almacenar la vaca con la que se colisionó
-      console.log("🐄 Iniciando secuencia de animación de colisión con vaca que tiene signo de exclamación");
-      
+      console.log(
+        "🐄 Iniciando secuencia de animación de colisión con vaca que tiene signo de exclamación"
+      );
+
       // Actualizar el estado de animación inmediatamente
       this.updateAnimationState();
     }
@@ -374,14 +371,14 @@ export class FarmerController {
   updateCowCollisionAnimation(currentTime) {
     if (this.isCollidingWithCow) {
       const elapsedTime = currentTime - this.cowCollisionStartTime;
-      
+
       if (this.cowCollisionState === "kneelingDown") {
         // Si ha pasado el tiempo de la animación de transición, cambiar al estado final agachado
         if (elapsedTime >= this.kneelingDownDuration) {
           this.cowCollisionState = "kneeling";
           this.cowCollisionStartTime = Date.now(); // Reiniciar el tiempo para el estado kneeling
           console.log("🐄 Transición a estado final agachado");
-          
+
           // Actualizar el estado de animación para reproducir la animación final
           this.updateAnimationState();
         }
@@ -389,13 +386,13 @@ export class FarmerController {
         // Si ha pasado el tiempo de la animación final, terminar la secuencia y reiniciar la barra de progreso
         if (elapsedTime >= this.kneelingDuration) {
           console.log("🐄 Secuencia de animación de colisión finalizada");
-          
+
           // Reiniciar la barra de progreso de la vaca con la que se colisionó
           if (this.currentCollidedCow) {
             console.log("🐄 Reiniciando barra de progreso de la vaca");
             this.currentCollidedCow.resetProgressBar();
           }
-          
+
           this.isCollidingWithCow = false;
           this.cowCollisionState = "none";
           this.cowCollisionStartTime = 0;
@@ -404,14 +401,19 @@ export class FarmerController {
             // Generar cantidad aleatoria entre 1.2 y 2.5 litros
             const min = 1.2;
             const max = 2.5;
-            const milkAmount = Math.round((Math.random() * (max - min) + min) * 100) / 100; // 2 decimales
+            const milkAmount =
+              Math.round((Math.random() * (max - min) + min) * 100) / 100; // 2 decimales
 
             const addAndNotify = (inv) => {
               inv.addMilk(milkAmount);
               // Calcular posición en pantalla encima del personaje si es posible
               let screenPos = null;
               try {
-                if (this.camera && this.model && typeof window !== 'undefined') {
+                if (
+                  this.camera &&
+                  this.model &&
+                  typeof window !== "undefined"
+                ) {
                   // proyectar la posición del modelo al espacio de pantalla (NDC)
                   const vector = this.model.position.clone();
                   // ajustar altura para mostrar arriba de la cabeza
@@ -423,47 +425,67 @@ export class FarmerController {
                   const ndcY = vector.y;
 
                   // Preferir calcular respecto al canvas del renderer si está disponible
-                  const rendererEl = (typeof window !== 'undefined' && window.renderer && window.renderer.domElement) ? window.renderer.domElement : null;
+                  const rendererEl =
+                    typeof window !== "undefined" &&
+                    window.renderer &&
+                    window.renderer.domElement
+                      ? window.renderer.domElement
+                      : null;
                   if (rendererEl) {
                     const rect = rendererEl.getBoundingClientRect();
                     screenPos = {
-                      x: rect.left + (ndcX + 1) / 2 * rect.width,
-                      y: rect.top + (1 - ndcY) / 2 * rect.height,
+                      x: rect.left + ((ndcX + 1) / 2) * rect.width,
+                      y: rect.top + ((1 - ndcY) / 2) * rect.height,
                     };
                   } else {
                     // Fallback a viewport completo
                     const halfWidth = window.innerWidth / 2;
                     const halfHeight = window.innerHeight / 2;
                     screenPos = {
-                      x: (ndcX * halfWidth) + halfWidth,
-                      y: (-ndcY * halfHeight) + halfHeight,
+                      x: ndcX * halfWidth + halfWidth,
+                      y: -ndcY * halfHeight + halfHeight,
                     };
                   }
                 }
               } catch (e) {
-                console.warn('No se pudo calcular screenPos para popup:', e);
+                console.warn("No se pudo calcular screenPos para popup:", e);
                 screenPos = null;
               }
 
               // Intentar usar popup si existe, si no usar notify
-              if (typeof inv.popup === "function") inv.popup(`+${milkAmount.toFixed(2)} L de leche obtenidos`, 2800, { screenPos });
-              else if (typeof inv.notify === "function") inv.notify(`+${milkAmount.toFixed(2)} L de leche obtenidos`);
+              if (typeof inv.popup === "function")
+                inv.popup(
+                  `+${milkAmount.toFixed(2)} L de leche obtenidos`,
+                  2800,
+                  { screenPos }
+                );
+              else if (typeof inv.notify === "function")
+                inv.notify(`+${milkAmount.toFixed(2)} L de leche obtenidos`);
             };
 
-            if (this.inventory && typeof this.inventory.addMilk === "function") {
+            if (
+              this.inventory &&
+              typeof this.inventory.addMilk === "function"
+            ) {
               addAndNotify(this.inventory);
               console.log(`🐄 Ordeñaste y obtuviste ${milkAmount} L de leche`);
-            } else if (window && window.inventory && typeof window.inventory.addMilk === "function") {
+            } else if (
+              window &&
+              window.inventory &&
+              typeof window.inventory.addMilk === "function"
+            ) {
               // Fallback a window.inventory
               addAndNotify(window.inventory);
-              console.log(`🐄 Ordeñaste y obtuviste ${milkAmount} L de leche (fallback window.inventory)`);
+              console.log(
+                `🐄 Ordeñaste y obtuviste ${milkAmount} L de leche (fallback window.inventory)`
+              );
             }
           } catch (err) {
             console.warn("No se pudo añadir leche al inventario:", err);
           }
 
           this.currentCollidedCow = null; // Limpiar la referencia a la vaca
-          
+
           // Actualizar el estado de animación para volver al estado normal
           this.updateAnimationState();
         }
@@ -732,6 +754,10 @@ export class FarmerController {
       return;
     }
 
+    // Obtener el multiplicador de velocidad para las animaciones
+    const speedMultiplier = this.getSpeedMultiplier();
+    const animationSpeed = 0.2 * speedMultiplier; // Ajustar velocidad de animación basada en el speed boost
+
     // Si está rotando, no cambiar la animación
     if (this.isRotating) {
       return;
@@ -743,27 +769,33 @@ export class FarmerController {
       // Solo permitir interrupción después de 0.5 segundos de la colisión para evitar interrupciones inmediatas
       const timeSinceCollision = Date.now() - this.cowCollisionStartTime;
       const canInterrupt = timeSinceCollision > 500; // 0.5 segundos
-      
+
       if (canInterrupt) {
         // Verificar si el jugador intenta moverse (interrupción)
-        const isTryingToMove = 
-          this.keys.w || this.keys.a || this.keys.s || this.keys.d ||
-          this.keys.ArrowUp || this.keys.ArrowDown || this.keys.ArrowLeft || this.keys.ArrowRight;
-        
+        const isTryingToMove =
+          this.keys.w ||
+          this.keys.a ||
+          this.keys.s ||
+          this.keys.d ||
+          this.keys.ArrowUp ||
+          this.keys.ArrowDown ||
+          this.keys.ArrowLeft ||
+          this.keys.ArrowRight;
+
         if (isTryingToMove) {
           // El jugador quiere interrumpir la animación
           this.isCollidingWithCow = false;
           this.cowCollisionState = "none";
           this.cowCollisionStartTime = 0;
           console.log("🐄 Animación de colisión interrumpida por el jugador");
-          
+
           // No hacer return aquí, dejar que continúe con la lógica normal de movimiento
         } else {
           // Reproducir la animación correspondiente según el estado
           if (this.cowCollisionState === "kneelingDown") {
-            this.modelLoader.play("Kneel_Granjero2", 0.2); // Kneeling Down
+            this.modelLoader.play("Kneel_Granjero2", animationSpeed); // Kneeling Down
           } else if (this.cowCollisionState === "kneeling") {
-            this.modelLoader.play("Kneeling", 0.2); // Kneeling (estado final)
+            this.modelLoader.play("Kneeling", animationSpeed); // Kneeling (estado final)
           }
           return;
         }
@@ -919,9 +951,20 @@ export class FarmerController {
   }
 
   /**
-   * Actualiza la posición del modelo basado en la entrada del usuario
-   * @param {number} delta - Tiempo transcurrido desde el último fotograma
+   * Obtiene el multiplicador de velocidad actual
+   * @returns {number} - Multiplicador de velocities
    */
+  getSpeedMultiplier() {
+    let multiplier = 1.0;
+
+    // Aplicar multiplicador de correr
+    if (this.keys.shift) {
+      multiplier *= this.config.runMultiplier;
+    }
+
+    return multiplier;
+  }
+
   update(delta) {
     if (!this.model || !this.modelLoader?.model) {
       return;
@@ -938,12 +981,11 @@ export class FarmerController {
       return;
     }
 
-    // Calcular la distancia de movimiento normalizada por tiempo
-    const moveDistance = this.config.moveSpeed * 60 * delta;
-    const isRunning = this.keys.shift;
-    const currentMoveSpeed = isRunning
-      ? moveDistance * this.config.runMultiplier
-      : moveDistance;
+    // Calcular la velocidad base
+    const baseSpeed = this.config.moveSpeed * 60 * delta;
+    // Aplicar todos los multiplicadores (correr y speed boost)
+    const speedMultiplier = this.getSpeedMultiplier();
+    const currentMoveSpeed = baseSpeed * speedMultiplier;
 
     let moveX = 0;
     let moveZ = 0;
