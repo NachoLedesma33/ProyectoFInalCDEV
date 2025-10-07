@@ -43,6 +43,9 @@ export class FarmerController {
     // Referencia a las vacas para detección de colisiones
     this.cows = null;
 
+    // Referencia al mercado para detección de colisiones
+    this.market = null;
+
     // Referencia al inventario (se puede inyectar desde main.js)
     this.inventory = null;
 
@@ -576,6 +579,15 @@ export class FarmerController {
     // Probar la nueva posición
     const newPosition = currentPosition.clone().add(movementVector);
 
+    // Verificar colisión con el mercado (antes que otras colisiones)
+    if (this.market && this.checkMarketCollision(newPosition)) {
+      console.log("🚫 Colisión con mercado detectada, intentando deslizamiento...");
+      // Intentar deslizamiento suave contra el mercado
+      const slidingMovement = this.getSlidingMovement(currentPosition, movementVector);
+      // Si el deslizamiento resulta en movimiento, usarlo, de lo contrario detenerse
+      return slidingMovement.length() > 0 ? slidingMovement : new THREE.Vector3(0, 0, 0);
+    }
+
     // Verificar colisión con el corral
     if (this.corral && this.checkCorralCollision(newPosition)) {
       // Hay colisión con el corral, intentar deslizamiento suave
@@ -685,8 +697,83 @@ export class FarmerController {
       return false;
     }
 
+    // Verificar colisión con el mercado
+    if (this.market && this.checkMarketCollision(position)) {
+      return false;
+    }
+
     // Si no hay colisiones, la posición es válida
     return true;
+  }
+
+  /**
+   * Verifica si hay colisión con el área del mercado
+   * @param {THREE.Vector3} position - Posición a verificar
+   * @returns {boolean} - True si hay colisión
+   */
+  checkMarketCollision(position) {
+    if (!this.market || !this.market.marketGroup) {
+      console.warn('Mercado no está correctamente inicializado para detección de colisiones');
+      return false;
+    }
+
+    // Coordenadas exactas del polígono del mercado (ajustadas manualmente)
+    // Basadas en las coordenadas que proporcionaste
+    const marketPolygon = [
+      new THREE.Vector2(-148.7, 51.5),  // Punto 1
+      new THREE.Vector2(-154.7, 46.2),  // Punto 2
+      new THREE.Vector2(-162.7, 55.3),  // Punto 3
+      new THREE.Vector2(-156.5, 60.4),  // Punto 4
+      new THREE.Vector2(-148.7, 51.5)   // Cierra el polígono
+    ];
+
+    // Punto a verificar (posición del personaje)
+    const point = new THREE.Vector2(position.x, position.z);
+
+    // Algoritmo de punto en polígono (ray casting)
+    let inside = false;
+    for (let i = 0, j = marketPolygon.length - 1; i < marketPolygon.length; j = i++) {
+      const xi = marketPolygon[i].x, yi = marketPolygon[i].y;
+      const xj = marketPolygon[j].x, yj = marketPolygon[j].y;
+
+      // Asegurarse de que no haya divisiones por cero
+      if (yj === yi) continue;
+      
+      const intersect = ((yi > point.y) !== (yj > point.y)) &&
+        (point.x <= (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+      
+      if (intersect) inside = !inside;
+    }
+
+    // Para depuración: mostrar la posición y si hay colisión
+    if (inside) {
+      console.log('🚫 Colisión con mercado en posición:', 
+        `X: ${position.x.toFixed(1)}, Z: ${position.z.toFixed(1)}`,
+        'Polígono:', marketPolygon.map(p => `(${p.x}, ${p.y})`).join(' -> ')
+      );
+    }
+
+    return inside;
+  }
+
+  /**
+   * Establece la referencia al mercado para detección de colisiones
+   * @param {Object} market - Instancia del mercado
+   */
+  /**
+   * Establece la referencia al mercado para detección de colisiones
+   * @param {Object} market - Instancia del mercado
+   */
+  setMarket(market) {
+    this.market = market;
+    if (market && market.marketGroup) {
+      console.log('✅ Market reference set in FarmerController', {
+        position: market.marketGroup.position,
+        rotation: market.marketGroup.rotation
+      });
+    } else {
+      console.warn('⚠️ Se pasó una referencia de mercado no válida');
+    }
   }
 
   /**
