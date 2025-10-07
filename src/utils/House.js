@@ -29,10 +29,10 @@ export class House {
   createHouse() {
     const { width, height, depth } = this.size;
     const wallThickness = 0.3;
-    
+
     // Cargar la textura de piedra
     const textureLoader = new THREE.TextureLoader();
-    
+
     textureLoader.load(
       "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/coral_gravel/coral_gravel_diff_4k.jpg",
       (texture) => {
@@ -40,20 +40,20 @@ export class House {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(2, 2); // Repetir la textura para mejor cobertura
-        
+
         // Material principal de piedra
         const stoneMaterial = new THREE.MeshStandardMaterial({
           map: texture,
           metalness: 0.05,
           roughness: 0.95,
-          color: 0xffffff
+          color: 0xffffff,
         });
 
         // Material secundario marrón para detalles
         const brownMaterial = new THREE.MeshStandardMaterial({
-          color: 0x8B4513, // Marrón madera
+          color: 0x8b4513, // Marrón madera
           metalness: 0.1,
-          roughness: 0.8
+          roughness: 0.8,
         });
 
         // Material para el techo (misma textura de grava de coral)
@@ -61,23 +61,28 @@ export class House {
           map: texture.clone(),
           metalness: 0.05,
           roughness: 0.95,
-          color: 0xffffff
+          color: 0xffffff,
         });
 
         // Crear las paredes de la casa
         this.createWalls(stoneMaterial, brownMaterial);
-        
+
         // Crear el techo
         this.createRoof(roofMaterial);
-        
+
         // Crear la puerta principal con la misma textura de piedra
         this.createDoor(stoneMaterial);
-        
-        console.log("Casa creada con sistema de colisiones y puerta interactiva");
+
+        console.log(
+          "Casa creada con sistema de colisiones y puerta interactiva"
+        );
       },
       undefined,
       (error) => {
-        console.warn("No se pudo cargar la textura de grava de coral, usando materiales alternativos:", error);
+        console.warn(
+          "No se pudo cargar la textura de grava de coral, usando materiales alternativos:",
+          error
+        );
         // Usar materiales alternativos si la textura no carga
         this.createHouseWithAlternativeMaterials();
       }
@@ -91,25 +96,25 @@ export class House {
     const stoneMaterial = new THREE.MeshStandardMaterial({
       color: 0x808080, // Gris piedra
       metalness: 0.05,
-      roughness: 0.95
+      roughness: 0.95,
     });
 
     const brownMaterial = new THREE.MeshStandardMaterial({
-      color: 0x8B4513, // Marrón madera
+      color: 0x8b4513, // Marrón madera
       metalness: 0.1,
-      roughness: 0.8
+      roughness: 0.8,
     });
 
     const roofMaterial = new THREE.MeshStandardMaterial({
       color: 0x808080, // Gris piedra (igual que las paredes)
       metalness: 0.05,
-      roughness: 0.95
+      roughness: 0.95,
     });
 
     this.createWalls(stoneMaterial, brownMaterial);
     this.createRoof(roofMaterial);
     this.createDoor(stoneMaterial);
-    
+
     console.log("Casa creada con materiales alternativos");
   }
 
@@ -162,9 +167,13 @@ export class House {
     // Pared derecha (con espacio para la puerta)
     const doorHeight = 4.0; // Altura de la puerta
     const doorWidth = 2.5; // Ancho de la puerta
-    
+
     // Parte superior de la pared derecha
-    const rightWallTop = new THREE.BoxGeometry(wallThickness, height - doorHeight, depth);
+    const rightWallTop = new THREE.BoxGeometry(
+      wallThickness,
+      height - doorHeight,
+      depth
+    );
     const rightWallTopMesh = new THREE.Mesh(rightWallTop, stoneMaterial);
     rightWallTopMesh.position.set(
       this.position.x + width / 2,
@@ -175,27 +184,41 @@ export class House {
     rightWallTopMesh.receiveShadow = true;
     this.scene.add(rightWallTopMesh);
     this.walls.push(rightWallTopMesh);
-    
+
     // Parte inferior izquierda de la pared derecha (antes de la puerta)
-    const rightWallBottomLeft = new THREE.BoxGeometry(wallThickness, doorHeight, (depth / 2) - (doorWidth / 2));
-    const rightWallBottomLeftMesh = new THREE.Mesh(rightWallBottomLeft, stoneMaterial);
+    const rightWallBottomLeft = new THREE.BoxGeometry(
+      wallThickness,
+      doorHeight,
+      depth / 2 - doorWidth / 2
+    );
+    const rightWallBottomLeftMesh = new THREE.Mesh(
+      rightWallBottomLeft,
+      stoneMaterial
+    );
     rightWallBottomLeftMesh.position.set(
       this.position.x + width / 2,
       this.position.y + doorHeight / 2,
-      this.position.z - (depth / 4) - (doorWidth / 4)
+      this.position.z - depth / 4 - doorWidth / 4
     );
     rightWallBottomLeftMesh.castShadow = true;
     rightWallBottomLeftMesh.receiveShadow = true;
     this.scene.add(rightWallBottomLeftMesh);
     this.walls.push(rightWallBottomLeftMesh);
-    
+
     // Parte inferior derecha de la pared derecha (después de la puerta)
-    const rightWallBottomRight = new THREE.BoxGeometry(wallThickness, doorHeight, (depth / 2) - (doorWidth / 2));
-    const rightWallBottomRightMesh = new THREE.Mesh(rightWallBottomRight, stoneMaterial);
+    const rightWallBottomRight = new THREE.BoxGeometry(
+      wallThickness,
+      doorHeight,
+      depth / 2 - doorWidth / 2
+    );
+    const rightWallBottomRightMesh = new THREE.Mesh(
+      rightWallBottomRight,
+      stoneMaterial
+    );
     rightWallBottomRightMesh.position.set(
       this.position.x + width / 2,
       this.position.y + doorHeight / 2,
-      this.position.z + (depth / 4) + (doorWidth / 4)
+      this.position.z + depth / 4 + doorWidth / 4
     );
     rightWallBottomRightMesh.castShadow = true;
     rightWallBottomRightMesh.receiveShadow = true;
@@ -218,7 +241,7 @@ export class House {
    */
   createRoof(roofMaterial) {
     const { width, height, depth } = this.size;
-    
+
     // Techo principal (plano base) - aumentado para cubrir completamente la casa
     const roofBase = new THREE.BoxGeometry(width + 1.0, 0.2, depth + 1.0);
     const roofBaseMesh = new THREE.Mesh(roofBase, roofMaterial);
@@ -260,11 +283,11 @@ export class House {
     const frameMaterial = new THREE.MeshStandardMaterial({
       color: 0x4a4a4a, // Gris oscuro para el marco
       metalness: 0.2,
-      roughness: 0.7
+      roughness: 0.7,
     });
 
     const frameGroup = new THREE.Group();
-    
+
     // Lado izquierdo del marco
     const leftFrame = new THREE.Mesh(
       new THREE.BoxGeometry(0.2, doorHeight, 0.2), // Marco más grueso
@@ -303,7 +326,11 @@ export class House {
     const doorGroup = new THREE.Group();
 
     // Hoja de la puerta
-    const doorGeometry = new THREE.BoxGeometry(doorWidth, doorHeight, doorThickness);
+    const doorGeometry = new THREE.BoxGeometry(
+      doorWidth,
+      doorHeight,
+      doorThickness
+    );
     const doorMesh = new THREE.Mesh(doorGeometry, doorMaterial);
     doorMesh.position.set(0, 0, 0);
     doorMesh.castShadow = true;
@@ -313,9 +340,9 @@ export class House {
     // Manija de la puerta
     const handleGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8); // Manija más grande
     const handleMaterial = new THREE.MeshStandardMaterial({
-      color: 0xFFD700, // Dorado para la manija
+      color: 0xffd700, // Dorado para la manija
       metalness: 0.8,
-      roughness: 0.2
+      roughness: 0.2,
     });
     const handle = new THREE.Mesh(handleGeometry, handleMaterial);
     // Posicionar la manija en el lado correcto de la puerta (considerando la rotación)
@@ -329,7 +356,7 @@ export class House {
       this.position.y + doorHeight / 2,
       this.position.z
     );
-    
+
     // Rotar la puerta para que quede paralela a la pared derecha
     doorGroup.rotation.y = Math.PI / 2;
 
@@ -350,7 +377,6 @@ export class House {
     this.gates.push(gateData);
     this.scene.add(doorGroup);
     // No añadir la puerta móvil a las paredes para colisiones, ya que se maneja por separado
-
 
     // Añadir caja de colisión inicial para la puerta cerrada
     this.updateSingleGateCollisionBox(gateData);
@@ -402,7 +428,6 @@ export class House {
     // Eliminar la colisión de la puerta
     this.updateSingleGateCollisionBox(gateData);
 
-
     // Configurar autocierre
     this.scheduleAutoClose(gateData);
   }
@@ -416,7 +441,6 @@ export class House {
 
     gateData.open = false;
     gateData.targetRotation = 0;
-
   }
 
   /**
@@ -523,10 +547,10 @@ export class House {
     if (this.gates.length === 0) {
       return;
     }
-    
+
     this.gates.forEach((gateData) => {
       const distance = farmerPosition.distanceTo(gateData.mesh.position);
-      
+
       if (this.isFarmerNearGate(farmerPosition, gateData)) {
         if (!gateData.open) {
           this.openSingleGate(gateData);
@@ -649,7 +673,7 @@ export class House {
       if (wall.geometry) wall.geometry.dispose();
       if (wall.material) {
         if (Array.isArray(wall.material)) {
-          wall.material.forEach(material => material.dispose());
+          wall.material.forEach((material) => material.dispose());
         } else {
           wall.material.dispose();
         }

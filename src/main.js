@@ -16,6 +16,7 @@ import { SpaceShuttle } from "./utils/SpaceShuttle.js"; // Space Shuttle Orbiter
 import { Cow } from "./utils/Cow.js"; // Modelo de vaca
 import { Stone } from "./utils/Stone.js"; // Modelo de piedra
 import { House } from "./utils/House.js"; // Casa con puerta interactiva
+import { Market } from "./utils/Market.js"; // Mercado con ventana frontal
 import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
 
 // Variables globales principales de Three.js
@@ -32,7 +33,10 @@ let terrain, // Gestor del terreno
   skybox; // Fondo 360°
 
 // Variables para el minimap
-let minimapCanvas, minimapCtx, minimapWidth = 340, minimapHeight = 249;
+let minimapCanvas,
+  minimapCtx,
+  minimapWidth = 340,
+  minimapHeight = 249;
 let worldBounds = { minX: -250, maxX: 100, minZ: -250, maxZ: 300 }; // Límites del mundo ajustados para todas las piedras
 
 // Cargador de modelos
@@ -85,9 +89,9 @@ function createCows() {
     { x: 21.6, y: 0.0, z: 22.6 }, // Vaca 1
     { x: 21.6, y: 0.0, z: 17.2 }, // Vaca 2
     { x: 20.9, y: 0.0, z: 11.4 }, // Vaca 3
-    { x: 9.6,  y: 0.0, z: 21.9 }, // Vaca 4 (corregida posición duplicada)
-    { x: 9.6,  y: 0.0, z: 16.7 }, // Vaca 5 (posición adicional)
-    { x: 9.6,  y: 0.0, z: 12.6 }  // Vaca 6
+    { x: 9.6, y: 0.0, z: 21.9 }, // Vaca 4 (corregida posición duplicada)
+    { x: 9.6, y: 0.0, z: 16.7 }, // Vaca 5 (posición adicional)
+    { x: 9.6, y: 0.0, z: 12.6 }, // Vaca 6
   ];
 
   // Línea central del corral (desde z: 24.4 hasta z: 5.6 en x: 15.3)
@@ -97,30 +101,45 @@ function createCows() {
   // Crear cada vaca
   cowPositions.forEach((position, index) => {
     const cow = new Cow(scene, position); // La escala se calcula automáticamente para coincidir con el farmer
-    
+
     // Calcular el punto más cercano en la línea central para que la vaca mire hacia adentro
-    const targetZ = Math.max(centerLineEnd.z, Math.min(centerLineStart.z, position.z));
+    const targetZ = Math.max(
+      centerLineEnd.z,
+      Math.min(centerLineStart.z, position.z)
+    );
     const lookAtPoint = { x: centerLineStart.x, y: position.y, z: targetZ };
-    
+
     // Orientar la vaca hacia el punto de la línea central
     const orientCow = () => {
       if (cow.model) {
-        const targetVector = new THREE.Vector3(lookAtPoint.x, lookAtPoint.y, lookAtPoint.z);
+        const targetVector = new THREE.Vector3(
+          lookAtPoint.x,
+          lookAtPoint.y,
+          lookAtPoint.z
+        );
         cow.model.lookAt(targetVector);
-        console.log(`Vaca ${index + 1} orientada hacia la línea central:`, lookAtPoint);
+        console.log(
+          `Vaca ${index + 1} orientada hacia la línea central:`,
+          lookAtPoint
+        );
       } else {
         console.log(`Vaca ${index + 1} modelo aún no cargado, reintentando...`);
       }
     };
-    
+
     // Intentar orientar inmediatamente y luego varios reintentos
     setTimeout(orientCow, 500);
     setTimeout(orientCow, 1000);
     setTimeout(orientCow, 2000);
     setTimeout(orientCow, 3000);
-    
+
     cows.push(cow);
-    console.log(`Vaca ${index + 1} creada en posición:`, position, "mirando hacia:", lookAtPoint);
+    console.log(
+      `Vaca ${index + 1} creada en posición:`,
+      position,
+      "mirando hacia:",
+      lookAtPoint
+    );
   });
 
   // Hacer las vacas accesibles para depuración
@@ -135,54 +154,54 @@ function createCows() {
  */
 function initMinimap() {
   console.log("Inicializando minimap...");
-  
+
   // Obtener el canvas del minimap
-  minimapCanvas = document.getElementById('minimap-canvas');
+  minimapCanvas = document.getElementById("minimap-canvas");
   if (!minimapCanvas) {
     console.error("No se encontró el canvas del minimap");
     return;
   }
-  
-  minimapCtx = minimapCanvas.getContext('2d');
-  
+
+  minimapCtx = minimapCanvas.getContext("2d");
+
   // Configurar el canvas
   minimapCanvas.width = minimapWidth;
   minimapCanvas.height = minimapHeight;
-  
+
   // Configurar el botón de plegado/desplegado
-  const minimapToggle = document.getElementById('minimap-toggle');
-  const minimapClose = document.getElementById('minimap-close');
-  const minimap = document.getElementById('minimap');
-  
+  const minimapToggle = document.getElementById("minimap-toggle");
+  const minimapClose = document.getElementById("minimap-close");
+  const minimap = document.getElementById("minimap");
+
   // Estado inicial: plegado
   let isMinimapExpanded = false;
-  
+
   // Función para plegar el minimap
   function collapseMinimap() {
-    minimap.classList.remove('minimap-expanded');
-    minimap.classList.add('minimap-collapsed');
-    minimapToggle.classList.remove('hidden');
+    minimap.classList.remove("minimap-expanded");
+    minimap.classList.add("minimap-collapsed");
+    minimapToggle.classList.remove("hidden");
     isMinimapExpanded = false;
   }
-  
+
   // Función para desplegar el minimap
   function expandMinimap() {
-    minimap.classList.remove('minimap-collapsed');
-    minimap.classList.add('minimap-expanded');
-    minimapToggle.classList.add('hidden');
+    minimap.classList.remove("minimap-collapsed");
+    minimap.classList.add("minimap-expanded");
+    minimapToggle.classList.add("hidden");
     isMinimapExpanded = true;
   }
-  
+
   // Event listener para el botón principal (Mapa)
-  minimapToggle.addEventListener('click', () => {
+  minimapToggle.addEventListener("click", () => {
     expandMinimap();
   });
-  
+
   // Event listener para el botón de cierre (X)
-  minimapClose.addEventListener('click', () => {
+  minimapClose.addEventListener("click", () => {
     collapseMinimap();
   });
-  
+
   console.log("✅ Minimap inicializado con funcionalidad plegable");
 }
 
@@ -194,13 +213,15 @@ function initMinimap() {
  */
 function worldToMinimap(x, z) {
   // Normalizar coordenadas del mundo a 0-1
-  const normalizedX = (x - worldBounds.minX) / (worldBounds.maxX - worldBounds.minX);
-  const normalizedZ = (z - worldBounds.minZ) / (worldBounds.maxZ - worldBounds.minZ);
-  
+  const normalizedX =
+    (x - worldBounds.minX) / (worldBounds.maxX - worldBounds.minX);
+  const normalizedZ =
+    (z - worldBounds.minZ) / (worldBounds.maxZ - worldBounds.minZ);
+
   // Convertir a coordenadas del canvas (sin invertir Y para que el mapa muestre la dirección correcta)
   const minimapX = normalizedX * minimapWidth;
   const minimapY = normalizedZ * minimapHeight; // Sin invertir Y - ahora muestra la dirección real del movimiento
-  
+
   return { x: minimapX, y: minimapY };
 }
 
@@ -209,115 +230,128 @@ function worldToMinimap(x, z) {
  */
 function updateMinimap() {
   if (!minimapCtx || !minimapCanvas) return;
-  
+
   // Limpiar el canvas con fondo transparente
-  minimapCtx.fillStyle = 'rgba(25, 25, 25, 0.2)';
+  minimapCtx.fillStyle = "rgba(25, 25, 25, 0.2)";
   minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight);
-  
-  
+
   // Dibujar cuadrícula de referencia extremadamente sutil
-  minimapCtx.strokeStyle = 'rgba(255, 255, 255, 0.01)';
+  minimapCtx.strokeStyle = "rgba(255, 255, 255, 0.01)";
   minimapCtx.lineWidth = 0.3;
-  
+
   // Líneas verticales cada 50 unidades
   for (let x = worldBounds.minX; x <= worldBounds.maxX; x += 50) {
-    const minimapX = ((x - worldBounds.minX) / (worldBounds.maxX - worldBounds.minX)) * minimapWidth;
+    const minimapX =
+      ((x - worldBounds.minX) / (worldBounds.maxX - worldBounds.minX)) *
+      minimapWidth;
     minimapCtx.beginPath();
     minimapCtx.moveTo(minimapX, 0);
     minimapCtx.lineTo(minimapX, minimapHeight);
     minimapCtx.stroke();
   }
-  
+
   // Líneas horizontales cada 50 unidades
   for (let z = worldBounds.minZ; z <= worldBounds.maxZ; z += 50) {
-    const minimapY = ((z - worldBounds.minZ) / (worldBounds.maxZ - worldBounds.minZ)) * minimapHeight;
+    const minimapY =
+      ((z - worldBounds.minZ) / (worldBounds.maxZ - worldBounds.minZ)) *
+      minimapHeight;
     minimapCtx.beginPath();
     minimapCtx.moveTo(0, minimapY);
     minimapCtx.lineTo(minimapWidth, minimapY);
     minimapCtx.stroke();
   }
-  
+
   // Dibujar piedras
   if (stones && stones.length > 0) {
     stones.forEach((stone, index) => {
       if (stone.model) {
         const pos = stone.model.position;
         const minimapPos = worldToMinimap(pos.x, pos.z);
-        
+
         // Verificar si la piedra está dentro de los límites visibles del minimap
-        if (minimapPos.x >= 0 && minimapPos.x <= minimapWidth && minimapPos.y >= 0 && minimapPos.y <= minimapHeight) {
-          minimapCtx.fillStyle = 'rgba(139, 69, 19, 0.6)'; // Color marrón transparente para piedras
+        if (
+          minimapPos.x >= 0 &&
+          minimapPos.x <= minimapWidth &&
+          minimapPos.y >= 0 &&
+          minimapPos.y <= minimapHeight
+        ) {
+          minimapCtx.fillStyle = "rgba(139, 69, 19, 0.6)"; // Color marrón transparente para piedras
           minimapCtx.beginPath();
           minimapCtx.arc(minimapPos.x, minimapPos.y, 1.5, 0, Math.PI * 2);
           minimapCtx.fill();
         }
       }
     });
-    
   }
-  
+
   // Dibujar casa
   if (house && house.position) {
     const minimapPos = worldToMinimap(house.position.x, house.position.z);
-    
-    minimapCtx.fillStyle = 'rgba(139, 69, 19, 0.5)'; // Color marrón transparente para casa
+
+    minimapCtx.fillStyle = "rgba(139, 69, 19, 0.5)"; // Color marrón transparente para casa
     minimapCtx.fillRect(minimapPos.x - 3, minimapPos.y - 3, 6, 6);
   }
-  
+
   // Dibujar Space Shuttle
   if (spaceShuttle && spaceShuttle.model) {
     const pos = spaceShuttle.model.position;
     const minimapPos = worldToMinimap(pos.x, pos.z);
-    
-    minimapCtx.fillStyle = 'rgba(192, 192, 192, 0.7)'; // Color plateado transparente para Space Shuttle
+
+    minimapCtx.fillStyle = "rgba(192, 192, 192, 0.7)"; // Color plateado transparente para Space Shuttle
     minimapCtx.beginPath();
     minimapCtx.arc(minimapPos.x, minimapPos.y, 4, 0, Math.PI * 2);
     minimapCtx.fill();
   }
-  
+
   // Dibujar corral
   if (corral && corral.position) {
     const minimapPos = worldToMinimap(corral.position.x, corral.position.z);
     const size = 20; // Tamaño del corral
-    
+
     // Convertir tamaño del corral a coordenadas del minimap
     const sizeX = (size / (worldBounds.maxX - worldBounds.minX)) * minimapWidth;
-    const sizeZ = (size / (worldBounds.maxZ - worldBounds.minZ)) * minimapHeight;
-    
-    minimapCtx.strokeStyle = 'rgba(139, 69, 19, 0.4)'; // Color marrón transparente para corral
+    const sizeZ =
+      (size / (worldBounds.maxZ - worldBounds.minZ)) * minimapHeight;
+
+    minimapCtx.strokeStyle = "rgba(139, 69, 19, 0.4)"; // Color marrón transparente para corral
     minimapCtx.lineWidth = 1;
-    minimapCtx.strokeRect(minimapPos.x - sizeX/2, minimapPos.y - sizeZ/2, sizeX, sizeZ);
+    minimapCtx.strokeRect(
+      minimapPos.x - sizeX / 2,
+      minimapPos.y - sizeZ / 2,
+      sizeX,
+      sizeZ
+    );
   }
-  
+
   // Dibujar vacas
   if (cows && cows.length > 0) {
-    cows.forEach(cow => {
+    cows.forEach((cow) => {
       if (cow.model) {
         const pos = cow.model.position;
         const minimapPos = worldToMinimap(pos.x, pos.z);
-        
-        minimapCtx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // Color blanco transparente para vacas
+
+        minimapCtx.fillStyle = "rgba(255, 255, 255, 0.7)"; // Color blanco transparente para vacas
         minimapCtx.beginPath();
         minimapCtx.arc(minimapPos.x, minimapPos.y, 2, 0, Math.PI * 2);
         minimapCtx.fill();
       }
     });
   }
-  
+
   // Dibujar personaje principal (farmer)
   if (farmerController && farmerController.model) {
     const pos = farmerController.model.position;
     const minimapPos = worldToMinimap(pos.x, pos.z);
-    
+
     // Dibujar el farmer como un triángulo que apunta en la dirección del personaje
-    minimapCtx.fillStyle = 'rgba(0, 255, 0, 0.8)'; // Color verde transparente para el jugador
+    minimapCtx.fillStyle = "rgba(0, 255, 0, 0.8)"; // Color verde transparente para el jugador
     minimapCtx.save();
     minimapCtx.translate(minimapPos.x, minimapPos.y);
-    
+
     // Obtener la rotación del personaje (farmer) y invertirla para modo espejo
     const farmerRotation = farmerController.model.rotation.y;
     minimapCtx.rotate(farmerRotation + Math.PI); // Invertir 180 grados
-    
+
     minimapCtx.beginPath();
     minimapCtx.moveTo(0, -5);
     minimapCtx.lineTo(-3, 3);
@@ -434,6 +468,29 @@ function createHouse() {
   console.log(
     "✅ Casa creada exitosamente con textura de piedra y puerta interactiva"
   );
+}
+
+/**
+ * Crear el mercado con textura de piedra y ventana frontal
+ */
+function createMarket() {
+  console.log("Creando mercado con ventana frontal...");
+
+  // Crear el mercado en las coordenadas especificadas
+  const market = new Market(
+    scene,
+    { x: -155.8, y: 0.0, z: 53.3 }, // Posición especificada
+    { width: 12, height: 6, depth: 8 } // Tamaño rectangular con el lado más ancho al frente
+  );
+
+  // Hacer el mercado accesible desde la consola para depuración
+  window.market = market;
+  console.log("Mercado disponible como 'window.market' para depuración");
+  console.log(
+    "✅ Mercado creado exitosamente con textura de piedra y ventana frontal"
+  );
+
+  return market;
 }
 
 /**
@@ -567,6 +624,13 @@ async function init() {
   // Crear la casa con puerta interactiva
   createHouse();
 
+  // Crear el mercado con ventana frontal
+  const market = createMarket();
+
+  // Hacer el mercado accesible desde la consola para depuración
+  window.market = market;
+  console.log("Mercado disponible como 'window.market' para depuración");
+
   // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
   controls = cameraManager.getControls();
@@ -637,7 +701,9 @@ async function init() {
             if (typeof farmerController.setInventory === "function") {
               farmerController.setInventory(inventory);
             }
-            console.log("Inventory inicializado y disponible en window.inventory");
+            console.log(
+              "Inventory inicializado y disponible en window.inventory"
+            );
           } catch (e) {
             console.warn("No se pudo inicializar Inventory:", e);
           }
@@ -705,6 +771,20 @@ async function init() {
             console.warn("cows:", cows);
           }
 
+          // Conectar el farmerController con el mercado para detección de colisiones
+          if (farmerController && market) {
+            farmerController.setMarket(market);
+            console.log(
+              "✅ FarmerController conectado con el mercado para detección de colisiones"
+            );
+          } else {
+            console.warn(
+              "⚠️ No se pudo conectar el farmerController con el mercado"
+            );
+            console.warn("farmerController:", farmerController);
+            console.warn("market:", market);
+          }
+
           // Mostrar las animaciones disponibles en consola
           const availableAnims = Object.keys(instance.actions);
           console.log("🎬 Animaciones disponibles:", availableAnims);
@@ -760,11 +840,12 @@ function setupEventListeners() {
   // Escuchar cambios en el tamaño de la ventana
   window.addEventListener("resize", onWindowResize);
   console.log("Listener de redimensionamiento configurado");
-  
+
   // Tecla 'i' para mostrar/ocultar el inventario
   window.addEventListener("keydown", (ev) => {
     // Ignorar si el usuario está escribiendo en un input/textarea
-    const tag = (document.activeElement && document.activeElement.tagName) || "";
+    const tag =
+      (document.activeElement && document.activeElement.tagName) || "";
     if (tag === "INPUT" || tag === "TEXTAREA") return;
     if (ev.key && ev.key.toLowerCase() === "i") {
       if (window.inventory && typeof window.inventory.toggle === "function") {
