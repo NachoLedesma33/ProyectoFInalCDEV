@@ -60,6 +60,7 @@ export class FarmerController {
       ArrowLeft: false,
       ArrowRight: false,
       shift: false,
+      e: false, // tecla para equipar/usar arma
     };
 
     // Estado de rotación
@@ -83,6 +84,13 @@ export class FarmerController {
 
     // Inicializar el controlador
     this.setupEventListeners();
+
+  // referencia al bone de la mano (si se encuentra) para seguirla
+  this._handBone = null;
+
+  // vector y quaternion temporales para cálculos
+  this._tmpVec = new THREE.Vector3();
+  this._tmpQuat = new THREE.Quaternion();
 
     // Crear HUD de coordenadas
     this.createCoordinateDisplay();
@@ -813,6 +821,15 @@ export class FarmerController {
       if (key in this.keys) {
         this.keys[key] = true;
         this.updateAnimationState();
+        // Si es la tecla 'e' y se presionó, alternar equip/ataque
+        if (key === "e") {
+          // Si ya está equipado, ejecutar ataque corto
+          if (this.isEquipped) {
+            this.attack();
+          } else {
+            this.equipWeapon();
+          }
+        }
       } else if (key === "shift") {
         this.keys.shift = true;
         this.updateAnimationState();
@@ -830,6 +847,161 @@ export class FarmerController {
         this.updateAnimationState();
       }
     });
+  }
+
+  /**
+   * Intenta equipar el arma precargada en window.loadedAxe
+   */
+  equipWeapon() {
+    // ahora delegamos a equipTool con nombre por defecto 'Hacha'
+    this.equipTool('Hacha');
+  }
+
+  /**
+   * Equipar una herramienta por nombre (p. ej. 'Hacha')
+   * @param {string} toolName
+   */
+  equipTool(toolName) {
+    try {
+      if (!toolName) return;
+      // Si ya está equipado, y es la misma herramienta, no hacer nada
+      if (this.isEquipped && this.equippedToolName === toolName) return;
+
+      // Intentar obtener el recurso cargado en window según la herramienta
+      let resource = null;
+      if (typeof window !== 'undefined') {
+        if (toolName.toLowerCase() === 'hacha') resource = window.loadedAxe;
+        // en el futuro mapear otras herramientas aquí
+      }
+
+      if (!resource) {
+        console.warn('Recurso del tool no disponible para:', toolName);
+        if (this.inventory && typeof this.inventory.notify === 'function') this.inventory.notify(`No se encontró recurso para ${toolName}`);
+        return; // no marcar equipado si no hay mesh
+      }
+
+      // Buscar hueso de mano
+      let handBone = null;
+      this.model.traverse((c) => {
+        if (!handBone && c.isBone) {
+          const name = (c.name || '').toLowerCase();
+          if (name.includes('hand') || name.includes('right') || name.includes('r_hand') || name.includes('hand_r') || name.includes('mixamorig')) {
+            handBone = c;
+          }
+        }
+      });
+
+      const parent = handBone || this.model;
+  const weapon = resource.clone ? resource.clone(true) : resource;
+  weapon.name = `equipped_${toolName}`;
+  weapon.position.set(0,0,0);
+  weapon.rotation.set(0,0,0);
+  // Normalize weapon scale relative to the farmer model so size is reasonable
+  try {
+    const modelBox = new THREE.Box3().setFromObject(this.model);
+    const modelSize = new THREE.Vector3();
+    modelBox.getSize(modelSize);
+    const weaponBox = new THREE.Box3().setFromObject(weapon);
+    const weaponSize = new THREE.Vector3();
+    weaponBox.getSize(weaponSize);
+    // target weapon height proportional to model height
+    const modelHeight = Math.max(0.1, modelSize.y);
+    const weaponHeight = Math.max(0.001, weaponSize.y);
+  // desired weapon height = ~12% of model height (smaller)
+  const desiredWeaponHeight = modelHeight * 0.08;
+    const scaleFactor = desiredWeaponHeight / weaponHeight;
+    // clamp scale so the weapon remains reasonably small
+    const sf = Math.max(0.005, Math.min(scaleFactor, 1.0));
+    weapon.scale.multiplyScalar(sf);
+    console.log('equipTool scale applied', { modelHeight, weaponHeight, sf });
+  } catch (e) {
+    console.warn('Could not auto-scale weapon:', e);
+  }
+      // Offsets heurísticos
+      // Base offsets (will be applied relative to bone/world after transform)
+    const baseOffset = { x: 0.05, y: -0.10, z: 0.05, rotX: -Math.PI/2 };
+      // Apply rotation offset
+      weapon.rotation.x += baseOffset.rotX;
+      // Añadir arma a la escena raíz para evitar conflictos de esqueleto
+      const sceneRoot = this.model && this.model.parent ? this.model.parent : (typeof window !== 'undefined' ? window.scene : null);
+      if (sceneRoot && sceneRoot.isScene) {
+        sceneRoot.add(weapon);
+      } else if (this.model && this.model.parent) {
+        this.model.parent.add(weapon);
+      } else if (typeof window !== 'undefined' && window.scene) {
+        window.scene.add(weapon);
+      }
+      this.equippedWeapon = weapon;
+      this.isEquipped = true;
+      this.equippedToolName = toolName;
+      console.log(`Tool equipada: ${toolName}`, { parentName: parent.name || parent.type, boneFound: !!handBone });
+      // Log some bone names to help debug if handBone wasn't found
+      try {
+        const boneNames = [];
+        this.model.traverse((c) => {
+          if (c.isBone) boneNames.push(c.name || c.type);
+        });
+        if (boneNames.length > 0) console.log('Model bones sample:', boneNames.slice(0, 12));
+      } catch (e) {}
+      if (this.inventory && typeof this.inventory.notify === 'function') this.inventory.notify(`${toolName} equipada`);
+      // Solo cambiar animación si la acción existe
+      if (this.modelLoader && this.modelLoader.actions['meleeIdle']) {
+        this.modelLoader.play('meleeIdle', 0.15);
+      } else {
+        console.log('meleeIdle no disponible, manteniendo animación actual');
+      }
+      // force an animation state evaluation so melee animations are used if available
+      this.updateAnimationState();
+    } catch (e) {
+      console.warn('Error equipTool:', e);
+    }
+  }
+
+  /**
+   * Desequipar herramienta actualmente equipada
+   */
+  unequipTool() {
+    try {
+      if (!this.isEquipped) return;
+      if (this.equippedWeapon) {
+        try {
+          if (this.equippedWeapon.parent) this.equippedWeapon.parent.remove(this.equippedWeapon);
+        } catch (e) {}
+      }
+      this.equippedWeapon = null;
+      const prev = this.equippedToolName || 'Herramienta';
+      this.equippedToolName = null;
+      this.isEquipped = false;
+      console.log(`Tool guardada: ${prev}`);
+      if (this.inventory && typeof this.inventory.notify === 'function') this.inventory.notify(`${prev} guardada`);
+      // Volver a animación normal
+      if (this.modelLoader) {
+        // elegir idle por defecto
+        this.modelLoader.play('idle', 0.15);
+      }
+    } catch (e) {
+      console.warn('Error unequipTool:', e);
+    }
+  }
+
+  /**
+   * Ejecutar un ataque corto usando la animación meleeAttack
+   */
+  attack() {
+    if (!this.isEquipped) return;
+    try {
+      if (this.modelLoader && this.modelLoader.actions['meleeAttack']) {
+        this.modelLoader.play('meleeAttack', 0.05);
+        // Después de la animación, volver a meleeIdle
+        setTimeout(() => {
+          if (this.modelLoader.actions['meleeIdle']) this.modelLoader.play('meleeIdle', 0.12);
+        }, 700);
+      } else {
+        console.warn('Animación de melee no disponible');
+      }
+    } catch (e) {
+      console.warn('Error al ejecutar attack():', e);
+    }
   }
 
   /**
@@ -908,9 +1080,16 @@ export class FarmerController {
       this.keys.ArrowLeft ||
       this.keys.ArrowRight;
     const isRunning = this.keys.shift;
+    // Si está equipado, preferir animaciones de melee si están disponibles
+    const hasMeleeIdle = this.modelLoader && this.modelLoader.actions && this.modelLoader.actions['meleeIdle'];
+    const hasMeleeRun = this.modelLoader && this.modelLoader.actions && this.modelLoader.actions['meleeRun'];
+    const hasMeleeAttack = this.modelLoader && this.modelLoader.actions && this.modelLoader.actions['meleeAttack'];
+    const usingMelee = this.isEquipped && (hasMeleeIdle || hasMeleeRun || hasMeleeAttack);
 
     if (!isMoving) {
-      this.modelLoader.play("idle", 0.15);
+      // Si está equipado y hay meleeIdle, usarla
+      if (usingMelee && hasMeleeIdle) this.modelLoader.play('meleeIdle', 0.15);
+      else this.modelLoader.play("idle", 0.15);
       return;
     }
 
@@ -940,7 +1119,13 @@ export class FarmerController {
     }
     // Movimiento hacia adelante
     else if (this.keys.w || this.keys.ArrowUp) {
-      this.modelLoader.play(isRunning ? "run" : "walk", 0.1);
+      if (usingMelee) {
+        if (isRunning && hasMeleeRun) this.modelLoader.play('meleeRun', 0.1);
+        else if (hasMeleeIdle) this.modelLoader.play('meleeIdle', 0.1);
+        else this.modelLoader.play(isRunning ? "run" : "walk", 0.1);
+      } else {
+        this.modelLoader.play(isRunning ? "run" : "walk", 0.1);
+      }
     }
     // Movimiento hacia atrás (rotación 180)
     else if (this.keys.s || this.keys.ArrowDown) {
@@ -1172,6 +1357,49 @@ export class FarmerController {
 
     // Actualizar el cartel de coordenadas
     this.updateCoordinateDisplay();
+
+    // Si hay arma equipada y tenemos bone objetivo, actualizar su transform global para seguir la mano
+    if (this.equippedWeapon) {
+      try {
+        // Si no se encontró el bone previamente, buscarlo ahora y cachearlo
+        if (!this._handBone) {
+          this.model.traverse((c) => {
+            if (!this._handBone && c.isBone) {
+              const name = (c.name || '').toLowerCase();
+              if (name.includes('hand') || name.includes('right') || name.includes('r_hand') || name.includes('hand_r') || name.includes('mixamorig')) {
+                this._handBone = c;
+              }
+            }
+          });
+        }
+
+        if (this._handBone) {
+          // Obtener world position y quaternion del bone
+          this._handBone.getWorldPosition(this._tmpVec);
+          this._handBone.getWorldQuaternion(this._tmpQuat);
+
+          // Aplicar al arma: posicion cerca, con offsets en space del jugador
+          this.equippedWeapon.position.copy(this._tmpVec);
+          // aplicar rotación del hueso
+          this.equippedWeapon.quaternion.copy(this._tmpQuat);
+
+          // Offsets locales aplicados en el espacio del mundo (escalados según la escala del arma)
+          try {
+            const s = (this.equippedWeapon.scale ? (this.equippedWeapon.scale.x + this.equippedWeapon.scale.y + this.equippedWeapon.scale.z) / 3 : 1);
+            const ox = 0.05 * s;
+            const oy = -0.10 * s;
+            const oz = 0.05 * s;
+            this.equippedWeapon.translateX(ox);
+            this.equippedWeapon.translateY(oy);
+            this.equippedWeapon.translateZ(oz);
+          } catch (e) {
+            // ignore
+          }
+        }
+      } catch (e) {
+        // no bloquear el update si falla
+      }
+    }
   }
 
   /**

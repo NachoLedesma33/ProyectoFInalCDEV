@@ -800,8 +800,77 @@ async function init() {
     console.error("Error al cargar el modelo o animaciones:", error);
   }
 
+  // Intentar cargar el hacha (arma) y exponer helper para equiparla
+  (async () => {
+    try {
+      const axePath = modelConfig.getPath(
+        "weapons/melee/axes/axe.fbx"
+      );
+      console.log("Cargando arma (hacha) desde:", axePath);
+      const axeModel = await modelLoader.loadModel(axePath);
+      // Normalizar: tomar la primera malla encontrada
+      let axeMesh = null;
+      axeModel.traverse((c) => {
+        if (!axeMesh && c.isMesh) axeMesh = c.clone();
+      });
+
+      // Si no hay malla, exponer el modelo completo
+      if (!axeMesh) axeMesh = axeModel;
+
+      // No forzamos la escala aquí: conservar la escala original del recurso
+      if (axeMesh) {
+        axeMesh.name = "equip_axe";
+      }
+
+      // Guardar en window para uso posterior
+      window.loadedAxe = axeMesh;
+      console.log("Hacha cargada y disponible en window.loadedAxe");
+
+      // Registrar la herramienta en el inventario si existe
+      if (window.inventory && typeof window.inventory.addTool === "function") {
+        window.inventory.addTool("Hacha");
+        console.log("Hacha registrada en el inventario");
+      }
+    } catch (err) {
+      console.warn("No se pudo cargar el hacha:", err);
+    }
+  })();
+
   // Configurar eventos
   setupEventListeners();
+
+  // Mapear teclas 1..5 para equipar/guardar herramientas desde el inventario
+  window.addEventListener('keydown', (ev) => {
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (!window.inventory) return;
+    const k = ev.key;
+    if (/^[1-5]$/.test(k)) {
+      const idx = Number(k) - 1; // 0-based
+      try {
+        window.inventory.toggleSlot(idx);
+      } catch (e) {
+        console.warn('Error toggling inventory slot', e);
+      }
+    }
+  });
+
+  // Conectar cambio de equipamiento del inventario con el farmerController
+  if (window.inventory && farmerController) {
+    window.inventory.onEquipChange = (slotIndex, toolName) => {
+      try {
+        if (!toolName) {
+          // unequip
+          if (typeof farmerController.unequipTool === 'function') farmerController.unequipTool();
+        } else {
+          // equipar por nombre
+          if (typeof farmerController.equipTool === 'function') farmerController.equipTool(toolName);
+        }
+      } catch (e) {
+        console.warn('Error handling inventory equip change', e);
+      }
+    };
+  }
 
   // Inicializar el minimap
   initMinimap();

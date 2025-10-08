@@ -64,6 +64,10 @@ export const modelConfig = {
         Kneel_Granjero2: "characters/farmer/Kneeling Down.fbx",
         // Animación de estado final agachado
         Kneeling: "characters/farmer/Kneeling.fbx",
+        // Animaciones de combate / melee (para cuando el granjero sostiene un arma)
+        meleeIdle: "characters/farmer/Melee_Idle_Granjero2.fbx",
+        meleeAttack: "characters/farmer/Standing_Melee_Attack_Horizontal_Granjero2.fbx",
+        meleeRun: "characters/farmer/Combat_Run_Forward_Granjero2.fbx",
       },
 
       // Ajustes específicos

@@ -1,13 +1,18 @@
 export class Inventory {
   constructor({ pricePerLiter = 5 } = {}) {
     this.milkLiters = 0;
-    this.tools = [];
+    // tools represented as array of slot strings (null = empty)
+    this.slotCount = 5;
+    this.tools = new Array(this.slotCount).fill(null);
+    this.equippedSlot = null; // index (0-based) of equipped tool
     this.coins = 0;
     this.pricePerLiter = pricePerLiter;
     this._createUI();
     this._updateUI();
     // Mostrar el inventario por defecto
     this.show();
+    // callback cuando cambia equipamiento: (slotIndex, toolName|null)
+    this.onEquipChange = null;
   }
 
   addMilk(liters = 0) {
@@ -17,11 +22,51 @@ export class Inventory {
     return this.milkLiters;
   }
 
+  // Añadir una herramienta a la primera ranura libre. Devuelve el índice o -1 si no hay espacio
   addTool(name) {
-    if (!name) return this.tools;
-    if (!this.tools.includes(name)) this.tools.push(name);
+    if (!name) return -1;
+    const freeIndex = this.tools.findIndex((t) => t === null);
+    if (freeIndex === -1) {
+      console.warn('No hay ranuras libres en el inventario');
+      return -1;
+    }
+    this.tools[freeIndex] = name;
     this._updateUI();
-    return this.tools;
+    return freeIndex;
+  }
+
+  // Obtener herramienta en slot (1-based index for callers is nicer; internal 0-based)
+  getToolInSlot(index0) {
+    if (index0 == null) return null;
+    if (index0 < 0 || index0 >= this.slotCount) return null;
+    return this.tools[index0];
+  }
+
+  // Toggle equip/unequip slot. index0 = 0..slotCount-1
+  toggleSlot(index0) {
+    if (index0 == null) return;
+    if (index0 < 0 || index0 >= this.slotCount) return;
+    const tool = this.tools[index0];
+    if (!tool) {
+      // nothing to equip
+      this._flash('Ranura vacía');
+      return;
+    }
+
+    console.log('Inventory.toggleSlot called for', index0, 'current equipped:', this.equippedSlot, 'tool:', this.tools[index0]);
+    if (this.equippedSlot === index0) {
+      // unequip
+      this.equippedSlot = null;
+      this._updateUI();
+      if (typeof this.onEquipChange === 'function') this.onEquipChange(null, null);
+      this._flash(`${tool} guardada`);
+    } else {
+      // equip
+      this.equippedSlot = index0;
+      this._updateUI();
+      if (typeof this.onEquipChange === 'function') this.onEquipChange(index0, tool);
+      this._flash(`${tool} equipada`);
+    }
   }
 
   sellMilk() {
@@ -86,8 +131,8 @@ export class Inventory {
         <span id="inv-coins" style="font-family:'Courier New', monospace">0</span>
       </div>
       <div style="margin-top:10px;margin-bottom:4px">
-        <div style="font-size:12px;opacity:0.8;margin-bottom:4px"><strong>Herramientas:</strong></div>
-        <div id="inv-tools" style="font-size:12px;color:#a0d8ef">-</div>
+        <div style="font-size:12px;opacity:0.8;margin-bottom:4px"><strong>Herramientas (1-5):</strong></div>
+        <div id="inv-tools" style="display:flex;gap:6px;flex-wrap:wrap"></div>
       </div>
       <div id="inv-msg" style="margin-top:10px;padding:6px;background:rgba(255,255,255,0.1);border-radius:4px;font-size:12px;display:none"></div>
     `;
@@ -103,6 +148,40 @@ export class Inventory {
   _updateUI() {
     if (!this._ui) return;
     this._ui.milk.textContent = this.milkLiters.toFixed(2);
+    // Actualizar monedas
+    if (this._ui.coins) this._ui.coins.textContent = String(this.coins);
+
+    // Actualizar slots de herramientas
+    if (this._ui.tools) {
+      // Limpiar
+      this._ui.tools.innerHTML = '';
+      for (let i = 0; i < this.slotCount; i++) {
+        const slot = document.createElement('div');
+        Object.assign(slot.style, {
+          minWidth: '36px',
+          height: '36px',
+          borderRadius: '6px',
+          background: 'rgba(255,255,255,0.04)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#a0d8ef',
+          fontSize: '12px',
+          border: '1px solid rgba(255,255,255,0.04)',
+          cursor: 'default'
+        });
+
+        if (this.equippedSlot === i) {
+          slot.style.background = 'linear-gradient(90deg, rgba(250,200,50,0.15), rgba(250,200,50,0.05))';
+          slot.style.border = '1px solid rgba(250,200,50,0.6)';
+          slot.style.color = '#ffd66b';
+        }
+
+        const toolName = this.tools[i] || '';
+        slot.textContent = toolName ? `${i + 1}. ${toolName}` : `${i + 1}`;
+        this._ui.tools.appendChild(slot);
+      }
+    }
   }
 
   _flash(msg, ms = 2200) {

@@ -129,6 +129,22 @@ export class ModelLoader {
   async loadAnimations(animationConfig) {
     const animationPromises = [];
 
+    // Helper: collect bone names from an object
+    const collectBoneNames = (obj) => {
+      const names = new Set();
+      obj.traverse((c) => {
+        if (c.isBone) names.add((c.name || '').toLowerCase());
+        // FBX sometimes stores bones as objects with type 'Bone' or includes skeletons on skinned meshes
+        if (c.skeleton && c.skeleton.bones) {
+          c.skeleton.bones.forEach(b => names.add((b.name||'').toLowerCase()));
+        }
+      });
+      return names;
+    };
+
+    // Bone set of the target model (lowercased)
+    const modelBoneNames = this.model ? collectBoneNames(this.model) : new Set();
+
     // Cargar cada animación definida en la configuración
     for (const [name, path] of Object.entries(animationConfig)) {
       if (!path) continue;
@@ -137,8 +153,22 @@ export class ModelLoader {
         this.animationLoader.load(
           path,
           (animModel) => {
-            // Si el modelo cargado tiene animaciones, agregarlas al array
+            // Si el modelo cargado tiene animaciones, verificar compatibilidad de huesos antes de agregarlas
             if (animModel.animations && animModel.animations.length > 0) {
+              // recopilar nombres de hueso del animModel
+              const animBoneNames = collectBoneNames(animModel);
+
+              // Calcular intersección
+              let common = 0;
+              animBoneNames.forEach(n => { if (modelBoneNames.has(n)) common++; });
+
+              // Si no hay huesos en común, evitar cargar la animación (riesgo de T-pose)
+              if (modelBoneNames.size > 0 && common === 0) {
+                console.warn(`Skipping animation '${name}' - no bone names match the target model (possible incompatible skeleton)`);
+                resolve();
+                return;
+              }
+
               // Usar la primera animación del modelo cargado
               const clip = animModel.animations[0];
 
@@ -153,7 +183,7 @@ export class ModelLoader {
               action.clampWhenFinished = true;
               this.actions[name] = action;
 
-              console.log(`Loaded animation: ${name}`);
+              console.log(`Loaded animation: ${name} (common bones: ${common})`);
             }
             resolve();
           },
