@@ -1,4 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
+import { FBXLoader } from 'https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js';
 
 /**
  * Controlador para manejar el movimiento y animaciones del granjero
@@ -48,6 +49,10 @@ export class FarmerController {
 
     // Referencia al inventario (se puede inyectar desde main.js)
     this.inventory = null;
+    
+    // Referencia al arma equipada
+    this.equippedWeapon = null;
+    this.isEquipped = false;
 
     // Estado de las teclas
     this.keys = {
@@ -60,7 +65,9 @@ export class FarmerController {
       ArrowLeft: false,
       ArrowRight: false,
       shift: false,
-      e: false, // tecla para equipar/usar arma
+      e: false,  // tecla E para rotar a la DERECHA
+      q: false,  // tecla Q para rotar a la IZQUIERDA
+      '1': false // tecla 1 para equipar/descartar arma
     };
 
     // Estado de rotación
@@ -821,9 +828,9 @@ export class FarmerController {
       if (key in this.keys) {
         this.keys[key] = true;
         this.updateAnimationState();
-        // Si es la tecla 'e' y se presionó, alternar equip/ataque
-        if (key === "e") {
-          // Si ya está equipado, ejecutar ataque corto
+        
+        // Manejar tecla '1' para equipar/desequipar arma
+        if (key === "1") {
           if (this.isEquipped) {
             this.attack();
           } else {
@@ -850,110 +857,443 @@ export class FarmerController {
   }
 
   /**
+   * Busca recursivamente el hueso de la mano en el modelo
+   * @param {THREE.Object3D} object - Objeto o hueso donde buscar
+   * @returns {THREE.Bone|null} - Hueso de la mano (izquierda o derecha) o null si no se encuentra
+   */
+  findRightHandBone(object) {
+    if (!object) return null;
+    
+    // Debug: Log the bone hierarchy
+    if (object.isBone && object.parent) {
+      console.log(`Bone found: ${object.name} (parent: ${object.parent.name})`);
+    }
+
+    if (object.isBone) {
+      const name = object.name.toLowerCase();
+      
+      // Buscar específicamente el hueso de la mano izquierda (left hand)
+      const isLeftHand = name.includes('lefthand') || name.includes('left_hand') || 
+                        name.includes('hand_l') || name.includes('hand.left') ||
+                        name.includes('mixamorighandl') || name.includes('mixamorig_lefthand') ||
+                        name === 'mixamoriglefthand' || name === 'mixamorigLeftHand';
+      
+      if (isLeftHand) {
+        console.log(`Hueso de la mano izquierda encontrado: ${object.name}`);
+        
+        // Agregar una esfera de depuración en la posición del hueso
+        const debugSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(0.05, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+        );
+        debugSphere.name = 'leftHandDebug';
+        object.add(debugSphere);
+        
+        return object;
+      }
+      
+      // Si no se encuentra la mano izquierda, buscar la derecha como respaldo
+      const isRightHand = name.includes('righthand') || name.includes('right_hand') || 
+                         name.includes('hand_r') || name.includes('hand.right') ||
+                         name.includes('mixamorighandr') || name.includes('mixamorig_righthand') ||
+                         name === 'mixamorigrighthand' || name === 'mixamorigRightHand';
+      
+      if (isRightHand) {
+        console.log(`Hueso de la mano derecha encontrado: ${object.name} (usando como respaldo)`);
+        
+        // Agregar una esfera de depuración en la posición del hueso
+        const debugSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(0.05, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0x0000ff })
+        );
+        debugSphere.name = 'rightHandDebug';
+        object.add(debugSphere);
+        
+        return object;
+      }
+    }
+
+    // Búsqueda recursiva en los hijos
+    if (object.children) {
+      for (const child of object.children) {
+        const result = this.findRightHandBone(child);
+        if (result) return result;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
    * Intenta equipar el arma precargada en window.loadedAxe
    */
-  equipWeapon() {
-    // ahora delegamos a equipTool con nombre por defecto 'Hacha'
-    this.equipTool('Hacha');
+  async equipWeapon() {
+    try {
+      if (this.isEquipped) {
+        console.log('El arma ya está equipada');
+        return;
+      }
+
+      // Asegurarse de que el modelo esté completamente cargado
+      this.model.updateMatrixWorld(true);
+      
+      // Encontrar el hueso de la mano izquierda
+      this._handBone = this.findRightHandBone(this.model);
+      
+      if (!this._handBone) {
+        console.warn('No se encontró el hueso de la mano izquierda, usando posición por defecto');
+        // Posición por defecto si no se encuentra el hueso
+        this._weaponPivot = new THREE.Group();
+        this.model.add(this._weaponPivot);
+      } else {
+        console.log(`Usando hueso para el arma: ${this._handBone.name}`);
+        // Crear un pivote para el arma
+        this._weaponPivot = new THREE.Group();
+        
+        // Asegurarse de que el pivote esté en la jerarquía correcta
+        if (this._handBone) {
+          // Si ya tiene un padre, quitarlo primero
+          if (this._weaponPivot.parent) {
+            this._weaponPivot.parent.remove(this._weaponPivot);
+          }
+          this._handBone.add(this._weaponPivot);
+          console.log('Pivote del arma añadido al hueso:', this._handBone.name);
+          
+          // Asegurar que el pivote herede la rotación del personaje
+          this._weaponPivot.matrixAutoUpdate = true;
+        }
+      }
+      
+      // Limpiar cualquier arma anterior
+      while (this._weaponPivot.children.length) {
+        this._weaponPivot.remove(this._weaponPivot.children[0]);
+      }
+      
+      // Si ya hay un arma cargada, úsala
+      if (window.loadedAxe) {
+        // Clonar el modelo del arma para evitar problemas de referencia
+        this.equippedWeapon = window.loadedAxe.clone();
+        
+        // Ajustar escala del arma para que sea visible
+        this.equippedWeapon.scale.set(0.5, 0.5, 0.5);
+        
+        // Asegurar que el arma sea visible
+        console.log('Configurando visibilidad del arma...');
+        this.equippedWeapon.traverse((child) => {
+          if (child.isMesh) {
+            console.log(`Procesando mesh: ${child.name || 'sin nombre'}`);
+            
+            // Hacer el mesh visible
+            child.visible = true;
+            child.frustumCulled = false; // Desactivar frustum culling
+            
+            // Configurar materiales para que sean visibles
+            if (Array.isArray(child.material)) {
+              console.log(`  - Materiales (${child.material.length}):`);
+              child.material.forEach((mat, i) => {
+                console.log(`    [${i}]`, mat);
+                mat.visible = true;
+                mat.transparent = false;
+                mat.opacity = 1;
+                mat.side = THREE.DoubleSide;
+                mat.needsUpdate = true;
+              });
+            } else if (child.material) {
+              console.log('  - Material:', child.material);
+              child.material.visible = true;
+              child.material.transparent = false;
+              child.material.opacity = 1;
+              child.material.side = THREE.DoubleSide;
+              child.material.needsUpdate = true;
+            }
+            
+            // Configurar sombras
+            child.castShadow = true;
+            child.receiveShadow = true;
+            
+            // Forzar actualización de la matriz
+            child.updateMatrix();
+            
+            // Eliminado el recuadro verde de depuración
+          }
+        });
+        
+        console.log('Arma configurada:', this.equippedWeapon);
+        
+        // Añadir el arma al pivote
+        this._weaponPivot.add(this.equippedWeapon);
+        
+        // Ajustes de posición y rotación relativos al hueso de la mano
+        // Posición del arma (ajustar según sea necesario)
+        this._weaponPivot.position.set(0.1, 0.1, 0);  // Ajuste fino de posición
+        this._weaponPivot.rotation.set(0, 0, 0);   // Rotación inicial
+        
+        // Asegurar que el pivote esté en la jerarquía correcta
+        if (this._handBone) {
+          // Si ya tiene un padre, quitarlo primero
+          if (this._weaponPivot.parent) {
+            this._weaponPivot.parent.remove(this._weaponPivot);
+          }
+          this._handBone.add(this._weaponPivot);
+          console.log('Pivote del arma añadido al hueso:', this._handBone.name);
+        }
+        
+        // Ajustar la escala del arma (aumentada para mejor visibilidad)
+        this.equippedWeapon.scale.set(10, 10, 10);
+        
+        // Posición relativa al pivote (ajustar según sea necesario)
+        this.equippedWeapon.position.set(0.1, 0.1, 0);
+        
+        // Rotación inicial del hacha para que apunte hacia adelante
+        this.equippedWeapon.rotation.set(
+          -Math.PI / 2,  // Apuntar hacia adelante
+          0,             // Sin rotación en Y
+          Math.PI / 4    // Inclinación de 45 grados para mejor agarre
+        );
+        
+        // Ajustar la posición del pivote para que el arma esté en la mano
+        // Valores ajustados para la mano izquierda
+        this._weaponPivot.position.set(
+          0.2,   // Ajuste lateral (positivo para derecha, negativo para izquierda)
+          0.2,   // Ajuste vertical (arriba/abajo)
+          0.1    // Ajuste hacia adelante/atrás
+        );
+        
+        // Asegurar que el arma esté orientada correctamente
+        this.equippedWeapon.updateMatrix();
+        
+        // Punto de referencia visual (temporalmente visible para depuración)
+        const marker = new THREE.Mesh(
+          new THREE.SphereGeometry(0.1, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
+        );
+        marker.name = 'weaponMarker';
+        marker.visible = true; // Temporalmente visible para depuración
+        this.equippedWeapon.add(marker);
+        
+        // Asegurar que el arma sea visible
+        this.equippedWeapon.visible = true;
+        this.equippedWeapon.traverse((child) => {
+          if (child.isMesh) {
+            child.visible = true;
+            if (child.material) {
+              child.material.visible = true;
+              child.material.needsUpdate = true;
+            }
+          }
+        });
+        
+        // Asegurarse de que el arma esté orientada correctamente
+        this.equippedWeapon.updateMatrix();
+        
+        // Actualizar las matrices de toda la jerarquía
+        this.model.updateMatrixWorld(true);
+        if (this._handBone) this._handBone.updateMatrixWorld(true);
+        this._weaponPivot.updateMatrixWorld(true);
+        this.equippedWeapon.updateMatrixWorld(true);
+        
+        // Forzar actualización de todas las matrices
+        this.model.traverse((obj) => {
+          if (obj.updateMatrix) obj.updateMatrix();
+          if (obj.updateMatrixWorld) obj.updateMatrixWorld(true);
+        });
+        
+        // Forzar renderizado
+        if (this._renderer && this._scene && this._camera) {
+          console.log('Forzando renderizado...');
+          this._renderer.render(this._scene, this._camera);
+          
+          // Añadir un temporizador para forzar actualizaciones
+          if (!this._debugInterval) {
+            this._debugInterval = setInterval(() => {
+              console.log('Actualizando arma...');
+              this.equippedWeapon.updateMatrix();
+              this.equippedWeapon.updateMatrixWorld(true);
+              this._renderer.render(this._scene, this._camera);
+            }, 1000);
+          }
+        }
+        
+        // Depuración: Mostrar un punto en la posición del arma
+        let debugSphere = this._weaponPivot.getObjectByName('weaponDebug');
+        if (!debugSphere) {
+          debugSphere = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 16, 16),
+            new THREE.MeshBasicMaterial({ 
+              color: 0xff0000, 
+              wireframe: true,
+              transparent: true,
+              opacity: 0.8
+            })
+          );
+          debugSphere.name = 'weaponDebug';
+          this._weaponPivot.add(debugSphere);
+        }
+        
+        // Depuración: Mostrar ejes en el pivote del arma
+        const axesHelper = new THREE.AxesHelper(0.5);
+        axesHelper.name = 'weaponAxes';
+        this._weaponPivot.add(axesHelper);
+        
+        // Depuración: Mostrar ejes en el hueso de la mano
+        if (this._handBone) {
+          const handAxes = new THREE.AxesHelper(0.3);
+          handAxes.name = 'handAxes';
+          this._handBone.add(handAxes);
+        }
+          
+          // Forzar actualización de la matriz del mundo
+          this.equippedWeapon.updateMatrixWorld(true);
+          
+          // Depuración
+          console.log('=== INFORMACIÓN DEL ARMA ===');
+          console.log('Posición del arma (local):', this.equippedWeapon.position);
+          console.log('Posición del arma (mundo):', this.equippedWeapon.getWorldPosition(new THREE.Vector3()));
+          console.log('Escala del arma:', this.equippedWeapon.scale);
+          console.log('Rotación del arma:', this.equippedWeapon.rotation);
+          console.log('==========================');
+          
+          // Forzar actualización de la escena
+          this.equippedWeapon.updateMatrixWorld(true);
+          
+          // Verificar si el arma tiene geometría
+          this.equippedWeapon.traverse((child) => {
+            if (child.isMesh) {
+              console.log('Mesh encontrado en el arma:', child);
+              console.log('Geometría del mesh:', child.geometry);
+              console.log('Material del mesh:', child.material);
+            }
+          });
+        
+        // Depuración
+        console.log('=== INFORMACIÓN DEL ARMA ===');
+        console.log('Posición del arma (local):', this.equippedWeapon.position);
+        console.log('Posición del arma (mundo):', this.equippedWeapon.getWorldPosition(new THREE.Vector3()));
+        console.log('Rotación del arma:', this.equippedWeapon.rotation);
+        console.log('Escala del arma:', this.equippedWeapon.scale);
+        console.log('==========================');
+        
+        this.isEquipped = true;
+        console.log('Arma equipada correctamente');
+        return;
+      }
+
+      // Si no hay arma cargada, crea una caja roja temporal
+      console.log('No se encontró un arma precargada, creando una de prueba...');
+      
+      // Crear un grupo para el hacha
+      const axe = new THREE.Group();
+      
+      // Crear el mango del hacha (más grueso y largo)
+      const handleGeometry = new THREE.BoxGeometry(0.2, 1.0, 0.2);
+      const handleMaterial = new THREE.MeshBasicMaterial({ color: 0x8B4513 }); // Marrón madera
+      const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+      
+      // Crear la cabeza del hacha (más grande)
+      const headGeometry = new THREE.BoxGeometry(0.6, 0.2, 0.8);
+      const headMaterial = new THREE.MeshBasicMaterial({ color: 0xCCCCCC }); // Gris metal
+      const head = new THREE.Mesh(headGeometry, headMaterial);
+      
+      // Posicionar la cabeza en la parte superior del mango
+      head.position.y = 0.5;
+      head.rotation.z = Math.PI / 4; // Inclinar la cabeza del hacha
+      
+      // Añadir las partes al hacha
+      axe.add(handle);
+      axe.add(head);
+      
+      // Hacer el hacha más grande
+      axe.scale.set(2, 2, 2);
+      
+      // Añadir el hacha a la escena (directamente al modelo por ahora)
+      this.model.add(axe);
+      this.equippedWeapon = axe;
+      
+      // Mostrar posición de depuración
+      console.log('Hacha de prueba creada en posición:', axe.position);
+      
+      // Encontrar el hueso de la mano
+      this._handBone = this.findRightHandBone(this.model);
+      
+      if (this._handBone) {
+        console.log('Hueso de la mano encontrado:', this._handBone.name);
+        
+        // Obtener la posición y rotación del hueso
+        this._handBone.getWorldPosition(this._tmpVec);
+        this._handBone.getWorldQuaternion(this._tmpQuat);
+        
+        // Aplicar la posición y rotación al arma
+        this.equippedWeapon.position.copy(this._tmpVec);
+        this.equippedWeapon.quaternion.copy(this._tmpQuat);
+        
+        // Ajustes de posición (más pronunciados para mejor visibilidad)
+        this.equippedWeapon.translateX(0.5);  // Mover más a la derecha
+        this.equippedWeapon.translateY(0.5);  // Mover más arriba
+        this.equippedWeapon.translateZ(0.5);  // Mover más al frente
+        
+        // Rotación para mejor visibilidad
+        this.equippedWeapon.rotation.x = Math.PI / 2;  // Apuntar hacia adelante
+        this.equippedWeapon.rotation.y = Math.PI / 4;  // Girar 45 grados
+        
+        // Actualizar la matriz del mundo del arma
+        this.equippedWeapon.updateMatrixWorld(true);
+      } else {
+        console.warn('No se encontró el hueso de la mano, usando posición por defecto');
+        // Posición por defecto si no se encuentra el hueso
+        this.equippedWeapon.position.copy(this.model.position);
+        this.equippedWeapon.position.y += 2.0; // Ajustar altura (más alto)
+        this.equippedWeapon.position.z += 1.0; // Mover hacia adelante
+        this.equippedWeapon.rotation.set(Math.PI / 2, 0, 0); // Rotar para mejor visibilidad
+      }
+      
+      this.isEquipped = true;
+      console.log('Hacha de prueba creada');
+      
+      console.log('Hacha de prueba creada en la mano derecha');
+      
+      // Función para mostrar información de depuración
+      const logDebugInfo = () => {
+        const worldPos = new THREE.Vector3();
+        axe.getWorldPosition(worldPos);
+        
+        console.log('=== INFORMACIÓN DE DEPURACIÓN ===');
+        console.log('Posición del hacha (local):', axe.position);
+        console.log('Posición del hacha (mundo):', worldPos);
+        console.log('Escala del hacha:', axe.scale);
+        console.log('Padre del hacha:', axe.parent?.name || 'Escena raíz');
+        console.log('Hueso de la mano:', rightHandBone.name);
+        console.log('Posición del hueso (local):', rightHandBone.position);
+        console.log('Posición del hueso (mundo):', rightHandBone.getWorldPosition(new THREE.Vector3()));
+        console.log('================================');
+      };
+      
+      // Mostrar información de depuración
+      logDebugInfo();
+      
+      // Mostrar información periódicamente (útil para depuración)
+      this.debugInterval = setInterval(logDebugInfo, 2000);
+      
+      // Forzar actualización
+      axe.updateMatrixWorld(true);
+      
+    } catch (error) {
+      console.error('Error al equipar el hacha:', error);
+    }
   }
 
   /**
    * Equipar una herramienta por nombre (p. ej. 'Hacha')
    * @param {string} toolName
    */
-  equipTool(toolName) {
-    try {
-      if (!toolName) return;
-      // Si ya está equipado, y es la misma herramienta, no hacer nada
-      if (this.isEquipped && this.equippedToolName === toolName) return;
-
-      // Intentar obtener el recurso cargado en window según la herramienta
-      let resource = null;
-      if (typeof window !== 'undefined') {
-        if (toolName.toLowerCase() === 'hacha') resource = window.loadedAxe;
-        // en el futuro mapear otras herramientas aquí
-      }
-
-      if (!resource) {
-        console.warn('Recurso del tool no disponible para:', toolName);
-        if (this.inventory && typeof this.inventory.notify === 'function') this.inventory.notify(`No se encontró recurso para ${toolName}`);
-        return; // no marcar equipado si no hay mesh
-      }
-
-      // Buscar hueso de mano
-      let handBone = null;
-      this.model.traverse((c) => {
-        if (!handBone && c.isBone) {
-          const name = (c.name || '').toLowerCase();
-          if (name.includes('hand') || name.includes('right') || name.includes('r_hand') || name.includes('hand_r') || name.includes('mixamorig')) {
-            handBone = c;
-          }
-        }
-      });
-
-      const parent = handBone || this.model;
-  const weapon = resource.clone ? resource.clone(true) : resource;
-  weapon.name = `equipped_${toolName}`;
-  weapon.position.set(0,0,0);
-  weapon.rotation.set(0,0,0);
-  // Normalize weapon scale relative to the farmer model so size is reasonable
-  try {
-    const modelBox = new THREE.Box3().setFromObject(this.model);
-    const modelSize = new THREE.Vector3();
-    modelBox.getSize(modelSize);
-    const weaponBox = new THREE.Box3().setFromObject(weapon);
-    const weaponSize = new THREE.Vector3();
-    weaponBox.getSize(weaponSize);
-    // target weapon height proportional to model height
-    const modelHeight = Math.max(0.1, modelSize.y);
-    const weaponHeight = Math.max(0.001, weaponSize.y);
-  // desired weapon height = ~12% of model height (smaller)
-  const desiredWeaponHeight = modelHeight * 0.08;
-    const scaleFactor = desiredWeaponHeight / weaponHeight;
-    // clamp scale so the weapon remains reasonably small
-    const sf = Math.max(0.005, Math.min(scaleFactor, 1.0));
-    weapon.scale.multiplyScalar(sf);
-    console.log('equipTool scale applied', { modelHeight, weaponHeight, sf });
-  } catch (e) {
-    console.warn('Could not auto-scale weapon:', e);
-  }
-      // Offsets heurísticos
-      // Base offsets (will be applied relative to bone/world after transform)
-    const baseOffset = { x: 0.05, y: -0.10, z: 0.05, rotX: -Math.PI/2 };
-      // Apply rotation offset
-      weapon.rotation.x += baseOffset.rotX;
-      // Añadir arma a la escena raíz para evitar conflictos de esqueleto
-      const sceneRoot = this.model && this.model.parent ? this.model.parent : (typeof window !== 'undefined' ? window.scene : null);
-      if (sceneRoot && sceneRoot.isScene) {
-        sceneRoot.add(weapon);
-      } else if (this.model && this.model.parent) {
-        this.model.parent.add(weapon);
-      } else if (typeof window !== 'undefined' && window.scene) {
-        window.scene.add(weapon);
-      }
-      this.equippedWeapon = weapon;
-      this.isEquipped = true;
-      this.equippedToolName = toolName;
-      console.log(`Tool equipada: ${toolName}`, { parentName: parent.name || parent.type, boneFound: !!handBone });
-      // Log some bone names to help debug if handBone wasn't found
-      try {
-        const boneNames = [];
-        this.model.traverse((c) => {
-          if (c.isBone) boneNames.push(c.name || c.type);
-        });
-        if (boneNames.length > 0) console.log('Model bones sample:', boneNames.slice(0, 12));
-      } catch (e) {}
-      if (this.inventory && typeof this.inventory.notify === 'function') this.inventory.notify(`${toolName} equipada`);
-      // Solo cambiar animación si la acción existe
-      if (this.modelLoader && this.modelLoader.actions['meleeIdle']) {
-        this.modelLoader.play('meleeIdle', 0.15);
-      } else {
-        console.log('meleeIdle no disponible, manteniendo animación actual');
-      }
-      // force an animation state evaluation so melee animations are used if available
-      this.updateAnimationState();
-    } catch (e) {
-      console.warn('Error equipTool:', e);
+  async equipTool(toolName) {
+    console.log(`Intentando equipar herramienta: ${toolName}`);
+    
+    // Si el nombre de la herramienta es 'Hacha' o 'Axe', llamar a equipWeapon
+    if (toolName && (toolName.toLowerCase() === 'hacha' || toolName.toLowerCase() === 'axe')) {
+      console.log('Equipando hacha...');
+      await this.equipWeapon();
+    } else {
+      console.log(`Tipo de herramienta no soportado: ${toolName}`);
     }
   }
 
@@ -961,26 +1301,19 @@ export class FarmerController {
    * Desequipar herramienta actualmente equipada
    */
   unequipTool() {
-    try {
-      if (!this.isEquipped) return;
-      if (this.equippedWeapon) {
-        try {
-          if (this.equippedWeapon.parent) this.equippedWeapon.parent.remove(this.equippedWeapon);
-        } catch (e) {}
+    if (this.equippedWeapon) {
+      // Remover el hacha de la escena
+      if (this.equippedWeapon.parent) {
+        this.equippedWeapon.parent.remove(this.equippedWeapon);
       }
       this.equippedWeapon = null;
-      const prev = this.equippedToolName || 'Herramienta';
-      this.equippedToolName = null;
       this.isEquipped = false;
-      console.log(`Tool guardada: ${prev}`);
-      if (this.inventory && typeof this.inventory.notify === 'function') this.inventory.notify(`${prev} guardada`);
-      // Volver a animación normal
-      if (this.modelLoader) {
-        // elegir idle por defecto
-        this.modelLoader.play('idle', 0.15);
-      }
-    } catch (e) {
-      console.warn('Error unequipTool:', e);
+      console.log('Herramienta desequipada correctamente');
+    }
+    
+    // Volver a la animación de reposo
+    if (this.modelLoader) {
+      this.modelLoader.play('idle', 0.15);
     }
   }
 
@@ -988,20 +1321,9 @@ export class FarmerController {
    * Ejecutar un ataque corto usando la animación meleeAttack
    */
   attack() {
-    if (!this.isEquipped) return;
-    try {
-      if (this.modelLoader && this.modelLoader.actions['meleeAttack']) {
-        this.modelLoader.play('meleeAttack', 0.05);
-        // Después de la animación, volver a meleeIdle
-        setTimeout(() => {
-          if (this.modelLoader.actions['meleeIdle']) this.modelLoader.play('meleeIdle', 0.12);
-        }, 700);
-      } else {
-        console.warn('Animación de melee no disponible');
-      }
-    } catch (e) {
-      console.warn('Error al ejecutar attack():', e);
-    }
+    console.log('La funcionalidad de ataque está deshabilitada temporalmente');
+    // No hacer nada cuando se intente atacar
+    return;
   }
 
   /**
@@ -1080,16 +1402,12 @@ export class FarmerController {
       this.keys.ArrowLeft ||
       this.keys.ArrowRight;
     const isRunning = this.keys.shift;
-    // Si está equipado, preferir animaciones de melee si están disponibles
-    const hasMeleeIdle = this.modelLoader && this.modelLoader.actions && this.modelLoader.actions['meleeIdle'];
-    const hasMeleeRun = this.modelLoader && this.modelLoader.actions && this.modelLoader.actions['meleeRun'];
-    const hasMeleeAttack = this.modelLoader && this.modelLoader.actions && this.modelLoader.actions['meleeAttack'];
-    const usingMelee = this.isEquipped && (hasMeleeIdle || hasMeleeRun || hasMeleeAttack);
+    // Deshabilitar temporalmente el sistema de melee
+    const usingMelee = false; // Siempre falso para deshabilitar las animaciones de melee
 
     if (!isMoving) {
-      // Si está equipado y hay meleeIdle, usarla
-      if (usingMelee && hasMeleeIdle) this.modelLoader.play('meleeIdle', 0.15);
-      else this.modelLoader.play("idle", 0.15);
+      // Siempre usar animación de reposo normal
+      this.modelLoader.play("idle", 0.15);
       return;
     }
 
@@ -1119,12 +1437,28 @@ export class FarmerController {
     }
     // Movimiento hacia adelante
     else if (this.keys.w || this.keys.ArrowUp) {
+      // Debug: Log available animations
+      console.log("Available animations:", Object.keys(this.modelLoader.actions || {}));
+      
+      // Definir velocidades de animación
+      const walkSpeed = 0.15;
+      const runSpeed = 0.25;
+      
       if (usingMelee) {
-        if (isRunning && hasMeleeRun) this.modelLoader.play('meleeRun', 0.1);
-        else if (hasMeleeIdle) this.modelLoader.play('meleeIdle', 0.1);
-        else this.modelLoader.play(isRunning ? "run" : "walk", 0.1);
+        if (isRunning && hasMeleeRun) {
+          console.log("Playing meleeRun");
+          this.modelLoader.play('meleeRun', runSpeed);
+        } else if (hasMeleeIdle) {
+          console.log("Playing meleeIdle");
+          this.modelLoader.play('meleeIdle', walkSpeed);
+        } else {
+          console.log("Playing run (melee fallback)");
+          this.modelLoader.play("run", isRunning ? runSpeed : walkSpeed);
+        }
       } else {
-        this.modelLoader.play(isRunning ? "run" : "walk", 0.1);
+        // Siempre usa la animación 'run' ya que 'walk' y 'run' usan el mismo archivo
+        console.log(`Playing run (${isRunning ? 'running' : 'walking'})`);
+        this.modelLoader.play("run", isRunning ? runSpeed : walkSpeed);
       }
     }
     // Movimiento hacia atrás (rotación 180)
@@ -1248,6 +1582,32 @@ export class FarmerController {
     // Actualizar rotación primero
     this.updateRotation(delta);
 
+    // Actualizar posición del arma si está equipada
+    if (this.isEquipped && this.equippedWeapon) {
+      if (!this._handBone) {
+        // Intentar encontrar el hueso de la mano si no se ha encontrado
+        this._handBone = this.findRightHandBone(this.model);
+      }
+      
+      if (this._handBone) {
+        // Obtener la posición y rotación del hueso
+        this._handBone.getWorldPosition(this._tmpVec);
+        this._handBone.getWorldQuaternion(this._tmpQuat);
+        
+        // Aplicar la posición y rotación al arma
+        this.equippedWeapon.position.copy(this._tmpVec);
+        this.equippedWeapon.quaternion.copy(this._tmpQuat);
+        
+        // Ajustes de posición (los mismos que en equipWeapon)
+        this.equippedWeapon.translateX(0.1);
+        this.equippedWeapon.translateZ(0.1);
+        this.equippedWeapon.rotation.x += Math.PI / 4;
+        
+        // Actualizar la matriz del mundo del arma
+        this.equippedWeapon.updateMatrixWorld(true);
+      }
+    }
+
     // Si está rotando, no permitir movimiento
     if (this.isRotating) {
       return;
@@ -1345,7 +1705,10 @@ export class FarmerController {
       }
     }
 
-    // Rotación del personaje con Q y E (solo si no está rotando automáticamente)
+    // Rotación manual del personaje:
+    // - Q: Rota a la izquierda
+    // - E: Rota a la derecha
+    // (solo si no está rotando automáticamente)
     if (!this.isRotating) {
       if (this.keys.q) {
         this.model.rotation.y += this.config.rotationSpeed * 2;
@@ -1358,46 +1721,41 @@ export class FarmerController {
     // Actualizar el cartel de coordenadas
     this.updateCoordinateDisplay();
 
-    // Si hay arma equipada y tenemos bone objetivo, actualizar su transform global para seguir la mano
+    // Si hay arma equipada, actualizar su posición para seguir la mano
     if (this.equippedWeapon) {
       try {
-        // Si no se encontró el bone previamente, buscarlo ahora y cachearlo
+        // Si no se encontró el hueso de la mano, intentar encontrarlo de nuevo
         if (!this._handBone) {
-          this.model.traverse((c) => {
-            if (!this._handBone && c.isBone) {
-              const name = (c.name || '').toLowerCase();
-              if (name.includes('hand') || name.includes('right') || name.includes('r_hand') || name.includes('hand_r') || name.includes('mixamorig')) {
-                this._handBone = c;
-              }
-            }
-          });
+          this._handBone = this.findRightHandBone(this.model);
+          if (this._handBone) {
+            console.log('Hueso de la mano derecha encontrado en update:', this._handBone.name);
+          }
         }
 
         if (this._handBone) {
-          // Obtener world position y quaternion del bone
+          // Obtener la posición y rotación mundial del hueso
           this._handBone.getWorldPosition(this._tmpVec);
           this._handBone.getWorldQuaternion(this._tmpQuat);
-
-          // Aplicar al arma: posicion cerca, con offsets en space del jugador
+          
+          // Aplicar la posición y rotación al arma
           this.equippedWeapon.position.copy(this._tmpVec);
-          // aplicar rotación del hueso
           this.equippedWeapon.quaternion.copy(this._tmpQuat);
-
-          // Offsets locales aplicados en el espacio del mundo (escalados según la escala del arma)
-          try {
-            const s = (this.equippedWeapon.scale ? (this.equippedWeapon.scale.x + this.equippedWeapon.scale.y + this.equippedWeapon.scale.z) / 3 : 1);
-            const ox = 0.05 * s;
-            const oy = -0.10 * s;
-            const oz = 0.05 * s;
-            this.equippedWeapon.translateX(ox);
-            this.equippedWeapon.translateY(oy);
-            this.equippedWeapon.translateZ(oz);
-          } catch (e) {
-            // ignore
-          }
+          
+          // Ajustes de posición (ajustar según sea necesario)
+          this.equippedWeapon.translateX(0.1);  // Ajustar posición X
+          this.equippedWeapon.translateY(-0.1); // Ajustar posición Y
+          this.equippedWeapon.translateZ(0.05); // Ajustar posición Z
+          
+          // Actualizar la matriz del mundo del arma
+          this.equippedWeapon.updateMatrixWorld(true);
+        } else {
+          // Si no se encuentra el hueso, posicionar el arma en una posición relativa al modelo
+          this.equippedWeapon.position.copy(this.model.position);
+          this.equippedWeapon.position.y += 1.0; // Ajustar altura
+          this.equippedWeapon.rotation.copy(this.model.rotation);
         }
       } catch (e) {
-        // no bloquear el update si falla
+        console.error('Error al actualizar la posición del arma:', e);
       }
     }
   }
@@ -1406,6 +1764,7 @@ export class FarmerController {
    * Limpia los event listeners y el HUD
    */
   dispose() {
+    // Limpiar event listeners
     document.removeEventListener("keydown", this.handleKeyDown);
     document.removeEventListener("keyup", this.handleKeyUp);
 
@@ -1413,6 +1772,16 @@ export class FarmerController {
     if (this.coordinateHUD && this.coordinateHUD.parentNode) {
       this.coordinateHUD.parentNode.removeChild(this.coordinateHUD);
     }
+    
+    // Limpiar el arma equipada si existe
+    if (this.equippedWeapon && this.equippedWeapon.parent) {
+      this.equippedWeapon.parent.remove(this.equippedWeapon);
+      this.equippedWeapon = null;
+    }
+    
+    // Limpiar referencias
+    this._handBone = null;
+    this.isEquipped = false;
   }
 }
 
