@@ -34,6 +34,25 @@ export const modelConfig = {
         receiveShadow: true,
       },
     },
+    alien2: {
+      // Modelo principal
+      model: "characters/alien/alien2.fbx",
+      scale: 1.2, // Misma escala que farmer2
+      // Animaciones
+      animations: {
+        // Animación de reposo
+        idle: "characters/alien/IdleAlien2.fbx",
+        // Animación de caminar
+        walk: "characters/alien/WalkingAlien2.fbx",
+      },
+
+      // Ajustes específicos
+      settings: {
+        height: 1.9, // Misma altura que farmer2
+        castShadow: true,
+        receiveShadow: true,
+      },
+    },
 
     farmer2: {
       // Modelo principal
@@ -66,7 +85,8 @@ export const modelConfig = {
         Kneeling: "characters/farmer/Kneeling.fbx",
         // Animaciones de combate / melee (para cuando el granjero sostiene un arma)
         meleeIdle: "characters/farmer/Melee_Idle_Granjero2.fbx",
-        meleeAttack: "characters/farmer/Standing_Melee_Attack_Horizontal_Granjero2.fbx",
+        meleeAttack:
+          "characters/farmer/Standing_Melee_Attack_Horizontal_Granjero2.fbx",
         meleeRun: "characters/farmer/Combat_Run_Forward_Granjero2.fbx",
       },
 

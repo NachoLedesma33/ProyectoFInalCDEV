@@ -177,11 +177,11 @@ export class Stone {
    */
   checkCollision(position, characterSize) {
     if (!this.model) return false;
-    
+
     // Sistema robusto: combinación de bounding box reducido y distancia
     return this.checkRobustCollision(position, characterSize);
   }
-  
+
   /**
    * Sistema de colisión robusto que evita que el farmer atraviese las piedras
    * @param {THREE.Vector3} position - Posición a verificar
@@ -191,44 +191,53 @@ export class Stone {
   checkRobustCollision(position, characterSize) {
     // Método 1: Bounding box optimizado para piedras (más preciso)
     const stoneBox = this.getBoundingBox();
-    
+
     // Crear bounding box para el personaje con el tamaño específico para piedras
     const characterBox = new THREE.Box3();
-    const characterMin = position.clone().sub(characterSize.clone().multiplyScalar(0.5));
-    const characterMax = position.clone().add(characterSize.clone().multiplyScalar(0.5));
+    const characterMin = position
+      .clone()
+      .sub(characterSize.clone().multiplyScalar(0.5));
+    const characterMax = position
+      .clone()
+      .add(characterSize.clone().multiplyScalar(0.5));
     characterBox.setFromPoints([characterMin, characterMax]);
-    
+
     // Expandir el bounding box de la piedra con un valor más pequeño para permitir acercamiento
     // Valor negativo = reduce el bounding box, permitiendo acercarse más
     stoneBox.expandByScalar(-0.3);
-    
+
     const boxCollision = stoneBox.intersectsBox(characterBox);
-    
+
     // Método 2: Verificación por distancia optimizada para piedras
     const stoneCenter = this.model.position.clone();
     // Ignorar el eje Y para la distancia (solo importan X y Z)
     const horizontalDistance = Math.sqrt(
-      Math.pow(position.x - stoneCenter.x, 2) + 
-      Math.pow(position.z - stoneCenter.z, 2)
+      Math.pow(position.x - stoneCenter.x, 2) +
+        Math.pow(position.z - stoneCenter.z, 2)
     );
-    
+
     // Radio de colisión más pequeño para permitir acercamiento
     const collisionRadius = Math.max(characterSize.x, characterSize.z) * 0.6;
-    
+
     const distanceCollision = horizontalDistance < collisionRadius;
-    
+
     // Método 3: Verificación de proximidad adicional (solo para piedras)
     const stoneSize = stoneBox.getSize(new THREE.Vector3());
     const stoneRadius = Math.max(stoneSize.x, stoneSize.z) * 0.4; // Radio efectivo de la piedra
     const characterRadius = Math.max(characterSize.x, characterSize.z) * 0.5;
-    const proximityCollision = horizontalDistance < (stoneRadius + characterRadius);
-    
+    const proximityCollision =
+      horizontalDistance < stoneRadius + characterRadius;
+
     // Solo considerar colisión si al menos dos métodos detectan colisión
     // Esto reduce falsos positivos y permite acercamiento más cercano
-    const collisionMethods = [boxCollision, distanceCollision, proximityCollision];
-    const collisionCount = collisionMethods.filter(method => method).length;
+    const collisionMethods = [
+      boxCollision,
+      distanceCollision,
+      proximityCollision,
+    ];
+    const collisionCount = collisionMethods.filter((method) => method).length;
     const collision = collisionCount >= 2;
-    
+
     if (collision) {
       console.log("🚫 Colisión con piedra detectada (sistema optimizado):", {
         position: position,
@@ -240,12 +249,12 @@ export class Stone {
         methods: {
           boxCollision: boxCollision,
           distanceCollision: distanceCollision,
-          proximityCollision: proximityCollision
+          proximityCollision: proximityCollision,
         },
-        collisionCount: collisionCount
+        collisionCount: collisionCount,
       });
     }
-    
+
     return collision;
   }
 
@@ -258,7 +267,7 @@ export class Stone {
       console.warn("⚠️ El modelo de la piedra no está cargado");
       return new THREE.Box3();
     }
-    
+
     const box = new THREE.Box3().setFromObject(this.model);
     return box;
   }

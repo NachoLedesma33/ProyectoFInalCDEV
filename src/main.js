@@ -803,9 +803,7 @@ async function init() {
   // Intentar cargar el hacha (arma) y exponer helper para equiparla
   (async () => {
     try {
-      const axePath = modelConfig.getPath(
-        "weapons/melee/axes/axe.fbx"
-      );
+      const axePath = modelConfig.getPath("weapons/melee/axes/axe.fbx");
       console.log("Cargando arma (hacha) desde:", axePath);
       const axeModel = await modelLoader.loadModel(axePath);
       // Normalizar: tomar la primera malla encontrada
@@ -840,9 +838,10 @@ async function init() {
   setupEventListeners();
 
   // Mapear teclas 1..5 para equipar/guardar herramientas desde el inventario
-  window.addEventListener('keydown', (ev) => {
-    const tag = (document.activeElement && document.activeElement.tagName) || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  window.addEventListener("keydown", (ev) => {
+    const tag =
+      (document.activeElement && document.activeElement.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
     if (!window.inventory) return;
     const k = ev.key;
     if (/^[1-5]$/.test(k)) {
@@ -850,7 +849,7 @@ async function init() {
       try {
         window.inventory.toggleSlot(idx);
       } catch (e) {
-        console.warn('Error toggling inventory slot', e);
+        console.warn("Error toggling inventory slot", e);
       }
     }
   });
@@ -861,13 +860,15 @@ async function init() {
       try {
         if (!toolName) {
           // unequip
-          if (typeof farmerController.unequipTool === 'function') farmerController.unequipTool();
+          if (typeof farmerController.unequipTool === "function")
+            farmerController.unequipTool();
         } else {
           // equipar por nombre
-          if (typeof farmerController.equipTool === 'function') farmerController.equipTool(toolName);
+          if (typeof farmerController.equipTool === "function")
+            farmerController.equipTool(toolName);
         }
       } catch (e) {
-        console.warn('Error handling inventory equip change', e);
+        console.warn("Error handling inventory equip change", e);
       }
     };
   }

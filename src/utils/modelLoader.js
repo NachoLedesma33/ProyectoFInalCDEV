@@ -19,7 +19,7 @@ export class ModelLoader {
     try {
       // Establecer la configuración del modelo
       this.config = config;
-      
+
       // Cargar el modelo principal
       const model = await this.loadModel(modelPath);
       this.model = model;
@@ -80,15 +80,15 @@ export class ModelLoader {
     // Usar la configuración si está disponible
     let targetHeight = 1.8; // Valor por defecto
     let customScale = 1.0; // Valor por defecto
-    
+
     if (this.config && this.config.settings) {
       targetHeight = this.config.settings.height || 1.8;
     }
-    
+
     if (this.config && this.config.scale) {
       customScale = this.config.scale;
     }
-    
+
     // Calcular la escala para que el modelo tenga la altura deseada
     const scaleFactor = (targetHeight / size.y) * customScale;
     this.model.scale.set(scaleFactor, scaleFactor, scaleFactor);
@@ -103,17 +103,17 @@ export class ModelLoader {
 
     // Asegurar que el modelo esté orientado correctamente
     this.model.rotation.set(0, 0, 0);
-    
+
     // Configurar sombras para el modelo del farmer
     this.model.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
-        
+
         // Optimizar materiales
         if (child.material) {
           if (Array.isArray(child.material)) {
-            child.material.forEach(mat => {
+            child.material.forEach((mat) => {
               if (mat) {
                 mat.needsUpdate = true;
               }
@@ -133,17 +133,21 @@ export class ModelLoader {
     const collectBoneNames = (obj) => {
       const names = new Set();
       obj.traverse((c) => {
-        if (c.isBone) names.add((c.name || '').toLowerCase());
+        if (c.isBone) names.add((c.name || "").toLowerCase());
         // FBX sometimes stores bones as objects with type 'Bone' or includes skeletons on skinned meshes
         if (c.skeleton && c.skeleton.bones) {
-          c.skeleton.bones.forEach(b => names.add((b.name||'').toLowerCase()));
+          c.skeleton.bones.forEach((b) =>
+            names.add((b.name || "").toLowerCase())
+          );
         }
       });
       return names;
     };
 
     // Bone set of the target model (lowercased)
-    const modelBoneNames = this.model ? collectBoneNames(this.model) : new Set();
+    const modelBoneNames = this.model
+      ? collectBoneNames(this.model)
+      : new Set();
 
     // Cargar cada animación definida en la configuración
     for (const [name, path] of Object.entries(animationConfig)) {
@@ -160,11 +164,15 @@ export class ModelLoader {
 
               // Calcular intersección
               let common = 0;
-              animBoneNames.forEach(n => { if (modelBoneNames.has(n)) common++; });
+              animBoneNames.forEach((n) => {
+                if (modelBoneNames.has(n)) common++;
+              });
 
               // Si no hay huesos en común, evitar cargar la animación (riesgo de T-pose)
               if (modelBoneNames.size > 0 && common === 0) {
-                console.warn(`Skipping animation '${name}' - no bone names match the target model (possible incompatible skeleton)`);
+                console.warn(
+                  `Skipping animation '${name}' - no bone names match the target model (possible incompatible skeleton)`
+                );
                 resolve();
                 return;
               }
@@ -183,7 +191,9 @@ export class ModelLoader {
               action.clampWhenFinished = true;
               this.actions[name] = action;
 
-              console.log(`Loaded animation: ${name} (common bones: ${common})`);
+              console.log(
+                `Loaded animation: ${name} (common bones: ${common})`
+              );
             }
             resolve();
           },
