@@ -36,14 +36,14 @@ export const modelConfig = {
     },
     alien2: {
       // Modelo principal
-      model: "characters/alien/alien2.fbx",
+      model: "characters/aliens/Alien2.fbx",
       scale: 1.2, // Misma escala que farmer2
       // Animaciones
       animations: {
         // Animación de reposo
-        idle: "characters/alien/IdleAlien2.fbx",
+        idle: "characters/aliens/IdleAlien2.fbx",
         // Animación de caminar
-        walk: "characters/alien/WalkingAlien2.fbx",
+        walk: "characters/aliens/WalkingAlien2.fbx",
       },
 
       // Ajustes específicos
