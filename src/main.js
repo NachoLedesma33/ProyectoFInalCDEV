@@ -18,6 +18,7 @@ import { Stone } from "./utils/Stone.js"; // Modelo de piedra
 import { House } from "./utils/House.js"; // Casa con puerta interactiva
 import { Market } from "./utils/Market.js"; // Mercado con ventana frontal
 import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
+import { Alien2 } from "./utils/Alien2.js"; // Alien2
 
 // Variables globales principales de Three.js
 let scene, // Escena 3D que contiene todos los objetos
@@ -492,7 +493,22 @@ function createMarket() {
 
   return market;
 }
+/**
+ * Crear y configurar el alien2 en la escena
+ */
+async function createAlien2() {
+  const alien2 = new Alien2(
+    scene,
+    modelLoader,
+    { x: -17.8, y: 0.0, z: -45.4 }, // Posición
+    { x: -16.0, y: 0.0, z: -44.0 }  // Punto de mira
+  );
 
+  await alien2.load();
+  window.alien2 = alien2;
+  console.log("Alien2 disponible como 'window.alien2' para depuración");
+  return alien2;
+}
 /**
  * Función de inicialización principal
  * Configura la escena, cámara, renderizador y carga los recursos
@@ -623,6 +639,10 @@ async function init() {
 
   // Crear la casa con puerta interactiva
   createHouse();
+  // Crear el alien2
+  const alien2 = await createAlien2();
+  window.alien2 = alien2; 
+  console.log("Alien2 creado exitosamente");
 
   // Crear el mercado con ventana frontal
   const market = createMarket();
@@ -1000,6 +1020,10 @@ function animate(currentTime = 0) {
     // Actualizar animaciones del modelo
     if (modelLoader) {
       modelLoader.update(delta);
+    }
+    // Actualizar animaciones del alien2
+    if (window.alien2) {
+      window.alien2.update(delta);
     }
 
     // Actualizar el controlador del granjero
