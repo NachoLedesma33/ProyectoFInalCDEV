@@ -999,95 +999,92 @@ let skyboxUpdateCounter = 0;
 const skyboxUpdateInterval = 3; // Actualizar skybox cada 3 frames
 
 function animate(currentTime = 0) {
-  // La cámara isométrica ahora es manejada automáticamente por el CameraManager
-  // No se necesita lógica adicional de seguimiento aquí
-
   requestAnimationFrame(animate);
 
-  // Control de FPS
+  // Control de FPS mejorado
   const deltaTime = currentTime - lastTime;
   if (deltaTime < frameTime) return;
   lastTime = currentTime - (deltaTime % frameTime);
 
-  const delta = Math.min(0.1, clock.getDelta()); // Limitar el delta para evitar saltos grandes
+  const delta = Math.min(0.05, clock.getDelta()); // Reducir el delta máximo para mayor suavidad
 
   try {
-    // Actualizar cámara y controles
+    // 1. Actualización de cámara (prioridad alta)
     if (cameraManager) {
       cameraManager.update(delta);
     }
 
-    // Actualizar animaciones del modelo
-    if (modelLoader) {
-      modelLoader.update(delta);
-    }
-    // Actualizar animaciones del alien2
-    if (window.alien2) {
-      window.alien2.update(delta);
-    }
-
-    // Actualizar el controlador del granjero
+    // 2. Actualización del jugador (prioridad alta)
     if (farmerController) {
       farmerController.update(delta);
     }
 
-    // Actualizar el corral (para animaciones de puerta, etc.)
-    if (corral && farmerController && farmerController.model) {
-      corral.update(delta, farmerController.model.position);
+    // 3. Actualización de animaciones principales (prioridad media)
+    if (modelLoader) {
+      modelLoader.update(delta);
+    }
+    if (window.alien2) {
+      window.alien2.update(delta);
     }
 
-    // Actualizar la casa (para animaciones de puerta, etc.)
-    if (house && farmerController && farmerController.model) {
-      house.update(delta, farmerController.model.position);
+    // 4. Actualización de objetos del juego (prioridad media-baja)
+    // Usar requestIdleCallback para tareas menos críticas
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(() => {
+        // Actualizar el corral
+        if (corral && farmerController?.model) {
+          corral.update(delta, farmerController.model.position);
+        }
+
+        // Actualizar la casa
+        if (house && farmerController?.model) {
+          house.update(delta, farmerController.model.position);
+        }
+
+        // Actualizar el Space Shuttle
+        if (spaceShuttle) {
+          spaceShuttle.update(delta);
+        }
+      });
     }
 
-    // Actualizar el Space Shuttle Orbiter
-    if (spaceShuttle) {
-      spaceShuttle.update(delta);
+    // 5. Actualización de múltiples instancias (optimizado)
+    // Usar for en lugar de forEach para mejor rendimiento
+    for (let i = 0; i < cows.length; i++) {
+      cows[i].update(delta);
     }
 
-    // Actualizar las vacas
-    cows.forEach((cow) => {
-      cow.update(delta);
-    });
+    for (let i = 0; i < stones.length; i++) {
+      stones[i].update(delta);
+    }
 
-    // Actualizar las piedras
-    stones.forEach((stone) => {
-      stone.update(delta);
-    });
-
-    // Actualizar el terreno (optimizado - cada 5 frames)
-    terrainUpdateCounter++;
-    if (terrainUpdateCounter >= terrainUpdateInterval) {
-      terrain.update(camera.position);
+    // 6. Actualizaciones menos frecuentes (optimizadas)
+    if (terrainUpdateCounter++ >= terrainUpdateInterval) {
+      terrain?.update(camera.position);
       terrainUpdateCounter = 0;
     }
 
-    // Actualizar el skybox para que siga a la cámara (optimizado - cada 3 frames)
-    skyboxUpdateCounter++;
-    if (skyboxUpdateCounter >= skyboxUpdateInterval && skybox) {
+    if (skyboxUpdateCounter++ >= skyboxUpdateInterval && skybox) {
       skybox.update(camera.position);
       skyboxUpdateCounter = 0;
     }
 
-    // Actualizar los efectos de fuego
-    if (terrain && terrain.animateFires) {
+    // 7. Efectos visuales (baja prioridad)
+    if (terrain?.animateFires) {
       terrain.animateFires();
     }
 
-    // Actualizar la iluminación
-    if (lighting) {
-      lighting.update(delta);
-    }
+    // 8. Iluminación
+    lighting?.update(delta);
 
-    // Actualizar el minimap (optimizado - cada 10 frames)
-    minimapUpdateCounter++;
-    if (minimapUpdateCounter >= minimapUpdateInterval) {
+    // 9. Minimap (actualizar con menos frecuencia)
+    if (minimapUpdateCounter++ >= minimapUpdateInterval * 2) {
+      // Reducir frecuencia
       updateMinimap();
       minimapUpdateCounter = 0;
     }
 
-    // Renderizar la escena
+    // 10. Renderizado final
     renderer.render(scene, camera);
   } catch (error) {
     console.error("Error en el bucle de animación:", error);
