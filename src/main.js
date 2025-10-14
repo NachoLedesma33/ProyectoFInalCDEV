@@ -1023,7 +1023,7 @@ function animate(currentTime = 0) {
     if (modelLoader) {
       modelLoader.update(delta);
     }
-    if (window.alien2) {
+    if (window.alien2 && window.alien2.update) {
       window.alien2.update(delta);
     }
 

@@ -1,5 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js";
+import * as BufferGeometryUtils from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/utils/BufferGeometryUtils.js";
 import modelConfig from "../config/modelConfig.js";
 
 export class Alien2 {
@@ -9,14 +10,14 @@ export class Alien2 {
     position = { x: 0, y: 0, z: 0 },
     lookAt = { x: 0, y: 0, z: 0 }
   ) {
-    this.scene = scene; // Escena de Three.js
-    this.modelLoader = modelLoader; // Cargador de modelos
-    this.position = position; // Posición inicial
-    this.lookAt = lookAt; // Punto hacia donde mira
-    this.model = null; // Modelo 3D
-    this.mixer = null; // Mezclador de animaciones
-    this.currentAction = null; // Animación actual
-    this.animations = {}; // Diccionario de animaciones
+    this.scene = scene;
+    this.modelLoader = modelLoader;
+    this.position = position;
+    this.lookAt = lookAt;
+    this.model = null;
+    this.mixer = null;
+    this.currentAction = null;
+    this.animations = {};
   }
 
   async load() {
@@ -24,12 +25,12 @@ export class Alien2 {
       const alien2Config = modelConfig.characters.alien2;
       console.log("Cargando configuración de Alien2:", alien2Config);
 
-      // Cargar el modelo base
+      // Cargar el modelo base (sin animaciones)
       const modelPath = modelConfig.getPath(alien2Config.model);
-      console.log("Cargando modelo desde:", modelPath);
+      console.log("Cargando modelo base desde:", modelPath);
 
       // Cargar modelo base como promesa
-      const model = await new Promise((resolve, reject) => {
+      this.model = await new Promise((resolve, reject) => {
         const loader = new FBXLoader();
         loader.load(
           modelPath,
@@ -46,120 +47,232 @@ export class Alien2 {
       });
 
       // Configurar el modelo
-      this.model = model;
-      this.model.scale.set(0.02, 0.02, 0.02); // Ajustar escala
-      this.model.position.copy(this.position); // Establecer posición
-      this.model.animations = {}; // Inicializar diccionario de animaciones
+      this.model.scale.set(0.02, 0.02, 0.02);
+      this.model.position.copy(this.position);
 
       // Configurar el mezclador de animaciones
       this.mixer = new THREE.AnimationMixer(this.model);
 
-      // Cargar animaciones
-      await this.loadAnimation(
-        "idle",
-        modelConfig.getPath(alien2Config.animations.idle)
-      );
-      await this.loadAnimation(
-        "walk",
-        modelConfig.getPath(alien2Config.animations.walk)
-      );
+      // Cargar la animación idle por separado
+      const idlePath = modelConfig.getPath(alien2Config.animations.idle);
+      console.log("Cargando animación idle desde:", idlePath);
+      
+      const idleLoaded = await this.loadAnimation("idle", idlePath);
+      if (idleLoaded) {
+        console.log("Animación idle cargada exitosamente");
+        // Esperar un frame antes de reproducir la animación
+        setTimeout(() => {
+          this.playAnimation("idle");
+        }, 100);
+      } else {
+        console.warn("No se pudo cargar la animación idle");
+      }
+
+      // Verificar si el modelo base tiene animaciones incluidas
+      if (this.model.animations && this.model.animations.length > 0) {
+        console.log("Modelo base tiene animaciones incluidas:", this.model.animations.length);
+        this.model.animations.forEach((anim, index) => {
+          console.log(`  Animación ${index}: ${anim.name} (${anim.duration}s)`);
+        });
+        
+        // Si hay animaciones en el modelo base, usar la primera como idle
+        const baseIdleClip = this.model.animations[0];
+        this.animations.baseIdle = baseIdleClip;
+        console.log("Usando animación del modelo base como respaldo");
+        
+        // Intentar reproducir la animación del modelo base si la externa falla
+        setTimeout(() => {
+          if (!this.currentAction || !this.currentAction.isRunning()) {
+            console.log("Intentando usar animación del modelo base...");
+            this.playAnimation("baseIdle");
+          }
+        }, 500);
+      }
 
       // Hacer que el modelo mire hacia la posición objetivo
       const targetPosition = new THREE.Vector3(
         this.lookAt.x,
-        this.lookAt.y,
+        this.model.position.y,
         this.lookAt.z
       );
       this.model.lookAt(targetPosition);
 
+      // Optimizar el modelo para mejor rendimiento
+      this.optimizeForPerformance();
+
       // Agregar el modelo a la escena
       this.scene.add(this.model);
 
-      // Reproducir animación de reposo
-      this.playAnimation("idle");
-
-      console.log("Alien2 cargado exitosamente");
-      return this.model;
+      console.log("Alien2 cargado y configurado correctamente");
+      return true;
     } catch (error) {
-      console.error("Error cargando Alien2:", error);
-      return null;
+      console.error("Error al cargar el Alien2:", error);
+      return false;
     }
   }
 
-  async loadAnimation(name, path) {
-    return new Promise((resolve, reject) => {
-      const loader = new FBXLoader();
-      loader.load(
-        path,
-        (anim) => {
-          console.log(`Animación '${name}' cargada:`, anim);
-          if (anim.animations && anim.animations.length > 0) {
-            console.log(
-              `Se encontraron ${anim.animations.length} animaciones en ${name}.fbx`
-            );
-            const clip = anim.animations[0];
-            clip.name = name; // Forzar el nombre de la animación
-            this.animations[name] = clip;
-            console.log(`Animación '${name}' registrada correctamente`);
-            resolve();
-          } else {
-            console.warn(
-              `No se encontraron animaciones en el archivo ${name}.fbx`
-            );
-            resolve();
+  optimizeForPerformance() {
+    if (!this.model) return;
+
+    // Reducir la calidad de sombras
+    this.model.traverse((child) => {
+      if (child.isMesh) {
+        // Optimizar geometrías
+        if (child.geometry) {
+          child.geometry.computeVertexNormals();
+
+          // Reducir la calidad de las sombras
+          child.castShadow = true;
+          child.receiveShadow = true;
+
+          // Reducir la calidad de las mallas
+          if (
+            child.geometry.attributes.position &&
+            child.geometry.attributes.position.count > 5000
+          ) {
+            try {
+              const ratio = Math.min(
+                1,
+                5000 / child.geometry.attributes.position.count
+              );
+              const simplifiedGeometry = BufferGeometryUtils.mergeVertices(
+                child.geometry,
+                0.01 * ratio
+              );
+              child.geometry.dispose(); // Liberar memoria de la geometría anterior
+              child.geometry = simplifiedGeometry;
+            } catch (error) {
+              console.warn("No se pudo simplificar la geometría:", error);
+            }
           }
-        },
-        undefined,
-        (error) => {
-          console.error(`Error cargando la animación '${name}':`, error);
-          reject(error);
         }
-      );
+
+        // Optimizar materiales
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach((mat) => this.optimizeMaterial(mat));
+          } else {
+            this.optimizeMaterial(child.material);
+          }
+        }
+      }
     });
+
+    console.log("Optimizaciones de rendimiento aplicadas al modelo Alien2");
+  }
+
+  optimizeMaterial(material) {
+    // Reducir la calidad de los materiales para mejor rendimiento
+    material.precision = "mediump";
+    material.shininess = 0;
+    material.roughness = 1;
+    material.metalness = 0;
+
+    // Desactivar características costosas
+    if (material.map) material.map.anisotropy = 1;
+    if (material.normalMap) material.normalScale.set(0.5, 0.5);
+    if (material.bumpMap) material.bumpScale = 0.5;
+
+    // Usar sombras más simples
+    material.shadowSide = THREE.FrontSide;
+  }
+
+  async loadAnimation(name, path) {
+    try {
+      const anim = await new Promise((resolve, reject) => {
+        const loader = new FBXLoader();
+        loader.load(
+          path,
+          (fbx) => {
+            if (fbx.animations.length > 0) {
+              console.log(`Animación '${name}' cargada correctamente`);
+              resolve(fbx.animations[0]);
+            } else {
+              reject(new Error(`No se encontraron animaciones en ${path}`));
+            }
+          },
+          undefined,
+          (error) => {
+            console.error(`Error cargando la animación '${name}':`, error);
+            reject(error);
+          }
+        );
+      });
+
+      this.animations[name] = anim;
+      return true;
+    } catch (error) {
+      console.error(`Error al cargar la animación '${name}':`, error);
+      return false;
+    }
   }
 
   playAnimation(name) {
-    console.log(`Intentando reproducir animación: ${name}`);
-    console.log("Animaciones disponibles:", Object.keys(this.animations));
-
-    if (!this.animations[name]) {
-      console.error(
-        `La animación '${name}' no está disponible. Animaciones cargadas:`,
-        Object.keys(this.animations)
+    if (!this.animations[name] || !this.mixer) {
+      console.warn(
+        `Animación '${name}' no disponible o mezclador no inicializado`
       );
       return false;
     }
 
+    // Evitar reiniciar la misma animación
+    if (
+      this.currentAction &&
+      this.currentAction.getClip()?.name === this.animations[name].name &&
+      this.currentAction.isRunning()
+    ) {
+      return true;
+    }
+
     try {
-      // Detener la animación actual con desvanecimiento
+      // Detener animación actual con fade out suave
       if (this.currentAction) {
-        console.log(
-          `Deteniendo animación actual: ${this.currentAction.getClip().name}`
-        );
-        this.currentAction.fadeOut(0.2);
+        this.currentAction.fadeOut(0.1);
       }
 
-      // Reproducir la nueva animación
+      // Crear y configurar la nueva acción
       const clip = this.animations[name];
-      console.log(`Creando acción para el clip:`, clip);
+      const action = this.mixer.clipAction(clip);
 
-      this.currentAction = this.mixer.clipAction(clip);
-      if (!this.currentAction) {
+      if (!action) {
         console.error("No se pudo crear la acción para el clip:", clip);
         return false;
       }
 
-      console.log("Configurando acción...");
-      this.currentAction.reset();
-      this.currentAction.setEffectiveTimeScale(1);
-      this.currentAction.setEffectiveWeight(1);
-      this.currentAction.fadeIn(0.2);
-      this.currentAction.play();
+      // Configuración óptima para la animación
+      action
+        .reset()
+        .setEffectiveTimeScale(1.0)
+        .setEffectiveWeight(1.0)
+        .setLoop(THREE.LoopRepeat, Infinity)
+        .fadeIn(0.1)
+        .play();
 
-      console.log(`Reproduciendo animación: ${name}`);
+      this.currentAction = action;
+      console.log(`Animación '${name}' iniciada correctamente`);
+      
+      // Forzar la actualización del mixer para aplicar la animación inmediatamente
+      if (this.mixer) {
+        this.mixer.update(0.016); // Actualizar con un delta pequeño
+      }
+      
+      // Verificar que la animación se está reproduciendo
+      setTimeout(() => {
+        if (this.currentAction && this.currentAction.isRunning()) {
+          console.log(`✅ Animación '${name}' confirmada como activa`);
+        } else {
+          console.warn(`⚠️ Animación '${name}' no se está reproduciendo`);
+          // Intentar forzar la animación
+          if (this.currentAction) {
+            this.currentAction.reset().play();
+            console.log("Intentando forzar la animación...");
+          }
+        }
+      }, 200);
+      
       return true;
     } catch (error) {
-      console.error(`Error reproduciendo animación '${name}':`, error);
+      console.error(`Error al reproducir animación '${name}':`, error);
       return false;
     }
   }
@@ -170,24 +283,94 @@ export class Alien2 {
     }
   }
 
+  // Método para forzar la aplicación de la animación
+  forceAnimation() {
+    if (this.currentAction && this.mixer) {
+      console.log("Forzando aplicación de animación...");
+      this.currentAction.reset();
+      this.currentAction.play();
+      this.mixer.update(0.1);
+      console.log("Animación forzada aplicada");
+    }
+  }
+
+  // Método para verificar el esqueleto del modelo
+  checkSkeleton() {
+    if (!this.model) {
+      console.log("Modelo no cargado");
+      return;
+    }
+
+    console.log("=== VERIFICACIÓN DEL ESQUELETO ===");
+    let skeletonFound = false;
+    
+    this.model.traverse((child) => {
+      if (child.isBone || child.type === 'Bone') {
+        skeletonFound = true;
+        console.log("Hueso encontrado:", child.name, child.type);
+      }
+      if (child.isSkinnedMesh) {
+        console.log("Malla con esqueleto encontrada:", child.name);
+        if (child.skeleton) {
+          console.log("Esqueleto de la malla:", child.skeleton.bones.length, "huesos");
+        }
+      }
+    });
+
+    if (!skeletonFound) {
+      console.warn("⚠️ No se encontró esqueleto en el modelo");
+    } else {
+      console.log("✅ Esqueleto encontrado en el modelo");
+    }
+    console.log("================================");
+  }
+
   // Método de depuración para verificar el estado de las animaciones
   logAnimationState() {
+    console.log("=== ESTADO DE ANIMACIONES ALIEN2 ===");
+    console.log("Modelo cargado:", !!this.model);
+    console.log("Mixer inicializado:", !!this.mixer);
     console.log("Animaciones cargadas:", Object.keys(this.animations));
+    
     if (this.currentAction) {
-      console.log(
-        "Reproduciendo animación:",
-        this.currentAction.getClip().name
-      );
+      console.log("Reproduciendo animación:", this.currentAction.getClip().name);
+      console.log("Animación activa:", this.currentAction.isRunning());
+      console.log("Peso de la animación:", this.currentAction.getEffectiveWeight());
     } else {
       console.log("No hay ninguna animación reproduciéndose actualmente");
     }
+    
+    // Verificar si el modelo tiene animaciones incluidas
+    if (this.model && this.model.animations) {
+      console.log("Animaciones incluidas en el modelo:", this.model.animations.length);
+      this.model.animations.forEach((anim, index) => {
+        console.log(`  ${index}: ${anim.name} (${anim.duration}s)`);
+      });
+    }
+    console.log("=====================================");
   }
 }
 
-// Hacer la función de depuración disponible globalmente
+// Hacer las funciones de depuración disponibles globalmente
 window.debugAlien2 = function () {
   if (window.alien2) {
     window.alien2.logAnimationState();
+  } else {
+    console.warn("Alien2 no encontrado en window.alien2");
+  }
+};
+
+window.forceAlien2Animation = function () {
+  if (window.alien2) {
+    window.alien2.forceAnimation();
+  } else {
+    console.warn("Alien2 no encontrado en window.alien2");
+  }
+};
+
+window.checkAlien2Skeleton = function () {
+  if (window.alien2) {
+    window.alien2.checkSkeleton();
   } else {
     console.warn("Alien2 no encontrado en window.alien2");
   }
