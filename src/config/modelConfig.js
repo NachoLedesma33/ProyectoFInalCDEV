@@ -44,6 +44,8 @@ export const modelConfig = {
         idle: "characters/aliens/IdleAlien2.fbx",
         // Animación de caminar
         walk: "characters/aliens/WalkingAlien2.fbx",
+        // Animación de giro a la derecha (usando la animación de caminar con rotación)
+        turnRight: "characters/aliens/Alien2 Walk Forward Turn 90L.fbx",
       },
 
       // Ajustes específicos

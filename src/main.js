@@ -500,8 +500,8 @@ async function createAlien2() {
   const alien2 = new Alien2(
     scene,
     modelLoader,
-    { x: -17.8, y: 0.0, z: -45.4 }, // Posición
-    { x: -16.0, y: 0.0, z: -44.0 }  // Punto de mira
+    { x: -52.5, y: 0.0, z: -159.7 }, // Posición inicial correcta
+    { x: -51.5, y: 0.0, z: -158.7 }  // Punto de mira inicial
   );
 
   await alien2.load();
@@ -643,6 +643,10 @@ async function init() {
   const alien2 = await createAlien2();
   window.alien2 = alien2; 
   console.log("Alien2 creado exitosamente");
+  
+  // Iniciar la secuencia de movimiento automático (5 minutos de delay)
+  alien2.startMovementSequence();
+  console.log("Sistema de movimiento del Alien2 programado para iniciar en 5 minutos");
 
   // Crear el mercado con ventana frontal
   const market = createMarket();
