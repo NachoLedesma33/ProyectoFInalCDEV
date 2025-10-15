@@ -22,6 +22,14 @@ export class Inventory {
     return this.milkLiters;
   }
 
+  addCoins(amount = 0) {
+    const n = Math.max(0, Number(amount) || 0);
+    this.coins += n;
+    this._updateUI();
+    this._flash(`+${n} monedas obtenidas`);
+    return this.coins;
+  }
+
   // Añadir una herramienta a la primera ranura libre. Devuelve el índice o -1 si no hay espacio
   addTool(name) {
     if (!name) return -1;
