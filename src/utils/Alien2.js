@@ -1287,28 +1287,91 @@ export class Alien2 {
     this.interactionSystem.buttonArea.appendChild(closeButton);
   }
 
+  // Animar la reducción de leche en el contador
+  animateMilkReduction(liters) {
+    if (!window.inventory || !window.inventory.milkElement) return;
+    
+    const milkElement = window.inventory.milkElement;
+    const startValue = parseFloat(milkElement.textContent);
+    const endValue = Math.max(0, startValue - liters);
+    const duration = 1000; // 1 segundo de animación
+    const startTime = performance.now();
+    
+    // Función de animación
+    const animate = (currentTime) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Interpolación suave
+      const currentValue = startValue - (startValue - endValue) * progress;
+      milkElement.textContent = currentValue.toFixed(1);
+      
+      // Continuar la animación si no ha terminado
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        // Asegurarse de que el valor final sea exacto
+        milkElement.textContent = endValue.toFixed(1);
+        // Actualizar el valor real en el inventario
+        if (window.inventory.milk !== undefined) {
+          window.inventory.milk = endValue;
+        }
+      }
+    };
+    
+    // Iniciar la animación
+    requestAnimationFrame(animate);
+  }
+
   // Vender leche al alien
   sellMilkToAlien(liters, price) {
-    if (!window.inventory) return;
+    if (!window.inventory) {
+      console.error('Inventario no disponible');
+      return;
+    }
 
-    // Reducir leche del inventario
-    if (typeof window.inventory.addMilk === "function") {
-      window.inventory.addMilk(-liters); // Restar leche
+    // Obtener la cantidad actual de leche
+    const currentMilk = this.getMilkAmount();
+    
+    // Verificar que haya suficiente leche
+    if (currentMilk < liters) {
+      console.warn(`No hay suficiente leche: ${currentMilk}L disponibles, se necesitan ${liters}L`);
+      return;
+    }
+
+    // Actualizar la cantidad de leche en el inventario
+    if (window.inventory.milkLiters !== undefined) {
+      // Restar la leche directamente
+      window.inventory.milkLiters = Math.max(0, window.inventory.milkLiters - liters);
+      
+      // Forzar la actualización de la UI
+      if (window.inventory._updateUI) {
+        window.inventory._updateUI();
+      }
+      
+      // Mostrar notificación de venta
+      if (window.inventory._flash) {
+        window.inventory._flash(`Vendiste ${liters.toFixed(1)}L por ${price} monedas`);
+      }
+    } else {
+      console.error('No se pudo actualizar la leche: propiedad milkLiters no encontrada en el inventario');
+      return;
     }
 
     // Añadir monedas al inventario
     if (typeof window.inventory.addCoins === "function") {
       window.inventory.addCoins(price);
-    } else {
-      // Fallback: modificar directamente el estado
+    } else if (window.inventory.coins !== undefined) {
       window.inventory.coins += price;
-      window.inventory._updateUI();
+      if (window.inventory._updateUI) {
+        window.inventory._updateUI();
+      }
     }
 
     // Crear animación de monedas
     this.createCoinAnimation(price);
 
-    console.log(`Vendidos ${liters}L por ${price} monedas`);
+    console.log(`Vendidos ${liters}L por ${price} monedas. Leche restante: ${(currentMilk - liters).toFixed(1)}L`);
   }
 
   // Crear animación de monedas
