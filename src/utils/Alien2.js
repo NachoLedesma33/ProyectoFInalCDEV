@@ -1012,27 +1012,27 @@ export class Alien2 {
 
   // Verificar colisión con el jugador
   checkPlayerCollision() {
-    if (!window.farmerController || !window.farmerController.model) {
-      this.interactionSystem.isPlayerNearby = false;
+    // Si ya estamos en diálogo, no es necesario verificar colisiones
+    if (this.interactionSystem.isDialogueOpen) return;
+
+    if (!this.interactionSystem.blinkingCircle || !window.farmerController)
       return;
-    }
 
-    // Verificar colisión con el círculo verde, no con el Alien2
-    const circlePos = new THREE.Vector3(-15, 0.0, -44.2);
+    const circlePos = this.interactionSystem.blinkingCircle.position;
     const playerPos = window.farmerController.model.position;
-
     const distance = circlePos.distanceTo(playerPos);
+    const wasPlayerNearby = this.interactionSystem.isPlayerNearby;
 
     this.interactionSystem.isPlayerNearby =
       distance <= this.interactionSystem.collisionRadius;
 
-    // Log para depuración
-    if (this.interactionSystem.isPlayerNearby) {
-      console.log(
-        `Jugador cerca del círculo verde. Distancia: ${distance.toFixed(
-          2
-        )}, Tiempo: ${this.interactionSystem.playerStayTime.toFixed(2)}s`
-      );
+    // Solo mostrar mensaje cuando cambia el estado de proximidad
+    if (this.interactionSystem.isPlayerNearby !== wasPlayerNearby) {
+      if (this.interactionSystem.isPlayerNearby) {
+        console.log("Jugador entró en el área de interacción");
+      } else {
+        console.log("Jugador salió del área de interacción");
+      }
     }
   }
 
