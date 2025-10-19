@@ -32,24 +32,24 @@ export class Alien2 {
         {
           start: { x: -52.5, y: 0.0, z: -159.7 },
           end: { x: -81.6, y: 0.0, z: -90.0 },
-          animation: 'walk'
+          animation: "walk",
         },
         // Ruta 2: Giro a la derecha (90 grados)
         {
           start: { x: -81.6, y: 0.0, z: -90.0 },
           end: { x: -81.6, y: 0.0, z: -90.0 },
-          animation: 'turnRight',
+          animation: "turnRight",
           rotation: Math.PI / 2, // 90 grados
-          isTurn: true
+          isTurn: true,
         },
         // Ruta 3: Desde segunda parada hasta posición final
         {
           start: { x: -81.6, y: 0.0, z: -90.0 },
           end: { x: -17.8, y: 0.0, z: -45.4 },
-          animation: 'walk'
-        }
+          animation: "walk",
+        },
       ],
-      timer: null
+      timer: null,
     };
 
     // Sistema de interacción
@@ -61,7 +61,7 @@ export class Alien2 {
       playerStayTime: 0,
       requiredStayTime: 2.0, // 2 segundos
       dialogueHud: null,
-      isDialogueOpen: false
+      isDialogueOpen: false,
     };
   }
 
@@ -101,9 +101,15 @@ export class Alien2 {
       // Cargar las animaciones por separado
       const idlePath = modelConfig.getPath(alien2Config.animations.idle);
       const walkPath = modelConfig.getPath(alien2Config.animations.walk);
-      const turnRightPath = modelConfig.getPath(alien2Config.animations.turnRight);
+      const turnRightPath = modelConfig.getPath(
+        alien2Config.animations.turnRight
+      );
 
-      console.log("Cargando animaciones desde:", { idlePath, walkPath, turnRightPath });
+      console.log("Cargando animaciones desde:", {
+        idlePath,
+        walkPath,
+        turnRightPath,
+      });
 
       // Cargar animación idle
       const idleLoaded = await this.loadAnimation("idle", idlePath);
@@ -123,10 +129,16 @@ export class Alien2 {
       }
 
       // Cargar animación de giro
-      const turnRightLoaded = await this.loadAnimation("turnRight", turnRightPath);
+      const turnRightLoaded = await this.loadAnimation(
+        "turnRight",
+        turnRightPath
+      );
       if (turnRightLoaded) {
         console.log("✅ Animación turnRight cargada exitosamente");
-        console.log("Detalles de animación turnRight:", this.animations.turnRight);
+        console.log(
+          "Detalles de animación turnRight:",
+          this.animations.turnRight
+        );
       } else {
         console.warn("❌ No se pudo cargar la animación turnRight");
       }
@@ -138,7 +150,10 @@ export class Alien2 {
 
       // Verificar si el modelo base tiene animaciones incluidas
       if (this.model.animations && this.model.animations.length > 0) {
-        console.log("Modelo base tiene animaciones incluidas:", this.model.animations.length);
+        console.log(
+          "Modelo base tiene animaciones incluidas:",
+          this.model.animations.length
+        );
         this.model.animations.forEach((anim, index) => {
           console.log(`  Animación ${index}: ${anim.name} (${anim.duration}s)`);
         });
@@ -262,7 +277,7 @@ export class Alien2 {
               console.log(`✅ Animación '${name}' cargada:`, {
                 name: animation.name,
                 duration: animation.duration,
-                tracks: animation.tracks.length
+                tracks: animation.tracks.length,
               });
               resolve(animation);
             } else {
@@ -271,7 +286,10 @@ export class Alien2 {
             }
           },
           (progress) => {
-            console.log(`📊 Progreso de carga '${name}':`, (progress.loaded / progress.total * 100).toFixed(2) + '%');
+            console.log(
+              `📊 Progreso de carga '${name}':`,
+              ((progress.loaded / progress.total) * 100).toFixed(2) + "%"
+            );
           },
           (error) => {
             console.error(`❌ Error cargando la animación '${name}':`, error);
@@ -298,7 +316,8 @@ export class Alien2 {
     }
 
     // Verificar si ya está reproduciendo la misma animación
-    const isSameAnimation = this.currentAction &&
+    const isSameAnimation =
+      this.currentAction &&
       this.currentAction.getClip()?.name === this.animations[name].name &&
       this.currentAction.isRunning();
 
@@ -312,7 +331,9 @@ export class Alien2 {
 
       // Detener animación actual con fade out suave
       if (this.currentAction) {
-        console.log(`Deteniendo animación actual: ${this.currentAction.getClip().name}`);
+        console.log(
+          `Deteniendo animación actual: ${this.currentAction.getClip().name}`
+        );
         this.currentAction.fadeOut(0.1);
         this.currentAction.stop();
       }
@@ -385,7 +406,9 @@ export class Alien2 {
     console.log("Iniciando secuencia de movimiento del Alien2 en 5 minutos...");
 
     this.movementSystem.timer = setTimeout(() => {
-      console.log("¡5 minutos transcurridos! Iniciando movimiento del Alien2...");
+      console.log(
+        "¡5 minutos transcurridos! Iniciando movimiento del Alien2..."
+      );
       this.activateMovementSystem();
     }, 5 * 60 * 1000); // 5 minutos en milisegundos
   }
@@ -397,9 +420,16 @@ export class Alien2 {
 
     // Mover el modelo a la posición inicial de la primera ruta
     const firstPath = this.movementSystem.paths[0];
-    this.model.position.set(firstPath.start.x, firstPath.start.y, firstPath.start.z);
+    this.model.position.set(
+      firstPath.start.x,
+      firstPath.start.y,
+      firstPath.start.z
+    );
 
-    console.log("Sistema de movimiento activado. Alien2 movido a posición inicial:", firstPath.start);
+    console.log(
+      "Sistema de movimiento activado. Alien2 movido a posición inicial:",
+      firstPath.start
+    );
 
     // Iniciar el primer movimiento
     this.startNextPath();
@@ -407,16 +437,24 @@ export class Alien2 {
 
   // Iniciar el siguiente segmento de la ruta
   startNextPath() {
-    if (this.movementSystem.currentPathIndex >= this.movementSystem.paths.length) {
-      console.log("Secuencia de movimiento completada. Alien2 en posición final.");
+    if (
+      this.movementSystem.currentPathIndex >= this.movementSystem.paths.length
+    ) {
+      console.log(
+        "Secuencia de movimiento completada. Alien2 en posición final."
+      );
 
       // Activar sistema de interacción (esto incluye el cambio a idle)
       this.activateInteractionSystem();
       return;
     }
 
-    const currentPath = this.movementSystem.paths[this.movementSystem.currentPathIndex];
-    console.log(`Iniciando ruta ${this.movementSystem.currentPathIndex + 1}:`, currentPath);
+    const currentPath =
+      this.movementSystem.paths[this.movementSystem.currentPathIndex];
+    console.log(
+      `Iniciando ruta ${this.movementSystem.currentPathIndex + 1}:`,
+      currentPath
+    );
 
     if (currentPath.isTurn) {
       this.startTurn(currentPath);
@@ -448,7 +486,12 @@ export class Alien2 {
     console.log("Cambiando a animación de caminar...");
     this.playAnimation(path.animation);
 
-    console.log("Iniciando movimiento hacia:", path.end, "con animación:", path.animation);
+    console.log(
+      "Iniciando movimiento hacia:",
+      path.end,
+      "con animación:",
+      path.animation
+    );
   }
 
   // Iniciar giro
@@ -466,14 +509,20 @@ export class Alien2 {
     console.log("Cambiando a animación de giro...");
     this.playAnimation(path.animation);
 
-    console.log("Iniciando giro de", (path.rotation * 180 / Math.PI), "grados con animación:", path.animation);
+    console.log(
+      "Iniciando giro de",
+      (path.rotation * 180) / Math.PI,
+      "grados con animación:",
+      path.animation
+    );
   }
 
   // Actualizar el movimiento
   updateMovement(delta) {
     if (!this.movementSystem.isActive) return;
 
-    const currentPath = this.movementSystem.paths[this.movementSystem.currentPathIndex];
+    const currentPath =
+      this.movementSystem.paths[this.movementSystem.currentPathIndex];
 
     if (this.movementSystem.isMoving) {
       this.updateMovementToTarget(currentPath, delta);
@@ -535,7 +584,8 @@ export class Alien2 {
       }, 500); // Pausa de 0.5 segundos entre rutas
     } else {
       // Continuar girando
-      const turnAmount = Math.sign(rotationDiff) * this.movementSystem.turnSpeed * delta * 60;
+      const turnAmount =
+        Math.sign(rotationDiff) * this.movementSystem.turnSpeed * delta * 60;
       this.model.rotation.y += turnAmount;
     }
   }
@@ -562,14 +612,18 @@ export class Alien2 {
     let skeletonFound = false;
 
     this.model.traverse((child) => {
-      if (child.isBone || child.type === 'Bone') {
+      if (child.isBone || child.type === "Bone") {
         skeletonFound = true;
         console.log("Hueso encontrado:", child.name, child.type);
       }
       if (child.isSkinnedMesh) {
         console.log("Malla con esqueleto encontrada:", child.name);
         if (child.skeleton) {
-          console.log("Esqueleto de la malla:", child.skeleton.bones.length, "huesos");
+          console.log(
+            "Esqueleto de la malla:",
+            child.skeleton.bones.length,
+            "huesos"
+          );
         }
       }
     });
@@ -598,12 +652,15 @@ export class Alien2 {
     console.log("Sistema de movimiento desactivado:", {
       isActive: this.movementSystem.isActive,
       isMoving: this.movementSystem.isMoving,
-      isTurning: this.movementSystem.isTurning
+      isTurning: this.movementSystem.isTurning,
     });
 
     // Detener cualquier animación actual
     if (this.currentAction) {
-      console.log("Deteniendo animación actual:", this.currentAction.getClip().name);
+      console.log(
+        "Deteniendo animación actual:",
+        this.currentAction.getClip().name
+      );
       this.currentAction.stop();
       this.currentAction = null;
     }
@@ -627,7 +684,9 @@ export class Alien2 {
     console.log("Sistema de interacción activado para Alien2");
 
     // FORZAR cambio a animación idle cuando se activa el sistema de interacción
-    console.log("🔄 Forzando cambio a animación idle al activar sistema de interacción...");
+    console.log(
+      "🔄 Forzando cambio a animación idle al activar sistema de interacción..."
+    );
     this.forceIdleAnimation();
 
     // Crear símbolo de exclamación
@@ -649,7 +708,7 @@ export class Alien2 {
     const material = new THREE.MeshBasicMaterial({
       color: 0xff0000,
       transparent: true,
-      opacity: 0.8
+      opacity: 0.8,
     });
 
     this.interactionSystem.exclamationMark = new THREE.Mesh(geometry, material);
@@ -674,7 +733,8 @@ export class Alien2 {
     const animate = () => {
       if (this.interactionSystem.exclamationMark) {
         this.interactionSystem.exclamationMark.rotation.y += 0.1;
-        this.interactionSystem.exclamationMark.scale.y = 1 + Math.sin(Date.now() * 0.01) * 0.2;
+        this.interactionSystem.exclamationMark.scale.y =
+          1 + Math.sin(Date.now() * 0.01) * 0.2;
         requestAnimationFrame(animate);
       }
     };
@@ -688,7 +748,7 @@ export class Alien2 {
       color: 0x00ff00,
       transparent: true,
       opacity: 0.6,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
     });
 
     this.interactionSystem.blinkingCircle = new THREE.Mesh(geometry, material);
@@ -700,7 +760,10 @@ export class Alien2 {
     // Animación de parpadeo
     this.animateBlinkingCircle();
 
-    console.log("Círculo verde parpadeante creado en posición:", this.interactionSystem.blinkingCircle.position);
+    console.log(
+      "Círculo verde parpadeante creado en posición:",
+      this.interactionSystem.blinkingCircle.position
+    );
 
     // FORZAR cambio a idle cuando se crea el círculo verde
     console.log("🔄 Forzando cambio a idle al crear círculo verde...");
@@ -715,8 +778,11 @@ export class Alien2 {
 
     const animate = () => {
       if (this.interactionSystem.blinkingCircle) {
-        this.interactionSystem.blinkingCircle.material.opacity = 0.3 + Math.sin(Date.now() * 0.005) * 0.3;
-        this.interactionSystem.blinkingCircle.scale.setScalar(1 + Math.sin(Date.now() * 0.003) * 0.1);
+        this.interactionSystem.blinkingCircle.material.opacity =
+          0.3 + Math.sin(Date.now() * 0.005) * 0.3;
+        this.interactionSystem.blinkingCircle.scale.setScalar(
+          1 + Math.sin(Date.now() * 0.003) * 0.1
+        );
         requestAnimationFrame(animate);
       }
     };
@@ -726,8 +792,8 @@ export class Alien2 {
   // Crear HUD de diálogo
   createDialogueHud() {
     // Crear contenedor del HUD
-    const hudContainer = document.createElement('div');
-    hudContainer.id = 'alien2-dialogue-hud';
+    const hudContainer = document.createElement("div");
+    hudContainer.id = "alien2-dialogue-hud";
     hudContainer.style.cssText = `
     position: fixed !important;
     top: 50% !important;
@@ -748,7 +814,7 @@ export class Alien2 {
   `;
 
     // Crear cabecera
-    const header = document.createElement('div');
+    const header = document.createElement("div");
     header.style.cssText = `
       background: linear-gradient(45deg, #27ae60, #2ecc71);
       color: white;
@@ -758,11 +824,11 @@ export class Alien2 {
       text-align: center;
       border-bottom: 3px solid #3498db;
     `;
-    header.innerHTML = '👽 ALIEN COMERCIANTE 👽';
+    header.innerHTML = "👽 ALIEN COMERCIANTE 👽";
     hudContainer.appendChild(header);
 
     // Crear contenedor principal
-    const mainContainer = document.createElement('div');
+    const mainContainer = document.createElement("div");
     mainContainer.style.cssText = `
       display: flex;
       height: calc(100% - 70px);
@@ -770,7 +836,7 @@ export class Alien2 {
     hudContainer.appendChild(mainContainer);
 
     // Crear contenedor izquierdo (imagen del alien)
-    const leftPanel = document.createElement('div');
+    const leftPanel = document.createElement("div");
     leftPanel.style.cssText = `
       width: 300px;
       background: linear-gradient(135deg, #1a2f3a, #2c3e50);
@@ -781,19 +847,21 @@ export class Alien2 {
       border-right: 3px solid #3498db;
     `;
 
-    // Crear placeholder para la cara del Alien2
-    const alienFace = document.createElement('div');
-    alienFace.innerHTML = '👽';
+    // Crear imagen del Alien2
+    const alienFace = document.createElement("img");
+    alienFace.src = "/src/assets/Alien2chat1.png";
+    alienFace.alt = "Alien2";
     alienFace.style.cssText = `
-      font-size: 150px;
-      text-align: center;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
       filter: drop-shadow(0 0 20px rgba(46, 204, 113, 0.5));
     `;
     leftPanel.appendChild(alienFace);
     mainContainer.appendChild(leftPanel);
 
     // Crear contenedor derecho (diálogo)
-    const rightPanel = document.createElement('div');
+    const rightPanel = document.createElement("div");
     rightPanel.style.cssText = `
       flex: 1;
       display: flex;
@@ -803,8 +871,8 @@ export class Alien2 {
     mainContainer.appendChild(rightPanel);
 
     // Crear área de diálogo
-    const dialogueArea = document.createElement('div');
-    dialogueArea.id = 'alien2-dialogue-text';
+    const dialogueArea = document.createElement("div");
+    dialogueArea.id = "alien2-dialogue-text";
     dialogueArea.style.cssText = `
       flex: 1;
       background: rgba(0, 0, 0, 0.6);
@@ -819,12 +887,13 @@ export class Alien2 {
       box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
       font-weight: 500;
     `;
-    dialogueArea.innerHTML = 'Hola humano, ¿tienes leche de tus vacas para vender?';
+    dialogueArea.innerHTML =
+      "Hola humano, ¿tienes leche de tus vacas para vender?";
     rightPanel.appendChild(dialogueArea);
 
     // Crear área de botones de respuesta
-    const buttonArea = document.createElement('div');
-    buttonArea.id = 'alien2-dialogue-buttons';
+    const buttonArea = document.createElement("div");
+    buttonArea.id = "alien2-dialogue-buttons";
     buttonArea.style.cssText = `
       display: flex;
       flex-direction: column;
@@ -836,8 +905,8 @@ export class Alien2 {
     rightPanel.appendChild(buttonArea);
 
     // Crear botón de cerrar
-    const closeButton = document.createElement('button');
-    closeButton.innerHTML = '✕ CERRAR';
+    const closeButton = document.createElement("button");
+    closeButton.innerHTML = "✕ CERRAR";
     closeButton.style.cssText = `
       position: absolute;
       top: 15px;
@@ -855,20 +924,20 @@ export class Alien2 {
       z-index: 10001;
     `;
     closeButton.onmouseover = () => {
-      closeButton.style.background = 'linear-gradient(45deg, #c0392b, #a93226)';
-      closeButton.style.transform = 'scale(1.05)';
-      closeButton.style.boxShadow = '0 6px 20px rgba(231, 76, 60, 0.6)';
+      closeButton.style.background = "linear-gradient(45deg, #c0392b, #a93226)";
+      closeButton.style.transform = "scale(1.05)";
+      closeButton.style.boxShadow = "0 6px 20px rgba(231, 76, 60, 0.6)";
     };
     closeButton.onmouseout = () => {
-      closeButton.style.background = 'linear-gradient(45deg, #e74c3c, #c0392b)';
-      closeButton.style.transform = 'scale(1)';
-      closeButton.style.boxShadow = '0 4px 15px rgba(231, 76, 60, 0.4)';
+      closeButton.style.background = "linear-gradient(45deg, #e74c3c, #c0392b)";
+      closeButton.style.transform = "scale(1)";
+      closeButton.style.boxShadow = "0 4px 15px rgba(231, 76, 60, 0.4)";
     };
     closeButton.onclick = () => this.closeDialogue();
     hudContainer.appendChild(closeButton);
 
     // Añadir estilos para la barra de scroll
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       #alien2-dialogue-hud::-webkit-scrollbar {
         width: 8px;
@@ -928,8 +997,11 @@ export class Alien2 {
       this.interactionSystem.playerStayTime += delta;
 
       // Si ha estado el tiempo suficiente, abrir diálogo
-      if (this.interactionSystem.playerStayTime >= this.interactionSystem.requiredStayTime &&
-        !this.interactionSystem.isDialogueOpen) {
+      if (
+        this.interactionSystem.playerStayTime >=
+          this.interactionSystem.requiredStayTime &&
+        !this.interactionSystem.isDialogueOpen
+      ) {
         this.openDialogue();
       }
     } else {
@@ -951,19 +1023,27 @@ export class Alien2 {
 
     const distance = circlePos.distanceTo(playerPos);
 
-    this.interactionSystem.isPlayerNearby = distance <= this.interactionSystem.collisionRadius;
+    this.interactionSystem.isPlayerNearby =
+      distance <= this.interactionSystem.collisionRadius;
 
     // Log para depuración
     if (this.interactionSystem.isPlayerNearby) {
-      console.log(`Jugador cerca del círculo verde. Distancia: ${distance.toFixed(2)}, Tiempo: ${this.interactionSystem.playerStayTime.toFixed(2)}s`);
+      console.log(
+        `Jugador cerca del círculo verde. Distancia: ${distance.toFixed(
+          2
+        )}, Tiempo: ${this.interactionSystem.playerStayTime.toFixed(2)}s`
+      );
     }
   }
 
   // Abrir diálogo
   openDialogue() {
-    if (this.interactionSystem.dialogueHud && !this.interactionSystem.isDialogueOpen) {
+    if (
+      this.interactionSystem.dialogueHud &&
+      !this.interactionSystem.isDialogueOpen
+    ) {
       console.log("Abriendo diálogo con Alien2...");
-      this.interactionSystem.dialogueHud.style.display = 'block';
+      this.interactionSystem.dialogueHud.style.display = "block";
       this.interactionSystem.isDialogueOpen = true;
 
       // Mostrar el diálogo inicial
@@ -973,10 +1053,13 @@ export class Alien2 {
 
       // Verificar que el HUD esté visible
       setTimeout(() => {
-        const hud = document.getElementById('alien2-dialogue-hud');
+        const hud = document.getElementById("alien2-dialogue-hud");
         if (hud) {
           console.log("HUD encontrado en DOM:", hud.style.display);
-          console.log("HUD visible:", hud.offsetWidth > 0 && hud.offsetHeight > 0);
+          console.log(
+            "HUD visible:",
+            hud.offsetWidth > 0 && hud.offsetHeight > 0
+          );
           console.log("HUD z-index:", hud.style.zIndex);
         } else {
           console.error("HUD no encontrado en DOM");
@@ -985,14 +1068,18 @@ export class Alien2 {
     } else {
       console.warn("No se puede abrir diálogo:", {
         hudExists: !!this.interactionSystem.dialogueHud,
-        alreadyOpen: this.interactionSystem.isDialogueOpen
+        alreadyOpen: this.interactionSystem.isDialogueOpen,
       });
     }
   }
 
   // Mostrar diálogo inicial
   showInitialDialogue() {
-    if (!this.interactionSystem.dialogueArea || !this.interactionSystem.buttonArea) return;
+    if (
+      !this.interactionSystem.dialogueArea ||
+      !this.interactionSystem.buttonArea
+    )
+      return;
 
     // Mostrar mensaje del Alien
     this.interactionSystem.dialogueArea.innerHTML =
@@ -1000,13 +1087,13 @@ export class Alien2 {
       '<div style="text-align: center; font-size: 20px; line-height: 1.5;">Hola humano, ¿tienes leche de tus vacas para vender?</div>';
 
     // Limpiar botones anteriores
-    this.interactionSystem.buttonArea.innerHTML = '';
+    this.interactionSystem.buttonArea.innerHTML = "";
 
     // Obtener cantidad de leche del inventario
     const milkAmount = this.getMilkAmount();
 
     // Crear botón de respuesta del granjero
-    const farmerButton = document.createElement('button');
+    const farmerButton = document.createElement("button");
     farmerButton.style.cssText = `
       background: linear-gradient(45deg, #f39c12, #e67e22);
       color: white;
@@ -1022,20 +1109,22 @@ export class Alien2 {
     `;
 
     if (milkAmount < 1) {
-      farmerButton.innerHTML = '🚫 Aún no tengo leche para vender';
+      farmerButton.innerHTML = "🚫 Aún no tengo leche para vender";
       farmerButton.onclick = () => this.handleNoMilkResponse();
     } else {
-      farmerButton.innerHTML = `✅ Sí - Tengo ${milkAmount.toFixed(1)} litros disponibles`;
+      farmerButton.innerHTML = `✅ Sí - Tengo ${milkAmount.toFixed(
+        1
+      )} litros disponibles`;
       farmerButton.onclick = () => this.handleYesMilkResponse();
     }
 
     farmerButton.onmouseover = () => {
-      farmerButton.style.transform = 'translateY(-3px)';
-      farmerButton.style.boxShadow = '0 8px 25px rgba(243, 156, 18, 0.6)';
+      farmerButton.style.transform = "translateY(-3px)";
+      farmerButton.style.boxShadow = "0 8px 25px rgba(243, 156, 18, 0.6)";
     };
     farmerButton.onmouseout = () => {
-      farmerButton.style.transform = 'translateY(0)';
-      farmerButton.style.boxShadow = '0 6px 20px rgba(243, 156, 18, 0.4)';
+      farmerButton.style.transform = "translateY(0)";
+      farmerButton.style.boxShadow = "0 6px 20px rgba(243, 156, 18, 0.4)";
     };
 
     this.interactionSystem.buttonArea.appendChild(farmerButton);
@@ -1043,7 +1132,7 @@ export class Alien2 {
 
   // Obtener cantidad de leche del inventario
   getMilkAmount() {
-    if (window.inventory && typeof window.inventory.getState === 'function') {
+    if (window.inventory && typeof window.inventory.getState === "function") {
       const state = window.inventory.getState();
       return state.milkLiters || 0;
     }
@@ -1059,11 +1148,11 @@ export class Alien2 {
       '<div style="text-align: center; font-size: 20px; line-height: 1.5;">Vuelve cuando tengas leche, humano</div>';
 
     // Limpiar botones
-    this.interactionSystem.buttonArea.innerHTML = '';
+    this.interactionSystem.buttonArea.innerHTML = "";
 
     // Crear botón para cerrar
-    const closeButton = document.createElement('button');
-    closeButton.innerHTML = '👌 Entendido';
+    const closeButton = document.createElement("button");
+    closeButton.innerHTML = "👌 Entendido";
     closeButton.style.cssText = `
       background: linear-gradient(45deg, #95a5a6, #7f8c8d);
       color: white;
@@ -1078,35 +1167,40 @@ export class Alien2 {
     `;
     closeButton.onclick = () => this.closeDialogue();
     closeButton.onmouseover = () => {
-      closeButton.style.transform = 'translateY(-2px)';
-      closeButton.style.boxShadow = '0 8px 25px rgba(149, 165, 166, 0.6)';
+      closeButton.style.transform = "translateY(-2px)";
+      closeButton.style.boxShadow = "0 8px 25px rgba(149, 165, 166, 0.6)";
     };
     closeButton.onmouseout = () => {
-      closeButton.style.transform = 'translateY(0)';
-      closeButton.style.boxShadow = '0 6px 20px rgba(149, 165, 166, 0.4)';
+      closeButton.style.transform = "translateY(0)";
+      closeButton.style.boxShadow = "0 6px 20px rgba(149, 165, 166, 0.4)";
     };
     this.interactionSystem.buttonArea.appendChild(closeButton);
   }
 
   // Manejar respuesta cuando sí hay leche
   handleYesMilkResponse() {
-    if (!this.interactionSystem.dialogueArea || !this.interactionSystem.buttonArea) return;
+    if (
+      !this.interactionSystem.dialogueArea ||
+      !this.interactionSystem.buttonArea
+    )
+      return;
 
-    this.interactionSystem.dialogueArea.innerHTML = 'Excelente! ¿Cuántos litros quieres vender?';
+    this.interactionSystem.dialogueArea.innerHTML =
+      "Excelente! ¿Cuántos litros quieres vender?";
 
     // Limpiar botones anteriores
-    this.interactionSystem.buttonArea.innerHTML = '';
+    this.interactionSystem.buttonArea.innerHTML = "";
 
     // Crear botones de opciones de venta
     const sellOptions = [
       { liters: 1.0, price: 5 },
       { liters: 3.0, price: 10 },
       { liters: 5.0, price: 15 },
-      { liters: 10.0, price: 25 }
+      { liters: 10.0, price: 25 },
     ];
 
-    sellOptions.forEach(option => {
-      const button = document.createElement('button');
+    sellOptions.forEach((option) => {
+      const button = document.createElement("button");
       button.style.cssText = `
         background: linear-gradient(45deg, #27ae60, #2ecc71);
         color: white;
@@ -1125,12 +1219,12 @@ export class Alien2 {
       button.onclick = () => this.handleSellMilk(option.liters, option.price);
 
       button.onmouseover = () => {
-        button.style.transform = 'translateY(-3px)';
-        button.style.boxShadow = '0 8px 25px rgba(39, 174, 96, 0.6)';
+        button.style.transform = "translateY(-3px)";
+        button.style.boxShadow = "0 8px 25px rgba(39, 174, 96, 0.6)";
       };
       button.onmouseout = () => {
-        button.style.transform = 'translateY(0)';
-        button.style.boxShadow = '0 6px 20px rgba(39, 174, 96, 0.4)';
+        button.style.transform = "translateY(0)";
+        button.style.boxShadow = "0 6px 20px rgba(39, 174, 96, 0.4)";
       };
 
       this.interactionSystem.buttonArea.appendChild(button);
@@ -1147,8 +1241,7 @@ export class Alien2 {
     const currentMilk = this.getMilkAmount();
 
     if (currentMilk < liters) {
-      this.interactionSystem.dialogueArea.innerHTML =
-        `<div style="text-align: center; color: #e74c3c; font-size: 22px;">❌</div>
+      this.interactionSystem.dialogueArea.innerHTML = `<div style="text-align: center; color: #e74c3c; font-size: 22px;">❌</div>
          <div style="text-align: center; font-size: 20px; line-height: 1.5;">
            No tienes suficientes litros.<br>
            Solo tienes ${currentMilk.toFixed(1)}L
@@ -1160,17 +1253,16 @@ export class Alien2 {
     this.sellMilkToAlien(liters, price);
 
     // Mostrar confirmación
-    this.interactionSystem.dialogueArea.innerHTML =
-      `<div style="text-align: center; color: #2ecc71; font-size: 22px;">🎉</div>
+    this.interactionSystem.dialogueArea.innerHTML = `<div style="text-align: center; color: #2ecc71; font-size: 22px;">🎉</div>
        <div style="text-align: center; font-size: 20px; line-height: 1.5;">
          ¡Perfecto! Vendiste ${liters}L por ${price} monedas de oro.<br>
          ¡Gracias humano!
        </div>`;
 
     // Limpiar botones y mostrar botón de cerrar
-    this.interactionSystem.buttonArea.innerHTML = '';
-    const closeButton = document.createElement('button');
-    closeButton.innerHTML = '🤝 De nada, alien';
+    this.interactionSystem.buttonArea.innerHTML = "";
+    const closeButton = document.createElement("button");
+    closeButton.innerHTML = "🤝 De nada, alien";
     closeButton.style.cssText = `
       background: linear-gradient(45deg, #3498db, #2980b9);
       color: white;
@@ -1185,12 +1277,12 @@ export class Alien2 {
     `;
     closeButton.onclick = () => this.closeDialogue();
     closeButton.onmouseover = () => {
-      closeButton.style.transform = 'translateY(-2px)';
-      closeButton.style.boxShadow = '0 8px 25px rgba(52, 152, 219, 0.6)';
+      closeButton.style.transform = "translateY(-2px)";
+      closeButton.style.boxShadow = "0 8px 25px rgba(52, 152, 219, 0.6)";
     };
     closeButton.onmouseout = () => {
-      closeButton.style.transform = 'translateY(0)';
-      closeButton.style.boxShadow = '0 6px 20px rgba(52, 152, 219, 0.4)';
+      closeButton.style.transform = "translateY(0)";
+      closeButton.style.boxShadow = "0 6px 20px rgba(52, 152, 219, 0.4)";
     };
     this.interactionSystem.buttonArea.appendChild(closeButton);
   }
@@ -1200,12 +1292,12 @@ export class Alien2 {
     if (!window.inventory) return;
 
     // Reducir leche del inventario
-    if (typeof window.inventory.addMilk === 'function') {
+    if (typeof window.inventory.addMilk === "function") {
       window.inventory.addMilk(-liters); // Restar leche
     }
 
     // Añadir monedas al inventario
-    if (typeof window.inventory.addCoins === 'function') {
+    if (typeof window.inventory.addCoins === "function") {
       window.inventory.addCoins(price);
     } else {
       // Fallback: modificar directamente el estado
@@ -1231,8 +1323,8 @@ export class Alien2 {
 
   // Crear animación de una sola moneda
   createSingleCoinAnimation() {
-    const coin = document.createElement('div');
-    coin.innerHTML = '🪙';
+    const coin = document.createElement("div");
+    coin.innerHTML = "🪙";
     coin.style.cssText = `
       position: fixed;
       font-size: 24px;
@@ -1242,20 +1334,20 @@ export class Alien2 {
     `;
 
     // Posición inicial (centro del diálogo)
-    const hud = document.getElementById('alien2-dialogue-hud');
+    const hud = document.getElementById("alien2-dialogue-hud");
     if (hud) {
       const hudRect = hud.getBoundingClientRect();
-      coin.style.left = (hudRect.left + hudRect.width / 2) + 'px';
-      coin.style.top = (hudRect.top + hudRect.height / 2) + 'px';
+      coin.style.left = hudRect.left + hudRect.width / 2 + "px";
+      coin.style.top = hudRect.top + hudRect.height / 2 + "px";
     } else {
-      coin.style.left = '50%';
-      coin.style.top = '50%';
+      coin.style.left = "50%";
+      coin.style.top = "50%";
     }
 
     document.body.appendChild(coin);
 
     // Posición final (inventario)
-    const inventory = document.getElementById('inventory-hud');
+    const inventory = document.getElementById("inventory-hud");
     if (inventory) {
       const invRect = inventory.getBoundingClientRect();
       const targetX = invRect.right - 30;
@@ -1263,10 +1355,10 @@ export class Alien2 {
 
       // Animar hacia el inventario
       setTimeout(() => {
-        coin.style.left = targetX + 'px';
-        coin.style.top = targetY + 'px';
-        coin.style.transform = 'scale(0.5)';
-        coin.style.opacity = '0.7';
+        coin.style.left = targetX + "px";
+        coin.style.top = targetY + "px";
+        coin.style.transform = "scale(0.5)";
+        coin.style.opacity = "0.7";
       }, 50);
     }
 
@@ -1280,8 +1372,11 @@ export class Alien2 {
 
   // Cerrar diálogo
   closeDialogue() {
-    if (this.interactionSystem.dialogueHud && this.interactionSystem.isDialogueOpen) {
-      this.interactionSystem.dialogueHud.style.display = 'none';
+    if (
+      this.interactionSystem.dialogueHud &&
+      this.interactionSystem.isDialogueOpen
+    ) {
+      this.interactionSystem.dialogueHud.style.display = "none";
       this.interactionSystem.isDialogueOpen = false;
       this.interactionSystem.playerStayTime = 0; // Resetear tiempo
       console.log("Diálogo cerrado con Alien2");
@@ -1296,16 +1391,25 @@ export class Alien2 {
     console.log("Animaciones cargadas:", Object.keys(this.animations));
 
     if (this.currentAction) {
-      console.log("Reproduciendo animación:", this.currentAction.getClip().name);
+      console.log(
+        "Reproduciendo animación:",
+        this.currentAction.getClip().name
+      );
       console.log("Animación activa:", this.currentAction.isRunning());
-      console.log("Peso de la animación:", this.currentAction.getEffectiveWeight());
+      console.log(
+        "Peso de la animación:",
+        this.currentAction.getEffectiveWeight()
+      );
     } else {
       console.log("No hay ninguna animación reproduciéndose actualmente");
     }
 
     // Verificar si el modelo tiene animaciones incluidas
     if (this.model && this.model.animations) {
-      console.log("Animaciones incluidas en el modelo:", this.model.animations.length);
+      console.log(
+        "Animaciones incluidas en el modelo:",
+        this.model.animations.length
+      );
       this.model.animations.forEach((anim, index) => {
         console.log(`  ${index}: ${anim.name} (${anim.duration}s)`);
       });
@@ -1367,14 +1471,17 @@ window.debugAlien2Movement = function () {
     console.log("Animaciones cargadas:", Object.keys(window.alien2.animations));
 
     // Verificar detalles de cada animación
-    Object.keys(window.alien2.animations).forEach(animName => {
+    Object.keys(window.alien2.animations).forEach((animName) => {
       const anim = window.alien2.animations[animName];
       console.log(`  ${animName}:`, anim.name, `(${anim.duration}s)`);
     });
 
     // Verificar animación actual
     if (window.alien2.currentAction) {
-      console.log("Animación actual:", window.alien2.currentAction.getClip().name);
+      console.log(
+        "Animación actual:",
+        window.alien2.currentAction.getClip().name
+      );
       console.log("¿Está corriendo?:", window.alien2.currentAction.isRunning());
     }
 
@@ -1389,13 +1496,13 @@ window.testAlien2Animations = function () {
     console.log("=== PROBANDO ANIMACIONES DEL ALIEN2 ===");
 
     // Probar cada animación por separado
-    const animations = ['idle', 'walk', 'turnRight'];
+    const animations = ["idle", "walk", "turnRight"];
 
     animations.forEach((animName, index) => {
       setTimeout(() => {
         console.log(`🎬 Probando animación: ${animName}`);
         const success = window.alien2.playAnimation(animName);
-        console.log(`Resultado: ${success ? '✅ Éxito' : '❌ Falló'}`);
+        console.log(`Resultado: ${success ? "✅ Éxito" : "❌ Falló"}`);
       }, index * 2000); // 2 segundos entre cada prueba
     });
 
@@ -1408,15 +1515,37 @@ window.testAlien2Animations = function () {
 window.debugAlien2Interaction = function () {
   if (window.alien2) {
     console.log("=== ESTADO DEL SISTEMA DE INTERACCIÓN ALIEN2 ===");
-    console.log("En posición final:", window.alien2.interactionSystem.isAtFinalPosition);
-    console.log("Jugador cerca:", window.alien2.interactionSystem.isPlayerNearby);
-    console.log("Tiempo de permanencia:", window.alien2.interactionSystem.playerStayTime.toFixed(2), "s");
-    console.log("Tiempo requerido:", window.alien2.interactionSystem.requiredStayTime, "s");
-    console.log("Diálogo abierto:", window.alien2.interactionSystem.isDialogueOpen);
-    console.log("Radio de colisión:", window.alien2.interactionSystem.collisionRadius);
+    console.log(
+      "En posición final:",
+      window.alien2.interactionSystem.isAtFinalPosition
+    );
+    console.log(
+      "Jugador cerca:",
+      window.alien2.interactionSystem.isPlayerNearby
+    );
+    console.log(
+      "Tiempo de permanencia:",
+      window.alien2.interactionSystem.playerStayTime.toFixed(2),
+      "s"
+    );
+    console.log(
+      "Tiempo requerido:",
+      window.alien2.interactionSystem.requiredStayTime,
+      "s"
+    );
+    console.log(
+      "Diálogo abierto:",
+      window.alien2.interactionSystem.isDialogueOpen
+    );
+    console.log(
+      "Radio de colisión:",
+      window.alien2.interactionSystem.collisionRadius
+    );
 
     if (window.farmerController && window.farmerController.model) {
-      const distance = window.alien2.model.position.distanceTo(window.farmerController.model.position);
+      const distance = window.alien2.model.position.distanceTo(
+        window.farmerController.model.position
+      );
       console.log("Distancia al jugador:", distance.toFixed(2));
     }
 
@@ -1448,7 +1577,7 @@ window.debugAlien2HUD = function () {
   console.log("=== DEBUGGING HUD DEL ALIEN2 ===");
 
   // Verificar si el HUD existe en el DOM
-  const hud = document.getElementById('alien2-dialogue-hud');
+  const hud = document.getElementById("alien2-dialogue-hud");
   if (hud) {
     console.log("✅ HUD encontrado en DOM");
     console.log("Display:", hud.style.display);
@@ -1461,9 +1590,15 @@ window.debugAlien2HUD = function () {
 
   // Verificar estado del sistema de interacción
   if (window.alien2) {
-    console.log("Sistema de interacción activo:", window.alien2.interactionSystem.isAtFinalPosition);
+    console.log(
+      "Sistema de interacción activo:",
+      window.alien2.interactionSystem.isAtFinalPosition
+    );
     console.log("HUD creado:", !!window.alien2.interactionSystem.dialogueHud);
-    console.log("Diálogo abierto:", window.alien2.interactionSystem.isDialogueOpen);
+    console.log(
+      "Diálogo abierto:",
+      window.alien2.interactionSystem.isDialogueOpen
+    );
   }
 
   console.log("=================================");
