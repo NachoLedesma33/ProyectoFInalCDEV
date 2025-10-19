@@ -14,7 +14,7 @@ export class Market {
     this.collisionBoxes = [];
     this.isPlayerNearby = false;
     this.isUIOpen = false;
-    this.radius = 3; // Radio del área de interacción
+    this.radius = 1.5; // Radio del área de interacción (reducido de 3 a 1.5)
 
     this.createMarket();
     this.createInteractionArea();
@@ -281,22 +281,49 @@ export class Market {
   }
 
   checkPlayerPosition(playerPosition) {
-    if (!playerPosition) return;
+    if (!playerPosition) {
+      console.warn("Market: playerPosition es undefined o null");
+      return;
+    }
 
+    // Convertir la posición del círculo a coordenadas del mundo
+    const worldPosition = new THREE.Vector3();
+    this.interactionCircle.getWorldPosition(worldPosition);
+    
+    console.log("Posición del jugador:", playerPosition.x.toFixed(2), playerPosition.y.toFixed(2), playerPosition.z.toFixed(2));
+    console.log("Posición del círculo:", worldPosition.x.toFixed(2), worldPosition.y.toFixed(2), worldPosition.z.toFixed(2));
+    
     const distance = Math.sqrt(
-      Math.pow(playerPosition.x - this.interactionCircle.position.x, 2) +
-        Math.pow(playerPosition.z - this.interactionCircle.position.z, 2)
+      Math.pow(playerPosition.x - worldPosition.x, 2) +
+      Math.pow(playerPosition.z - worldPosition.z, 2)
     );
 
-    console.log("Distancia al círculo:", distance); // Para depuración
+    console.log("Distancia al círculo:", distance.toFixed(2), "Radio:", this.radius);
 
     if (distance <= this.radius) {
+      console.log("DENTRO DEL CÍRCULO - Distancia:", distance.toFixed(2), "Radio:", this.radius);
       if (!this.isPlayerNearby) {
         this.isPlayerNearby = true;
-        this.showMarketUI();
+        console.log("Jugador entró al círculo del mercado");
+        
+        // Añadir un retraso de 2.5 segundos antes de mostrar el HUD
+        if (this.uiTimer) clearTimeout(this.uiTimer);
+        this.uiTimer = setTimeout(() => {
+          console.log("Temporizador completado, verificando si el jugador sigue en el círculo");
+          if (this.isPlayerNearby) { // Verificar que el jugador sigue en el círculo
+            console.log("Mostrando HUD del mercado después de 2.5 segundos");
+            this.showMarketUI();
+          }
+        }, 2500);
       }
     } else if (this.isPlayerNearby) {
       this.isPlayerNearby = false;
+      console.log("Jugador salió del círculo del mercado");
+      if (this.uiTimer) {
+        clearTimeout(this.uiTimer);
+        this.uiTimer = null;
+        console.log("Temporizador cancelado");
+      }
       this.hideMarketUI();
     }
   }
@@ -304,41 +331,115 @@ export class Market {
   showMarketUI() {
     if (this.isUIOpen) return;
     this.isUIOpen = true;
+    console.log("Creando y mostrando HUD del mercado");
 
     // Crear el contenedor del HUD
     this.marketUI = document.createElement("div");
     this.marketUI.id = "market-hud";
     this.marketUI.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
       background: rgba(0, 0, 0, 0.9);
       border: 2px solid #00aa00;
       border-radius: 10px;
       padding: 20px;
       color: white;
-      z-index: 1000;
-      width: 400px;
-      max-width: 90%;
-      max-height: 80vh;
+      z-index: 999999 !important;
+      width: 640px;
+      height: 437px;
       overflow-y: auto;
       font-family: 'Arial', sans-serif;
       box-shadow: 0 0 20px rgba(0, 200, 0, 0.5);
+      display: block;
+      pointer-events: auto;
     `;
 
     // Título
     const title = document.createElement("h2");
-    title.textContent = "Mercado";
-    title.style.cssText = "text-align: center; margin-top: 0; color: #4caf50;";
+    title.textContent = "Mercado Alienígena";
+    title.style.cssText = "text-align: center; margin-top: 0; color: #4caf50; font-size: 24px;";
     this.marketUI.appendChild(title);
 
-    // Monedas disponibles
+    // Monedas disponibles - Ahora en la parte superior derecha
     const coins = document.createElement("div");
-    coins.textContent = `Monedas: ${window.inventory?.coins || 0}`;
-    coins.style.cssText =
-      "text-align: center; margin-bottom: 20px; font-size: 1.2em; color: #ffd700;";
+    coins.textContent = `Monedas disponibles: ${window.inventory?.coins || 0}`;
+    coins.style.cssText = `
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 1.2em;
+      color: #ffd700;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 5px 10px;
+      border-radius: 5px;
+      border: 1px solid #ffd700;
+    `;
     this.marketUI.appendChild(coins);
+
+    // Subtítulo de Herramientas
+    const toolsTitle = document.createElement("h3");
+    toolsTitle.textContent = "Herramientas";
+    toolsTitle.style.cssText = "margin-top: 30px; color: #7fbfff; border-bottom: 1px solid #7fbfff; padding-bottom: 5px;";
+    this.marketUI.appendChild(toolsTitle);
+
+    // Contenedor de slots para herramientas
+    const slotsContainer = document.createElement("div");
+    slotsContainer.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-top: 15px;
+    `;
+
+    // Crear 6 slots vacíos con placeholders
+    for (let i = 0; i < 6; i++) {
+      const slot = document.createElement("div");
+      slot.style.cssText = `
+        background: rgba(50, 50, 50, 0.5);
+        border: 1px solid #7fbfff;
+        border-radius: 5px;
+        height: 80px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      `;
+      
+      // Placeholder para imagen
+      const placeholder = document.createElement("div");
+      placeholder.style.cssText = `
+        width: 50px;
+        height: 50px;
+        background: rgba(100, 100, 100, 0.3);
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+      placeholder.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke="#7fbfff" stroke-width="2" stroke-linecap="round"/></svg>';
+      
+      // Nombre del item (vacío por ahora)
+      const itemName = document.createElement("div");
+      itemName.textContent = `Item ${i+1}`;
+      itemName.style.cssText = "margin-top: 5px; font-size: 12px; color: #ccc;";
+      
+      slot.appendChild(placeholder);
+      slot.appendChild(itemName);
+      slot.addEventListener("mouseover", () => {
+        slot.style.background = "rgba(70, 70, 70, 0.7)";
+      });
+      slot.addEventListener("mouseout", () => {
+        slot.style.background = "rgba(50, 50, 50, 0.5)";
+      });
+      
+      slotsContainer.appendChild(slot);
+    }
+    
+    this.marketUI.appendChild(slotsContainer);
 
     // Botón de cierre
     const closeButton = document.createElement("button");
@@ -359,6 +460,21 @@ export class Market {
     document.body.appendChild(this.marketUI);
     this.marketUI.onclick = (e) => e.stopPropagation();
     document.addEventListener("click", this.handleOutsideClick);
+    
+    // Verificar que el HUD esté visible
+    setTimeout(() => {
+      const hud = document.getElementById("market-hud");
+      if (hud) {
+        console.log("HUD del mercado encontrado en DOM:", hud.style.display);
+        console.log(
+          "HUD del mercado visible:",
+          hud.offsetWidth > 0 && hud.offsetHeight > 0
+        );
+        console.log("HUD del mercado z-index:", hud.style.zIndex);
+      } else {
+        console.error("HUD del mercado no encontrado en DOM");
+      }
+    }, 100);
   }
 
   handleOutsideClick = (e) => {

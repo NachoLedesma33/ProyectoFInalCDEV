@@ -1061,6 +1061,12 @@ function animate(currentTime = 0) {
     for (let i = 0; i < stones.length; i++) {
       stones[i].update(delta);
     }
+    
+    // Actualizar el mercado con la posición del jugador
+    if (window.market && farmerController?.model) {
+      window.market.update(farmerController.model.position);
+      console.log("Actualizando mercado con posición del jugador:", farmerController.model.position);
+    }
 
     // 6. Actualizaciones menos frecuentes (optimizadas)
     if (terrainUpdateCounter++ >= terrainUpdateInterval) {
@@ -1098,6 +1104,29 @@ function animate(currentTime = 0) {
 // ==============================================
 // HERRAMIENTAS DE DEPURACIÓN
 // ==============================================
+
+// Función global para forzar la apertura del HUD del mercado
+window.forceOpenMarketHUD = function() {
+  if (window.market) {
+    console.log("Forzando apertura del HUD del mercado desde consola");
+    window.market.showMarketUI();
+    return "HUD del mercado abierto forzosamente";
+  } else {
+    console.error("No se encontró la instancia del mercado");
+    return "Error: No se encontró la instancia del mercado";
+  }
+}
+
+// Función global para mostrar la posición actual del jugador
+window.showPlayerPosition = function() {
+  if (farmerController && farmerController.model) {
+    const pos = farmerController.model.position;
+    console.log(`Posición del jugador: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(2)}, z=${pos.z.toFixed(2)}`);
+    return `Posición: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(2)}, z=${pos.z.toFixed(2)}`;
+  } else {
+    return "Error: No se encontró el modelo del jugador";
+  }
+}
 
 /**
  * Hacer disponibles las variables globales para depuración en la consola del navegador
