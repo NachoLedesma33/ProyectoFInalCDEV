@@ -155,6 +155,39 @@ export class Market {
     );
     window.position.set(0, height * 0.5, depth / 2 + 0.1);
     this.marketGroup.add(window);
+    
+    // Cargar la textura del Alien2Chat1.png para la ventana cuadrada
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(
+      "./src/assets/Alien2chat1m.png",
+      (texture) => {
+        console.log("✅ Textura Alien2chat1.png cargada para la ventana");
+        
+        // Crear ventana cuadrada con la imagen del alien
+        const alienWindowSize = 2.5; // Tamaño cuadrado
+        const alienWindowMaterial = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          side: THREE.DoubleSide
+        });
+        
+        const alienWindow = new THREE.Mesh(
+          new THREE.PlaneGeometry(alienWindowSize, alienWindowSize),
+          alienWindowMaterial
+        );
+        
+        // Posicionar en la pared frontal, frente al círculo verde
+        // Elevando la posición 0.5 unidades más (aproximadamente 30px más alto)
+        alienWindow.position.set(0, height * 0.4 + 0.5, depth / 2 + 0.15);
+        this.marketGroup.add(alienWindow);
+        
+        console.log("✅ Ventana con imagen de alien añadida al mercado");
+      },
+      undefined,
+      (error) => {
+        console.error("Error cargando textura del alien:", error);
+      }
+    );
   }
 
   createRoof(material) {
