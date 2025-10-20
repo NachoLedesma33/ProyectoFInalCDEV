@@ -322,40 +322,26 @@ export class Market {
     // Convertir la posición del círculo a coordenadas del mundo
     const worldPosition = new THREE.Vector3();
     this.interactionCircle.getWorldPosition(worldPosition);
-    
-    console.log("Posición del jugador:", playerPosition.x.toFixed(2), playerPosition.y.toFixed(2), playerPosition.z.toFixed(2));
-    console.log("Posición del círculo:", worldPosition.x.toFixed(2), worldPosition.y.toFixed(2), worldPosition.z.toFixed(2));
-    
     const distance = Math.sqrt(
       Math.pow(playerPosition.x - worldPosition.x, 2) +
       Math.pow(playerPosition.z - worldPosition.z, 2)
     );
-
-    console.log("Distancia al círculo:", distance.toFixed(2), "Radio:", this.radius);
-
     if (distance <= this.radius) {
-      console.log("DENTRO DEL CÍRCULO - Distancia:", distance.toFixed(2), "Radio:", this.radius);
       if (!this.isPlayerNearby) {
         this.isPlayerNearby = true;
-        console.log("Jugador entró al círculo del mercado");
-        
         // Añadir un retraso de 2.5 segundos antes de mostrar el HUD
         if (this.uiTimer) clearTimeout(this.uiTimer);
         this.uiTimer = setTimeout(() => {
-          console.log("Temporizador completado, verificando si el jugador sigue en el círculo");
           if (this.isPlayerNearby) { // Verificar que el jugador sigue en el círculo
-            console.log("Mostrando HUD del mercado después de 2.5 segundos");
             this.showMarketUI();
           }
         }, 2500);
       }
     } else if (this.isPlayerNearby) {
       this.isPlayerNearby = false;
-      console.log("Jugador salió del círculo del mercado");
       if (this.uiTimer) {
         clearTimeout(this.uiTimer);
         this.uiTimer = null;
-        console.log("Temporizador cancelado");
       }
       this.hideMarketUI();
     }

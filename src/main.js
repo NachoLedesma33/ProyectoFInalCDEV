@@ -1065,7 +1065,6 @@ function animate(currentTime = 0) {
     // Actualizar el mercado con la posición del jugador
     if (window.market && farmerController?.model) {
       window.market.update(farmerController.model.position);
-      console.log("Actualizando mercado con posición del jugador:", farmerController.model.position);
     }
 
     // 6. Actualizaciones menos frecuentes (optimizadas)
