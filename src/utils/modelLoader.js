@@ -12,36 +12,28 @@ export class ModelLoader {
     this.activeAction = null;
     this.animationLoader = new FBXLoader();
     this.modelLoader = new FBXLoader();
-    this.config = null; // Almacenar la configuración del modelo
+    this.config = null;
   }
 
   async load(modelPath, animationConfig = {}, onLoad, config = null) {
     try {
-      // Establecer la configuración del modelo
       this.config = config;
 
-      // Cargar el modelo principal
       const model = await this.loadModel(modelPath);
       this.model = model;
 
-      // Ajustar la escala y posición del modelo
       this.setupModel();
 
-      // Inicializar el mixer de animaciones
       this.mixer = new THREE.AnimationMixer(this.model);
 
-      // Cargar animaciones si se proporciona la configuración
       if (Object.keys(animationConfig).length > 0) {
         await this.loadAnimations(animationConfig);
       } else if (model.animations && model.animations.length > 0) {
-        // Si el modelo tiene animaciones integradas
         this.setupDefaultAnimations(model.animations);
       }
 
-      // Iniciar la animación por defecto
       this.play("idle");
 
-      // Agregar el modelo a la escena
       this.scene.add(this.model);
 
       if (onLoad) onLoad(this);
@@ -63,23 +55,17 @@ export class ModelLoader {
     });
   }
 
-  /**
-   * Establece la configuración del modelo
-   * @param {Object} config - Configuración del modelo
-   */
   setConfig(config) {
     this.config = config;
   }
 
   setupModel() {
-    // Calcular el bounding box para obtener las dimensiones
     const box = new THREE.Box3().setFromObject(this.model);
     const size = new THREE.Vector3();
     box.getSize(size);
 
-    // Usar la configuración si está disponible
-    let targetHeight = 1.8; // Valor por defecto
-    let customScale = 1.0; // Valor por defecto
+    let targetHeight = 1.8;
+    let customScale = 1.0;
 
     if (this.config && this.config.settings) {
       targetHeight = this.config.settings.height || 1.8;
@@ -89,28 +75,22 @@ export class ModelLoader {
       customScale = this.config.scale;
     }
 
-    // Calcular la escala para que el modelo tenga la altura deseada
     const scaleFactor = (targetHeight / size.y) * customScale;
     this.model.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-    // Recalcular el bounding box después de escalar
     box.setFromObject(this.model);
     box.getSize(size);
 
-    // Obtener el punto más bajo del modelo y posicionarlo en Y=0
     const minY = box.min.y;
     this.model.position.y = -minY;
 
-    // Asegurar que el modelo esté orientado correctamente
     this.model.rotation.set(0, 0, 0);
 
-    // Configurar sombras para el modelo del farmer
     this.model.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
 
-        // Optimizar materiales
         if (child.material) {
           if (Array.isArray(child.material)) {
             child.material.forEach((mat) => {
@@ -129,12 +109,10 @@ export class ModelLoader {
   async loadAnimations(animationConfig) {
     const animationPromises = [];
 
-    // Helper: collect bone names from an object
     const collectBoneNames = (obj) => {
       const names = new Set();
       obj.traverse((c) => {
         if (c.isBone) names.add((c.name || "").toLowerCase());
-        // FBX sometimes stores bones as objects with type 'Bone' or includes skeletons on skinned meshes
         if (c.skeleton && c.skeleton.bones) {
           c.skeleton.bones.forEach((b) =>
             names.add((b.name || "").toLowerCase())
@@ -144,12 +122,10 @@ export class ModelLoader {
       return names;
     };
 
-    // Bone set of the target model (lowercased)
     const modelBoneNames = this.model
       ? collectBoneNames(this.model)
       : new Set();
 
-    // Cargar cada animación definida en la configuración
     for (const [name, path] of Object.entries(animationConfig)) {
       if (!path) continue;
 
@@ -157,49 +133,34 @@ export class ModelLoader {
         this.animationLoader.load(
           path,
           (animModel) => {
-            // Si el modelo cargado tiene animaciones, verificar compatibilidad de huesos antes de agregarlas
             if (animModel.animations && animModel.animations.length > 0) {
-              // recopilar nombres de hueso del animModel
               const animBoneNames = collectBoneNames(animModel);
 
-              // Calcular intersección
               let common = 0;
               animBoneNames.forEach((n) => {
                 if (modelBoneNames.has(n)) common++;
               });
 
-              // Si no hay huesos en común, evitar cargar la animación (riesgo de T-pose)
               if (modelBoneNames.size > 0 && common === 0) {
-                console.warn(
-                  `Skipping animation '${name}' - no bone names match the target model (possible incompatible skeleton)`
-                );
                 resolve();
                 return;
               }
 
-              // Usar la primera animación del modelo cargado
               const clip = animModel.animations[0];
 
-              // Crear un nuevo clip con el nombre de la acción
               const newClip = clip.clone();
               newClip.name = name;
               this.animations.push(newClip);
 
-              // Crear la acción y configurarla
               const action = this.mixer.clipAction(newClip, this.model);
               action.setLoop(THREE.LoopRepeat, Infinity);
               action.clampWhenFinished = true;
               this.actions[name] = action;
-
-              console.log(
-                `Loaded animation: ${name} (common bones: ${common})`
-              );
             }
             resolve();
           },
           undefined,
           (error) => {
-            console.warn(`Error loading animation ${name}:`, error);
             resolve();
           }
         );
@@ -208,10 +169,8 @@ export class ModelLoader {
       animationPromises.push(promise);
     }
 
-    // Esperar a que todas las animaciones se carguen
     await Promise.all(animationPromises);
 
-    // Si no se cargaron animaciones, intentar usar las del modelo principal
     if (
       this.animations.length === 0 &&
       this.model.animations &&
@@ -222,12 +181,7 @@ export class ModelLoader {
   }
 
   setupDefaultAnimations(animations) {
-    console.log(`Found ${animations.length} animations in the model`);
-
     animations.forEach((clip, index) => {
-      console.log(`Animation ${index}:`, clip.name);
-
-      // Intentar determinar el tipo de animación basado en el nombre
       let animName = clip.name.toLowerCase();
       let actionName = "idle";
 
@@ -243,80 +197,55 @@ export class ModelLoader {
         actionName = "idle";
       }
 
-      // Crear la acción y configurarla
       const action = this.mixer.clipAction(clip);
       action.setLoop(THREE.LoopRepeat, Infinity);
       action.clampWhenFinished = true;
       this.actions[actionName] = action;
-
-      console.log(`Mapped animation "${clip.name}" to action "${actionName}"`);
     });
   }
 
   play(name, transitionTime = 0.2) {
-    // Verificar si la animación solicitada existe
     if (!this.actions[name]) {
-      // Si la animación no existe, intentar con 'idle' o 'walk' como respaldo
       const fallbackName = name === "run" ? "walk" : "idle";
       if (this.actions[fallbackName] && name !== fallbackName) {
-        console.warn(
-          `Animación "${name}" no encontrada. Usando "${fallbackName}" como respaldo.`
-        );
         return this.play(fallbackName, transitionTime);
       }
-      console.warn(
-        `Animación "${name}" no encontrada. Animaciones disponibles:`,
-        Object.keys(this.actions)
-      );
       return false;
     }
 
-    // No hacer nada si ya se está reproduciendo esta animación
     if (this.activeAction === this.actions[name]) {
       return false;
     }
 
-    // Obtener la acción actual y la nueva acción
     const oldAction = this.activeAction;
     const newAction = this.actions[name];
 
-    // Ajustar el tiempo de transición según el tipo de animación
     let actualTransitionTime = transitionTime;
     const isToIdle = name === "idle";
     const isFromIdle = oldAction === this.actions["idle"];
 
-    // Transiciones más rápidas entre movimientos similares
     if (
       (name === "walk" || name === "run") &&
       (oldAction === this.actions["walk"] || oldAction === this.actions["run"])
     ) {
       actualTransitionTime = 0.1;
-    }
-    // Transición más suave al detenerse
-    else if (isToIdle) {
+    } else if (isToIdle) {
       actualTransitionTime = 0.15;
-    }
-    // Transición más rápida al comenzar a moverse
-    else if (isFromIdle) {
+    } else if (isFromIdle) {
       actualTransitionTime = 0.15;
     }
 
-    // Configurar la nueva acción
     newAction.reset();
     newAction.setEffectiveTimeScale(1);
     newAction.setEffectiveWeight(1);
     newAction.clampWhenFinished = true;
     newAction.enabled = true;
 
-    // Reproducir la nueva acción
     newAction.play();
 
-    // Si hay una acción anterior, hacer crossfade
     if (oldAction) {
-      // Configurar el crossfade
       oldAction.crossFadeTo(newAction, actualTransitionTime, true);
 
-      // Detener la animación anterior después del crossfade
       setTimeout(() => {
         if (oldAction !== this.activeAction) {
           oldAction.stop();
@@ -324,13 +253,10 @@ export class ModelLoader {
       }, actualTransitionTime * 1000);
     }
 
-    // Actualizar la acción activa
     this.activeAction = newAction;
-    console.log(`Animación "${name}" iniciada correctamente`);
     return true;
   }
 
-  // Método para detener la animación actual
   stop() {
     if (this.activeAction) {
       this.activeAction.stop();
@@ -338,7 +264,6 @@ export class ModelLoader {
     }
   }
 
-  // Método para pausar/reanudar la animación actual
   setPaused(paused) {
     if (this.mixer) {
       this.mixer.timeScale = paused ? 0 : 1;
@@ -347,8 +272,7 @@ export class ModelLoader {
 
   update(delta) {
     if (this.mixer) {
-      // Limitar el delta para evitar saltos grandes
-      const cappedDelta = Math.min(delta, 0.033); // Máximo 30 FPS para cálculos de animación
+      const cappedDelta = Math.min(delta, 0.033);
       this.mixer.update(cappedDelta);
     }
   }
