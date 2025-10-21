@@ -23,7 +23,6 @@ export class Skybox {
     try {
       // First try to load the image
       const img = await loadImage(imagePath);
-      console.log("Image loaded successfully:", img.src);
 
       // Create texture from the loaded image
       const texture = new THREE.Texture(img);
@@ -59,7 +58,6 @@ export class Skybox {
       // Also set as scene background
       this.scene.background = texture;
 
-      console.log("Skybox created successfully");
     } catch (error) {
       console.error("Error creating skybox:", error);
       // Fallback to a solid color
@@ -74,12 +72,10 @@ export class Skybox {
 
       for (const path of alternativePaths) {
         try {
-          console.log("Trying alternative path:", path);
           const img = await loadImage(path);
           const texture = new THREE.Texture(img);
           texture.needsUpdate = true;
           this.scene.background = texture;
-          console.log("Successfully loaded from alternative path:", path);
           break;
         } catch (e) {
           console.error(`Failed to load from ${path}:`, e);
