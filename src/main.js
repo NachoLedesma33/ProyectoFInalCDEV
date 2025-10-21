@@ -20,6 +20,38 @@ import { Market } from "./utils/Market.js"; // Mercado con ventana frontal
 import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
 import { Alien2 } from "./utils/Alien2.js"; // Alien2
 
+// Inicialización del menú principal
+document.addEventListener("DOMContentLoaded", () => {
+    // Configurar los botones del menú principal
+    const playButton = document.getElementById("play-button");
+    const tutorialButton = document.getElementById("tutorial-button");
+    const controlsButton = document.getElementById("controls-button");
+    const soundButton = document.getElementById("sound-button");
+    
+    // Agregar evento al botón Jugar
+    playButton.addEventListener("click", () => {
+        // Ocultar el menú principal
+        document.getElementById("main-menu").style.display = "none";
+        // Mostrar el contenedor del juego
+        document.getElementById("game-container").style.display = "block";
+        // Iniciar el juego
+        init().catch(console.error);
+    });
+    
+    // Por ahora, los otros botones no tienen funcionalidad
+    tutorialButton.addEventListener("click", () => {
+        console.log("Tutorial button clicked");
+    });
+    
+    controlsButton.addEventListener("click", () => {
+        console.log("Controls button clicked");
+    });
+    
+    soundButton.addEventListener("click", () => {
+        console.log("Sound button clicked");
+    });
+});
+
 // Variables globales principales de Three.js
 let scene, // Escena 3D que contiene todos los objetos
   renderer, // Motor de renderizado WebGL
@@ -76,8 +108,8 @@ const keys = {
   d: false, // Derecha
 };
 
-// Iniciar la aplicación y manejar errores
-init().catch(console.error);
+// La inicialización del juego ahora se maneja a través del botón Jugar
+// init().catch(console.error);
 
 /**
  * Crear 6 vacas dentro del corral

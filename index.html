@@ -15,15 +15,32 @@
     <link rel="icon" type="image/png" href="./src/assets/icons8-astronauta-96.png">
   </head>
   <body>
-    <div id="container"></div>
-    <!-- Minimap HUD Plegable -->
-    <div id="minimap-container">
-      <button id="minimap-toggle" type="button">Mapa</button>
-      <div id="minimap" class="minimap-collapsed">
-        <button id="minimap-close" type="button">×</button>
-        <canvas id="minimap-canvas" width="340" height="249"></canvas>
+    <!-- Pantalla de inicio -->
+    <div id="main-menu" class="main-menu-container">
+      <div class="background-image"></div>
+      <div class="main-menu-content">
+        <div class="menu-buttons">
+          <button id="play-button" class="menu-button">Jugar</button>
+          <button id="tutorial-button" class="menu-button">Tutorial</button>
+          <button id="controls-button" class="menu-button">Controles</button>
+          <button id="sound-button" class="menu-button">Sonidos</button>
+        </div>
       </div>
     </div>
+
+    <!-- Contenedor del juego (inicialmente oculto) -->
+    <div id="game-container" style="display: none;">
+      <div id="container"></div>
+      <!-- Minimap HUD Plegable -->
+      <div id="minimap-container">
+        <button id="minimap-toggle" type="button">Mapa</button>
+        <div id="minimap" class="minimap-collapsed">
+          <button id="minimap-close" type="button">×</button>
+          <canvas id="minimap-canvas" width="340" height="249"></canvas>
+        </div>
+      </div>
+    </div>
+    
     <!-- Configuración de módulos ES -->
     <script type="importmap">
       {
