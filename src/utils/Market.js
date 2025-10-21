@@ -14,7 +14,7 @@ export class Market {
     this.collisionBoxes = [];
     this.isPlayerNearby = false;
     this.isUIOpen = false;
-    this.radius = 1.5; // Radio del área de interacción (reducido de 3 a 1.5)
+    this.radius = 1.5;
 
     this.createMarket();
     this.createInteractionArea();
@@ -24,7 +24,6 @@ export class Market {
     const { width, height, depth } = this.size;
     const wallThickness = 0.3;
 
-    // Crear el grupo principal del mercado
     this.marketGroup = new THREE.Group();
     this.marketGroup.position.set(
       this.position.x,
@@ -32,28 +31,22 @@ export class Market {
       this.position.z
     );
 
-    // Calcular la dirección hacia la que debe mirar el mercado
     const targetPosition = new THREE.Vector3(-140.1, 0.0, 66.4);
     const direction = new THREE.Vector3();
     direction.subVectors(targetPosition, this.marketGroup.position).normalize();
     this.marketGroup.rotation.y = Math.atan2(direction.x, direction.z);
 
-    // Añadir el mercado a la escena
     this.scene.add(this.marketGroup);
 
-    // Cargar texturas
     const textureLoader = new THREE.TextureLoader();
 
-    // Textura de piedra
     textureLoader.load(
       "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/coral_gravel/coral_gravel_diff_4k.jpg",
       (texture) => {
-        console.log("✅ Textura de grava de coral cargada para el mercado");
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(2, 2);
 
-        // Material principal de piedra
         const stoneMaterial = new THREE.MeshStandardMaterial({
           map: texture,
           metalness: 0.05,
@@ -61,7 +54,6 @@ export class Market {
           color: 0xffffff,
         });
 
-        // Material para el techo
         const roofMaterial = new THREE.MeshStandardMaterial({
           map: texture.clone(),
           metalness: 0.05,
@@ -69,7 +61,6 @@ export class Market {
           color: 0xffffff,
         });
 
-        // Material para la ventana (cristal oscuro)
         const windowMaterial = new THREE.MeshPhysicalMaterial({
           color: 0x333333,
           metalness: 0.8,
@@ -82,7 +73,6 @@ export class Market {
           transmission: 0.5,
         });
 
-        // Crear las paredes del mercado
         this.createWalls(stoneMaterial, windowMaterial);
         this.createRoof(roofMaterial);
         this.createAlienSign(width, height, depth, stoneMaterial);
@@ -90,7 +80,6 @@ export class Market {
       undefined,
       (error) => {
         console.error("Error cargando textura:", error);
-        // Usar materiales básicos si falla la carga
         const basicMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
         this.createWalls(basicMaterial, basicMaterial);
         this.createRoof(basicMaterial);
@@ -102,7 +91,6 @@ export class Market {
     const { width, height, depth } = this.size;
     const wallThickness = 0.3;
 
-    // Pared frontal con ventana
     const frontWall = new THREE.Mesh(
       new THREE.BoxGeometry(width, height, wallThickness),
       stoneMaterial
@@ -111,7 +99,6 @@ export class Market {
     this.marketGroup.add(frontWall);
     this.walls.push(frontWall);
 
-    // Pared trasera
     const backWall = new THREE.Mesh(
       new THREE.BoxGeometry(width, height, wallThickness),
       stoneMaterial
@@ -120,7 +107,6 @@ export class Market {
     this.marketGroup.add(backWall);
     this.walls.push(backWall);
 
-    // Pared izquierda
     const leftWall = new THREE.Mesh(
       new THREE.BoxGeometry(wallThickness, height, depth),
       stoneMaterial
@@ -129,7 +115,6 @@ export class Market {
     this.marketGroup.add(leftWall);
     this.walls.push(leftWall);
 
-    // Pared derecha
     const rightWall = new THREE.Mesh(
       new THREE.BoxGeometry(wallThickness, height, depth),
       stoneMaterial
@@ -138,7 +123,6 @@ export class Market {
     this.marketGroup.add(rightWall);
     this.walls.push(rightWall);
 
-    // Piso
     const floor = new THREE.Mesh(
       new THREE.BoxGeometry(width, 0.1, depth),
       stoneMaterial
@@ -146,7 +130,6 @@ export class Market {
     floor.position.set(0, -0.05, 0);
     this.marketGroup.add(floor);
 
-    // Ventana frontal
     const windowWidth = width * 0.6;
     const windowHeight = height * 0.4;
     const window = new THREE.Mesh(
@@ -156,15 +139,11 @@ export class Market {
     window.position.set(0, height * 0.5, depth / 2 + 0.1);
     this.marketGroup.add(window);
     
-    // Cargar la textura del Alien2Chat1.png para la ventana cuadrada
     const textureLoader = new THREE.TextureLoader();
     textureLoader.load(
       "./src/assets/Alien2chat1m.png",
       (texture) => {
-        console.log("✅ Textura Alien2chat1.png cargada para la ventana");
-        
-        // Crear ventana cuadrada con la imagen del alien
-        const alienWindowSize = 2.5; // Tamaño cuadrado
+        const alienWindowSize = 2.5;
         const alienWindowMaterial = new THREE.MeshBasicMaterial({
           map: texture,
           transparent: true,
@@ -176,12 +155,8 @@ export class Market {
           alienWindowMaterial
         );
         
-        // Posicionar en la pared frontal, frente al círculo verde
-        // Elevando la posición 0.5 unidades más (aproximadamente 30px más alto)
         alienWindow.position.set(0, height * 0.4 + 0.5, depth / 2 + 0.15);
         this.marketGroup.add(alienWindow);
-        
-        console.log("✅ Ventana con imagen de alien añadida al mercado");
       },
       undefined,
       (error) => {
@@ -210,7 +185,6 @@ export class Market {
   }
 
   createAlienSign(width, height, depth, material) {
-    // Crear soporte del cartel
     const signPost = new THREE.Mesh(
       new THREE.CylinderGeometry(0.2, 0.2, 2, 8),
       material
@@ -218,7 +192,6 @@ export class Market {
     signPost.position.set(0, height + 1, depth / 2 + 0.2);
     this.marketGroup.add(signPost);
 
-    // Crear panel del cartel
     const signWidth = 5;
     const signHeight = 2;
     const signGeometry = new THREE.BoxGeometry(signWidth, signHeight, 0.2);
@@ -232,7 +205,6 @@ export class Market {
     sign.position.set(0, height + 2.5, depth / 2 + 0.3);
     this.marketGroup.add(sign);
 
-    // Añadir texto al cartel
     this.createSignText("MERCADO", sign.position);
   }
 
@@ -242,20 +214,16 @@ export class Market {
     canvas.width = 512;
     canvas.height = 256;
 
-    // Fondo transparente
     context.fillStyle = "rgba(0, 0, 0, 0)";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Estilo del texto
     context.font = "Bold 100px Arial";
     context.fillStyle = "#00ff00";
     context.textAlign = "center";
     context.textBaseline = "middle";
 
-    // Dibujar texto
     context.fillText(text, canvas.width / 2, canvas.height / 2);
 
-    // Crear textura
     const texture = new THREE.CanvasTexture(canvas);
     const material = new THREE.MeshBasicMaterial({
       map: texture,
@@ -263,18 +231,15 @@ export class Market {
       side: THREE.DoubleSide,
     });
 
-    // Crear plano para el texto
     const textGeometry = new THREE.PlaneGeometry(4, 1.5);
     const textMesh = new THREE.Mesh(textGeometry, material);
 
-    // Posicionar el texto ligeramente delante del cartel
     textMesh.position.set(position.x, position.y, position.z + 0.1);
 
     this.marketGroup.add(textMesh);
   }
 
   createInteractionArea() {
-    // Crear un círculo en el suelo para marcar el área de interacción
     const geometry = new THREE.CircleGeometry(this.radius, 32);
     const material = new THREE.MeshBasicMaterial({
       color: 0x00ff00,
@@ -286,13 +251,12 @@ export class Market {
     this.interactionCircle = new THREE.Mesh(geometry, material);
     this.interactionCircle.rotation.x = -Math.PI / 2;
     this.interactionCircle.position.set(
-      this.position.x + 5, // 5 unidades delante del mercado
-      0.1, // Pequeña elevación para evitar z-fighting
-      this.position.z + 5 // 5 unidades a la derecha del mercado
+      this.position.x + 5,
+      0.1,
+      this.position.z + 5
     );
     this.scene.add(this.interactionCircle);
 
-    // Crear un borde para el círculo
     const edges = new THREE.EdgesGeometry(geometry);
     const lineMaterial = new THREE.LineBasicMaterial({
       color: 0x00aa00,
@@ -303,7 +267,7 @@ export class Market {
     const circle = new THREE.LineSegments(edges, lineMaterial);
     circle.rotation.x = -Math.PI / 2;
     circle.position.copy(this.interactionCircle.position);
-    circle.position.y = 0.11; // Un poco más arriba que el círculo
+    circle.position.y = 0.11;
     this.scene.add(circle);
   }
 
@@ -314,12 +278,8 @@ export class Market {
   }
 
   checkPlayerPosition(playerPosition) {
-    if (!playerPosition) {
-      console.warn("Market: playerPosition es undefined o null");
-      return;
-    }
+    if (!playerPosition) return;
 
-    // Convertir la posición del círculo a coordenadas del mundo
     const worldPosition = new THREE.Vector3();
     this.interactionCircle.getWorldPosition(worldPosition);
     const distance = Math.sqrt(
@@ -329,10 +289,9 @@ export class Market {
     if (distance <= this.radius) {
       if (!this.isPlayerNearby) {
         this.isPlayerNearby = true;
-        // Añadir un retraso de 2.5 segundos antes de mostrar el HUD
         if (this.uiTimer) clearTimeout(this.uiTimer);
         this.uiTimer = setTimeout(() => {
-          if (this.isPlayerNearby) { // Verificar que el jugador sigue en el círculo
+          if (this.isPlayerNearby) {
             this.showMarketUI();
           }
         }, 2500);
@@ -350,9 +309,7 @@ export class Market {
   showMarketUI() {
     if (this.isUIOpen) return;
     this.isUIOpen = true;
-    console.log("Creando y mostrando HUD del mercado");
 
-    // Crear el contenedor del HUD
     this.marketUI = document.createElement("div");
     this.marketUI.id = "market-hud";
     this.marketUI.style.cssText = `
@@ -375,13 +332,11 @@ export class Market {
       pointer-events: auto;
     `;
 
-    // Título
     const title = document.createElement("h2");
     title.textContent = "Mercado Alienígena";
     title.style.cssText = "text-align: center; margin-top: 0; color: #4caf50; font-size: 24px;";
     this.marketUI.appendChild(title);
 
-    // Monedas disponibles - Ahora en la parte superior derecha
     const coins = document.createElement("div");
     coins.textContent = `Monedas disponibles: ${window.inventory?.coins || 0}`;
     coins.style.cssText = `
@@ -397,13 +352,11 @@ export class Market {
     `;
     this.marketUI.appendChild(coins);
 
-    // Subtítulo de Herramientas
     const toolsTitle = document.createElement("h3");
     toolsTitle.textContent = "Herramientas";
     toolsTitle.style.cssText = "margin-top: 30px; color: #7fbfff; border-bottom: 1px solid #7fbfff; padding-bottom: 5px;";
     this.marketUI.appendChild(toolsTitle);
 
-    // Contenedor de slots para herramientas
     const slotsContainer = document.createElement("div");
     slotsContainer.style.cssText = `
       display: grid;
@@ -412,7 +365,6 @@ export class Market {
       margin-top: 15px;
     `;
 
-    // Crear 6 slots vacíos con placeholders
     for (let i = 0; i < 6; i++) {
       const slot = document.createElement("div");
       slot.style.cssText = `
@@ -428,7 +380,6 @@ export class Market {
         transition: all 0.2s;
       `;
       
-      // Placeholder para imagen
       const placeholder = document.createElement("div");
       placeholder.style.cssText = `
         width: 50px;
@@ -441,7 +392,6 @@ export class Market {
       `;
       placeholder.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke="#7fbfff" stroke-width="2" stroke-linecap="round"/></svg>';
       
-      // Nombre del item (vacío por ahora)
       const itemName = document.createElement("div");
       itemName.textContent = `Item ${i+1}`;
       itemName.style.cssText = "margin-top: 5px; font-size: 12px; color: #ccc;";
@@ -460,7 +410,6 @@ export class Market {
     
     this.marketUI.appendChild(slotsContainer);
 
-    // Botón de cierre
     const closeButton = document.createElement("button");
     closeButton.textContent = "Cerrar";
     closeButton.style.cssText = `
@@ -479,21 +428,6 @@ export class Market {
     document.body.appendChild(this.marketUI);
     this.marketUI.onclick = (e) => e.stopPropagation();
     document.addEventListener("click", this.handleOutsideClick);
-    
-    // Verificar que el HUD esté visible
-    setTimeout(() => {
-      const hud = document.getElementById("market-hud");
-      if (hud) {
-        console.log("HUD del mercado encontrado en DOM:", hud.style.display);
-        console.log(
-          "HUD del mercado visible:",
-          hud.offsetWidth > 0 && hud.offsetHeight > 0
-        );
-        console.log("HUD del mercado z-index:", hud.style.zIndex);
-      } else {
-        console.error("HUD del mercado no encontrado en DOM");
-      }
-    }, 100);
   }
 
   handleOutsideClick = (e) => {
