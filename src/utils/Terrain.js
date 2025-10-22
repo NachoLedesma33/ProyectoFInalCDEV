@@ -314,7 +314,6 @@ export class Terrain {
     this.scene.add(westWall);
     this.walls.push(westWall);
 
-    console.log("Paredes de contorno creadas:", this.walls.length, "paredes");
   }
 
   /**
