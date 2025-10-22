@@ -50,7 +50,6 @@ export class Corral {
     // Añadir postes en las esquinas y a lo largo de las paredes
     this.createAllPosts(postHeight, postRadius, postMaterial);
 
-    console.log("Corral creado con sistema de colisiones y puerta interactiva");
   }
 
   /**
@@ -269,7 +268,6 @@ export class Corral {
     this.scene.add(gateGroup);
     this.walls.push(gateGroup);
 
-    console.log(`Puerta ${side} creada y añadida a la escena`);
 
     // Añadir caja de colisión inicial
     this.updateSingleGateCollisionBox(gateData);
@@ -557,7 +555,6 @@ export class Corral {
     gateData.open = false;
     gateData.targetRotation = 0;
 
-    console.log(`Puerta ${gateData.side} del corral cerrada`);
   }
 
   /**
@@ -661,7 +658,6 @@ export class Corral {
    */
   handleFarmerInteraction(farmerPosition) {
     if (this.gates.length === 0) {
-      console.warn("No hay puertas disponibles para interacción");
       return;
     }
 
