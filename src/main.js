@@ -19,6 +19,7 @@ import { House } from "./utils/House.js";
 import { Market } from "./utils/Market.js";
 import { Inventory } from "./utils/Inventory.js";
 import { Alien2 } from "./utils/Alien2.js";
+import { SmokeEffect } from "./effects/smokeEffect.js";
 
 // Inicialización del menú principal
 document.addEventListener("DOMContentLoaded", () => {
@@ -404,6 +405,9 @@ async function init() {
   scene.background = new THREE.Color(0x000000);
   scene.fog = new THREE.Fog(0x5e5d5d, 100, 500);
 
+  // Crear efecto de humo en las coordenadas especificadas
+  smokeEffect = new SmokeEffect(scene, { x: 52.4, y: 0.0, z: -30.2 });
+
   THREE.Cache.enabled = true;
 
   renderer = new THREE.WebGLRenderer({
@@ -647,6 +651,9 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+// Variables globales
+let smokeEffect;
+
 // Variables para el control de FPS
 let lastTime = 0;
 const targetFPS = 60;
@@ -712,6 +719,11 @@ function animate(currentTime = 0) {
     
     if (window.market && farmerController?.model) {
       window.market.update(farmerController.model.position);
+    }
+    
+    // Actualizar el efecto de humo
+    if (smokeEffect) {
+      smokeEffect.update(delta);
     }
 
     if (terrainUpdateCounter++ >= terrainUpdateInterval) {
