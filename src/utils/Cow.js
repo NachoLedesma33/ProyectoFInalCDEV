@@ -56,7 +56,6 @@ export class Cow {
       // Crear la barra de progreso 3D
       this.progressBar = new ProgressBar(this, this.scene, 75000); // 75 segundos para cargar
 
-      console.log("✅ Vaca cargada exitosamente");
     } catch (error) {
       console.error("Error al cargar el modelo de vaca:", error);
     }
@@ -72,7 +71,6 @@ export class Cow {
         },
         (progress) => {
           const percent = (progress.loaded / progress.total) * 100;
-          console.log(`Cargando vaca: ${percent.toFixed(2)}%`);
         },
         (error) => {
           console.error("Error al cargar el modelo de vaca:", error);
@@ -275,9 +273,7 @@ export class Cow {
       this.progressBar.dispose();
       
       // Crear una nueva barra de progreso
-      this.progressBar = new ProgressBar(this, this.scene, 75000); // 75 segundos para cargar
-      
-      console.log("🐄 Barra de progreso reiniciada para la vaca");
+      this.progressBar = new ProgressBar(this, this.scene, 75000);
     }
   }
 }
