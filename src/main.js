@@ -19,6 +19,7 @@ import { House } from "./utils/House.js"; // Casa con puerta interactiva
 import { Market } from "./utils/Market.js"; // Mercado con ventana frontal
 import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
 import { Alien2 } from "./utils/Alien2.js"; // Alien2
+import { SmokeEffect } from "./utils/smokeEffect.js"; // Efecto de humo
 
 // Inicialización del menú principal
 document.addEventListener("DOMContentLoaded", () => {
@@ -57,7 +58,8 @@ let scene, // Escena 3D que contiene todos los objetos
   renderer, // Motor de renderizado WebGL
   cameraManager, // Gestor de cámara
   camera, // Cámara que define la vista del usuario (accesible a través de cameraManager)
-  controls; // Controles de la cámara (accesibles a través de cameraManager)
+  controls, // Controles de la cámara (accesibles a través de cameraManager)
+  smokeEffect; // Efecto de humo
 
 // Componentes personalizados
 let terrain, // Gestor del terreno
@@ -508,6 +510,9 @@ function createHouse() {
  */
 function createMarket() {
   console.log("Creando mercado con ventana frontal...");
+
+  // Crear efecto de humo en las coordenadas especificadas
+  smokeEffect = new SmokeEffect(scene, { x: 52.4, y: 0.0, z: -30.2 });
 
   // Crear el mercado en las coordenadas especificadas
   const market = new Market(
