@@ -15,6 +15,56 @@ export class Market {
     this.isPlayerNearby = false;
     this.isUIOpen = false;
     this.radius = 1.5;
+    this.marketItems = [
+      {
+        id: 1,
+        name: "Núcleo de Fusión",
+        description: "Alimenta el motor principal del transbordador con energía cuántica estable",
+        image: "../assets/Núcleo de Fusión.png",
+        price: 500,
+        owned: false
+      },
+      {
+        id: 2,
+        name: "Membrana de Vacío",
+        description: "Un panel flexible que se usa para sellar grietas en el casco",
+        image: "../assets/Membrana de Vacío.png",
+        price: 300,
+        owned: false
+      },
+      {
+        id: 3,
+        name: "Chip de Navegación",
+        description: "Un microprocesador que predice rutas seguras a través del espacio",
+        image: "../assets/Chip de Navegación.png",
+        price: 400,
+        owned: false
+      },
+      {
+        id: 4,
+        name: "Catalizador de Plasma",
+        description: "Cristal que contiene una sustancia incandescente que reacciona a la electricidad",
+        image: "../assets/Catalizador de Plasma.png",
+        price: 450,
+        owned: false
+      },
+      {
+        id: 5,
+        name: "Llave Multipropósito",
+        description: "Herramienta avanzada que permite manipular la masa de los objetos",
+        image: "../assets/Llave de Ajuste multiproposito.png",
+        price: 350,
+        owned: false
+      },
+      {
+        id: 6,
+        name: "Cristal de Poder",
+        description: "Potencia el motor para volver a casa",
+        image: "../assets/Fragmento de Cristal.png",
+        price: 600,
+        owned: false
+      }
+    ];
 
     this.createMarket();
     this.createInteractionArea();
@@ -310,6 +360,59 @@ export class Market {
     if (this.isUIOpen) return;
     this.isUIOpen = true;
 
+    // Define los ítems del mercado
+    this.marketItems = [
+      {
+        id: 1,
+        name: "Núcleo de Fusión",
+        description: "Alimenta el motor principal del transbordador con energía cuántica estable",
+        image: "../assets/Núcleo de Fusión.png",
+        price: 500,
+        owned: false
+      },
+      {
+        id: 2,
+        name: "Membrana de Vacío",
+        description: "Un panel flexible que se usa para sellar grietas en el casco",
+        image: "../assets/Membrana de Vacío.png",
+        price: 300,
+        owned: false
+      },
+      {
+        id: 3,
+        name: "Chip de Navegación",
+        description: "Un microprocesador antiguo que predice rutas seguras a través de tormentas espaciales y campos de asteroides",
+        image: "../assets/Chip de Navegación.png",
+        price: 400,
+        owned: false
+      },
+      {
+        id: 4,
+        name: "Catalizador de Plasma",
+        description: "Cristal flotante que contiene una sustancia incandescente que reacciona al contacto con la electricidad",
+        image: "../assets/Catalizador de Plasma.png",
+        price: 450,
+        owned: false
+      },
+      {
+        id: 5,
+        name: "Llave Multipropósito",
+        description: "Herramienta de ingeniería avanzada que permite manipular la masa de los objetos para montarlos",
+        image: "../assets/Llave de Ajuste multipropósito.png",
+        price: 350,
+        owned: false
+      },
+      {
+        id: 6,
+        name: "Cristal de Poder",
+        description: "Potencia el poder del motor para volver a casa",
+        image: "../assets/Fragmento de Cristal.png",
+        price: 600,
+        owned: false
+      }
+    ];
+
+    // Crear el contenedor principal del HUD
     this.marketUI = document.createElement("div");
     this.marketUI.id = "market-hud";
     this.marketUI.style.cssText = `
@@ -317,117 +420,459 @@ export class Market {
       top: 50% !important;
       left: 50% !important;
       transform: translate(-50%, -50%) !important;
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.95);
       border: 2px solid #00aa00;
       border-radius: 10px;
       padding: 20px;
       color: white;
       z-index: 999999 !important;
-      width: 640px;
-      height: 437px;
+      width: 800px;
+      max-height: 80vh;
       overflow-y: auto;
       font-family: 'Arial', sans-serif;
-      box-shadow: 0 0 20px rgba(0, 200, 0, 0.5);
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
       display: block;
       pointer-events: auto;
     `;
 
+    // Título del mercado
     const title = document.createElement("h2");
     title.textContent = "Mercado Alienígena";
-    title.style.cssText = "text-align: center; margin-top: 0; color: #4caf50; font-size: 24px;";
+    title.style.cssText = `
+      text-align: center; 
+      margin: 0 0 20px 0; 
+      color: #4cff4c; 
+      font-size: 28px;
+      text-shadow: 0 0 10px rgba(76, 255, 76, 0.7);
+      border-bottom: 2px solid #4cff4c;
+      padding-bottom: 10px;
+    `;
     this.marketUI.appendChild(title);
 
+    // Mostrar monedas disponibles
     const coins = document.createElement("div");
-    coins.textContent = `Monedas disponibles: ${window.inventory?.coins || 0}`;
+    const coinsDisplay = document.createElement("span");
+    coinsDisplay.textContent = `Monedas: ${window.inventory?.coins || 0} `;
     coins.style.cssText = `
       position: absolute;
-      top: 20px;
-      right: 20px;
+      top: 25px;
+      right: 25px;
       font-size: 1.2em;
       color: #ffd700;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 5px 10px;
-      border-radius: 5px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 8px 15px;
+      border-radius: 20px;
       border: 1px solid #ffd700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     `;
+    
+    // Añadir icono de moneda
+    const coinIcon = document.createElement("span");
+    coinIcon.innerHTML = '🪙';
+    coinsDisplay.appendChild(coinIcon);
+    coins.appendChild(coinsDisplay);
     this.marketUI.appendChild(coins);
 
-    const toolsTitle = document.createElement("h3");
-    toolsTitle.textContent = "Herramientas";
-    toolsTitle.style.cssText = "margin-top: 30px; color: #7fbfff; border-bottom: 1px solid #7fbfff; padding-bottom: 5px;";
-    this.marketUI.appendChild(toolsTitle);
-
-    const slotsContainer = document.createElement("div");
-    slotsContainer.style.cssText = `
+    // Contenedor de los ítems
+    const itemsContainer = document.createElement("div");
+    itemsContainer.style.cssText = `
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
-      margin-top: 15px;
+      gap: 20px;
+      margin: 20px 0;
     `;
 
-    for (let i = 0; i < 6; i++) {
-      const slot = document.createElement("div");
-      slot.style.cssText = `
-        background: rgba(50, 50, 50, 0.5);
-        border: 1px solid #7fbfff;
-        border-radius: 5px;
-        height: 80px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+    // Crear un ítem para cada elemento del mercado
+    this.marketItems.forEach((item, index) => {
+      const itemElement = document.createElement("div");
+      itemElement.dataset.id = item.id;
+      // Apply base styles
+      itemElement.style.cssText = `
+        background: rgba(30, 30, 40, 0.7);
+        border: 1px solid #4cff4c;
+        border-radius: 10px;
+        padding: 15px;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
       `;
       
-      const placeholder = document.createElement("div");
-      placeholder.style.cssText = `
-        width: 50px;
-        height: 50px;
-        background: rgba(100, 100, 100, 0.3);
-        border-radius: 5px;
+      // Add hover effect with event listeners
+      itemElement.addEventListener('mouseenter', () => {
+        itemElement.style.transform = 'translateY(-5px)';
+        itemElement.style.boxShadow = '0 5px 15px rgba(76, 255, 76, 0.3)';
+        itemElement.style.borderColor = '#7fff7f';
+      });
+      
+      itemElement.addEventListener('mouseleave', () => {
+        itemElement.style.transform = '';
+        itemElement.style.boxShadow = '';
+        itemElement.style.borderColor = '#4cff4c';
+      });
+
+      // Número del ítem
+      const itemNumber = document.createElement("div");
+      itemNumber.textContent = `${index + 1}`;
+      itemNumber.style.cssText = `
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        background: #4cff4c;
+        color: #000;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
       `;
-      placeholder.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke="#7fbfff" stroke-width="2" stroke-linecap="round"/></svg>';
-      
-      const itemName = document.createElement("div");
-      itemName.textContent = `Item ${i+1}`;
-      itemName.style.cssText = "margin-top: 5px; font-size: 12px; color: #ccc;";
-      
-      slot.appendChild(placeholder);
-      slot.appendChild(itemName);
-      slot.addEventListener("mouseover", () => {
-        slot.style.background = "rgba(70, 70, 70, 0.7)";
-      });
-      slot.addEventListener("mouseout", () => {
-        slot.style.background = "rgba(50, 50, 50, 0.5)";
-      });
-      
-      slotsContainer.appendChild(slot);
-    }
-    
-    this.marketUI.appendChild(slotsContainer);
+      itemElement.appendChild(itemNumber);
 
+      // Imagen del ítem
+      const itemImage = document.createElement("div");
+      itemImage.style.cssText = `
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 10px;
+        background: rgba(100, 100, 100, 0.3) url('${item.image}') no-repeat center center;
+        background-size: contain;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+      `;
+      itemImage.textContent = item.name.charAt(0); // Placeholder
+      
+      itemElement.appendChild(itemImage);
+
+      // Nombre del ítem
+      const itemName = document.createElement("div");
+      itemName.textContent = item.name;
+      itemName.style.cssText = `
+        font-weight: bold;
+        text-align: center;
+        margin: 5px 0;
+        color: #7fff7f;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      `;
+      itemElement.appendChild(itemName);
+
+      // Precio
+      const itemPrice = document.createElement("div");
+      itemPrice.textContent = `$${item.price}`;
+      itemPrice.style.cssText = `
+        text-align: center;
+        color: #ffd700;
+        font-size: 16px;
+        font-weight: bold;
+        margin: 5px 0;
+      `;
+      itemElement.appendChild(itemPrice);
+
+      // Evento de clic para mostrar detalles
+      itemElement.addEventListener("click", () => this.showItemDetails(item));
+      
+      itemsContainer.appendChild(itemElement);
+    });
+
+    // Añadir contenedor de ítems al HUD
+    this.marketUI.appendChild(itemsContainer);
+
+    // Botón de cerrar
     const closeButton = document.createElement("button");
     closeButton.textContent = "Cerrar";
+    // Base styles for close button
     closeButton.style.cssText = `
       display: block;
       margin: 20px auto 0;
-      padding: 10px 20px;
+      padding: 10px 30px;
       background: #d9534f;
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 20px;
       cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
     `;
-    closeButton.onclick = () => this.hideMarketUI();
+    
+    // Add hover effect with event listeners
+    closeButton.addEventListener('mouseenter', () => {
+      closeButton.style.background = '#c9302c';
+      closeButton.style.transform = 'scale(1.05)';
+    });
+    
+    closeButton.addEventListener('mouseleave', () => {
+      closeButton.style.background = '#d9534f';
+      closeButton.style.transform = '';
+    });
+    closeButton.onclick = (e) => {
+      e.stopPropagation();
+      this.hideMarketUI();
+    };
     this.marketUI.appendChild(closeButton);
 
+    // Añadir al documento
     document.body.appendChild(this.marketUI);
     this.marketUI.onclick = (e) => e.stopPropagation();
     document.addEventListener("click", this.handleOutsideClick);
+  }
+
+  // Mostrar detalles del ítem seleccionado
+  showItemDetails(item) {
+    // Ocultar la vista principal
+    this.marketUI.style.display = 'none';
+    
+    // Crear contenedor de detalles
+    const detailsView = document.createElement("div");
+    detailsView.id = "item-details";
+    detailsView.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.95);
+      border: 2px solid #4cff4c;
+      border-radius: 10px;
+      padding: 25px;
+      color: white;
+      z-index: 1000000;
+      width: 700px;
+      max-width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      font-family: 'Arial', sans-serif;
+      box-shadow: 0 0 30px rgba(76, 255, 76, 0.4);
+      display: flex;
+      flex-direction: column;
+    `;
+
+    // Botón de volver
+    const backButton = document.createElement("button");
+    backButton.innerHTML = '&larr; Volver';
+    // Base styles for back button
+    backButton.style.cssText = `
+      align-self: flex-start;
+      background: none;
+      border: 1px solid #4cff4c;
+      color: #4cff4c;
+      padding: 5px 15px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    `;
+    
+    // Add hover effect with event listeners
+    backButton.addEventListener('mouseenter', () => {
+      backButton.style.background = 'rgba(76, 255, 76, 0.2)';
+    });
+    
+    backButton.addEventListener('mouseleave', () => {
+      backButton.style.background = 'none';
+    });
+    backButton.onclick = () => {
+      document.body.removeChild(detailsView);
+      this.marketUI.style.display = 'block';
+    };
+    detailsView.appendChild(backButton);
+
+    // Contenido de detalles
+    const content = document.createElement("div");
+    content.style.cssText = `
+      display: flex;
+      flex-direction: row;
+      gap: 25px;
+      align-items: flex-start;
+      @media (max-width: 768px) {
+        flex-direction: column;
+        align-items: center;
+      }
+    `;
+
+    // Imagen del ítem
+    const itemImage = document.createElement("div");
+    itemImage.style.cssText = `
+      width: 200px;
+      height: 200px;
+      background: rgba(100, 100, 100, 0.3) url('${item.image}') no-repeat center center;
+      background-size: contain;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      flex-shrink: 0;
+      border: 2px solid #4cff4c;
+    `;
+    itemImage.textContent = item.name.charAt(0); // Placeholder
+    
+    // Información del ítem
+    const itemInfo = document.createElement("div");
+    itemInfo.style.cssText = `
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    `;
+
+    // Título
+    const title = document.createElement("h2");
+    title.textContent = item.name;
+    title.style.cssText = `
+      margin: 0 0 10px 0;
+      color: #4cff4c;
+      font-size: 24px;
+    `;
+    
+    // Precio
+    const price = document.createElement("div");
+    price.textContent = `Precio: $${item.price}`;
+    price.style.cssText = `
+      font-size: 20px;
+      color: #ffd700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    `;
+    
+    // Añadir icono de moneda
+    const coinIcon = document.createElement("span");
+    coinIcon.innerHTML = '🪙';
+    price.insertBefore(coinIcon, price.firstChild);
+
+    // Descripción
+    const description = document.createElement("p");
+    description.textContent = item.description;
+    description.style.cssText = `
+      margin: 0 0 25px 0;
+      line-height: 1.6;
+      color: #ddd;
+      flex: 1;
+    `;
+
+    // Botón de compra
+    const buyButton = document.createElement("button");
+    const updateButtonState = () => {
+      const canAfford = window.inventory?.coins >= item.price;
+      buyButton.textContent = item.owned 
+        ? "✓ Ya comprado" 
+        : canAfford 
+          ? `Comprar por $${item.price} ` 
+          : `$ ${item.price} (No tienes suficientes monedas)`;
+      
+      buyButton.disabled = item.owned;
+      buyButton.style.cssText = `
+        align-self: flex-start;
+        background: ${item.owned ? '#666' : canAfford ? '#4CAF50' : '#d9534f'};
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 12px 25px;
+        font-size: 14px;
+        cursor: ${item.owned ? 'not-allowed' : canAfford ? 'pointer' : 'not-allowed'};
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      `;
+      
+      // Añadir icono
+      const icon = document.createElement('span');
+      icon.innerHTML = item.owned ? '✓' : canAfford ? '🛒' : '❌';
+      buyButton.innerHTML = '';
+      buyButton.appendChild(icon);
+      buyButton.appendChild(document.createTextNode(
+        item.owned 
+          ? ' Ya comprado' 
+          : canAfford 
+            ? ` Comprar por $${item.price}` 
+            : ` $${item.price} (No tienes suficientes monedas)`
+      ));
+    };
+    
+    updateButtonState();
+    
+    // Add hover effect if item is not owned and can be afforded
+    if (!item.owned) {
+      buyButton.addEventListener('mouseenter', () => {
+        if (window.inventory?.coins >= item.price) {
+          buyButton.style.transform = 'scale(1.02)';
+          buyButton.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+        }
+      });
+      
+      buyButton.addEventListener('mouseleave', () => {
+        buyButton.style.transform = '';
+        buyButton.style.boxShadow = '';
+      });
+      
+      buyButton.onclick = () => {
+        if (window.inventory?.coins >= item.price) {
+          // Lógica de compra
+          window.inventory.coins -= item.price;
+          item.owned = true;
+          
+          // Actualizar el botón
+          updateButtonState();
+          
+          // Actualizar monedas mostradas
+          if (coinsDisplay) {
+            coinsDisplay.textContent = `Monedas: ${window.inventory.coins} `;
+            coinsDisplay.appendChild(coinIcon);
+          }
+          
+          // Guardar en el inventario
+          if (window.inventory.addItem) {
+            window.inventory.addItem({
+              id: item.id,
+              name: item.name,
+              description: item.description,
+              image: item.image,
+              type: 'item'
+            });
+          }
+        }
+      };
+    }
+
+    // Ensamblar la vista de detalles
+    itemInfo.appendChild(title);
+    itemInfo.appendChild(price);
+    itemInfo.appendChild(description);
+    itemInfo.appendChild(buyButton);
+    
+    content.appendChild(itemImage);
+    content.appendChild(itemInfo);
+    detailsView.appendChild(content);
+    
+    // Añadir al documento
+    document.body.appendChild(detailsView);
+    
+    // Manejar clic fuera para cerrar
+    const handleOutsideClick = (e) => {
+      if (!detailsView.contains(e.target)) {
+        document.body.removeChild(detailsView);
+        this.marketUI.style.display = 'block';
+        document.removeEventListener('click', handleOutsideClick);
+      }
+    };
+    
+    setTimeout(() => {
+      document.addEventListener('click', handleOutsideClick);
+    }, 100);
   }
 
   handleOutsideClick = (e) => {
