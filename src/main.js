@@ -85,20 +85,30 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function startGame() {
-    // Si el juego ya está inicializado, mostrar inmediatamente
-    if (gameInitialized) {
-      document.getElementById("story-carousel").style.display = "none";
-      document.getElementById("game-container").style.display = "block";
-      return;
-    }
-
-    // Si el juego está cargando, esperar a que termine
-    if (gameInitPromise) {
-      gameInitPromise.then(() => {
-        document.getElementById("story-carousel").style.display = "none";
+    // Ocultar el carrusel
+    document.getElementById("story-carousel").style.display = "none";
+    
+    // Mostrar tutorial de controles
+    document.getElementById("controls-hud").style.display = "flex";
+    
+    // Evento para el botón de entendido
+    document.getElementById("controls-continue").onclick = () => {
+      // Ocultar tutorial
+      document.getElementById("controls-hud").style.display = "none";
+      
+      // Si el juego ya está inicializado, mostrar inmediatamente
+      if (gameInitialized) {
         document.getElementById("game-container").style.display = "block";
-      });
-    }
+        return;
+      }
+
+      // Si el juego está cargando, esperar a que termine
+      if (gameInitPromise) {
+        gameInitPromise.then(() => {
+          document.getElementById("game-container").style.display = "block";
+        });
+      }
+    };
   }
 
   let gameInitialized = false;
@@ -1006,53 +1016,8 @@ async function init() {
     console.error("Error al cargar el modelo o animaciones:", error);
   }
 
-  // Intentar cargar el hacha (arma) y exponer helper para equiparla
-  (async () => {
-    try {
-      const axePath = modelConfig.getPath("weapons/melee/axes/axe.fbx");
-      console.log("Cargando arma (hacha) desde:", axePath);
-      const axeModel = await modelLoader.loadModel(axePath);
-      // Normalizar: tomar la primera malla encontrada
-      let axeMesh = null;
-      axeModel.traverse((c) => {
-        if (!axeMesh && c.isMesh) axeMesh = c.clone();
-      });
-
-      // Si no hay malla, exponer el modelo completo
-      if (!axeMesh) axeMesh = axeModel;
-
-      // No forzamos la escala aquí: conservar la escala original del recurso
-      if (axeMesh) {
-        axeMesh.name = "equip_axe";
-      }
-
-      // Guardar en window para uso posterior
-      window.loadedAxe = axeMesh;
-      console.log("Hacha cargada y disponible en window.loadedAxe");
-    } catch (err) {
-      console.warn("No se pudo cargar el hacha:", err);
-    }
-  })();
-
   // Configurar eventos
   setupEventListeners();
-
-  // Mapear teclas 1..5 para equipar/guardar herramientas desde el inventario
-  window.addEventListener("keydown", (ev) => {
-    const tag =
-      (document.activeElement && document.activeElement.tagName) || "";
-    if (tag === "INPUT" || tag === "TEXTAREA") return;
-    if (!window.inventory) return;
-    const k = ev.key;
-    if (/^[1-5]$/.test(k)) {
-      const idx = Number(k) - 1; // 0-based
-      try {
-        window.inventory.toggleSlot(idx);
-      } catch (e) {
-        console.warn("Error toggling inventory slot", e);
-      }
-    }
-  });
 
   // Conectar cambio de selección del inventario (sin equipar herramientas)
   if (window.inventory && farmerController) {
