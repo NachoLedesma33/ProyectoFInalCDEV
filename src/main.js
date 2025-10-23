@@ -38,15 +38,15 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     {
       image: "./src/assets/imagen2.png",
-      text: "Con él iban sus preciadas vacas que producto el mejor producto lácteo de la galaxia."
+      text: "Con él iban sus preciadas vacas que otorgaban el mejor producto lácteo de la galaxia."
     },
     {
       image: "./src/assets/imagen3.png",
-      text: "No le quedo otra opción que descender a una luna en alfa Centauri cercana y buscar la forma de arreglar su nave..."
+      text: "No le quedo otra opción que descender a la luna mas cercana en alfa Centauri y buscar la forma de arreglar su nave..."
     },
     {
       image: "./src/assets/imagen4.png",
-      text: "Luego de tanto buscar encontró a los aliens nativos"
+      text: "Luego de tanto buscar, Kael encontró a los aliens nativos"
     },
     {
       image: "./src/assets/imagen5.png",
@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     {
       image: "./src/assets/imagen6.png",
-      text: "Los aliens aceptaron pero le dieron una advertencia al granjero de que algunos aliens malvados trataran de tomar las vacas sin nada a cambio..."
+      text: "Los aliens aceptaron pero le dieron una advertencia para Kael... Algunos aliens malvados trataran de tomar las vacas sin nada a cambio..."
     },
     {
       image: "./src/assets/imagen7.png",
