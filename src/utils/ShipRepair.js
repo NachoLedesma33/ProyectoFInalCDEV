@@ -483,17 +483,37 @@ export class ShipRepair {
       const toolsInInv = inv ? (inv.getState ? inv.getState().tools : inv.tools) : [];
       // Normalize: array of strings or nulls
       for (const item of this.toolButtons) {
-        const exists = !!toolsInInv.find(t => t === item.inv);
-        if (exists) {
+        // If this tool type is already assigned to any slot, mark it as used (strike/disable)
+        const isAssigned = !!this.slots.find(s => s === item.inv);
+        const countInInv = toolsInInv ? toolsInInv.filter(t => t === item.inv).length : 0;
+        if (isAssigned) {
+          // Mark as used/disabled regardless of inventory count
+          item.badge.style.background = '#7a7a7a';
+          item.row.style.background = 'rgba(120,120,120,0.04)';
+          item.row.style.color = '#9b9b9b';
+          // strike-through label
+          if (item.row.firstChild) item.row.firstChild.style.textDecoration = 'line-through';
+          item.row.setAttribute('draggable', 'false');
+          item.row.style.pointerEvents = 'none';
+          item.row.title = 'Herramienta ya usada en una ranura';
+        } else if (countInInv > 0) {
+          // available in inventory and not yet used
           item.badge.style.background = '#26a926';
           item.row.style.background = 'rgba(38,169,38,0.06)';
           item.row.style.color = '#cfffcc';
+          if (item.row.firstChild) item.row.firstChild.style.textDecoration = '';
           item.row.setAttribute('draggable', 'true');
+          item.row.style.pointerEvents = '';
+          item.row.title = '';
         } else {
+          // not present in inventory
           item.badge.style.background = '#b72b2b';
           item.row.style.background = 'rgba(180,43,43,0.04)';
           item.row.style.color = '#ffd6d6';
+          if (item.row.firstChild) item.row.firstChild.style.textDecoration = '';
           item.row.setAttribute('draggable', 'false');
+          item.row.style.pointerEvents = '';
+          item.row.title = 'No disponible en inventario';
         }
       }
     } catch (e) {
