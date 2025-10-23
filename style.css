@@ -290,6 +290,38 @@ p {
   border-radius: 9px;
 }
 
+/* draggable cursor */
+#ship-inv-list div[draggable="true"] {
+  cursor: grab;
+}
+#ship-inv-list div[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* slot drop hover */
+.ship-slot {
+  transition: background 200ms ease, box-shadow 140ms ease;
+}
+.ship-slot.drag-over {
+  box-shadow: 0 8px 24px rgba(0, 255, 0, 0.08);
+}
+
+/* progress segment transition */
+.ship-segment > div {
+  transition: height 300ms ease, background 300ms ease;
+}
+
+/* small toast for ship actions */
+.ship-toast {
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+/* subtle highlight for segment when animated */
+.ship-segment.animate {
+  transform: scaleY(1.02);
+  box-shadow: 0 6px 18px rgba(0, 255, 0, 0.12);
+}
+
 /* Tool row selected outline */
 #ship-inv-list div[style*="outline"] {
   box-shadow: 0 0 0 4px rgba(127, 255, 127, 0.04);

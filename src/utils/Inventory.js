@@ -1,10 +1,10 @@
-export class Inventory {
+  export class Inventory {
   constructor({ pricePerLiter = 5 } = {}) {
     this.milkLiters = 30; // Iniciar con 30 litros de leche para pruebas
     // tools represented as array of slot strings (null = empty)
     this.slotCount = 6; // Aumentado a 6 slots
     this.tools = new Array(this.slotCount).fill(null);
-    this.coins = 100; // Iniciar con 100 monedas para pruebas
+    this.coins = 500; // Iniciar con 100 monedas para pruebas
     this.pricePerLiter = pricePerLiter;
     this._createUI();
     this._updateUI();

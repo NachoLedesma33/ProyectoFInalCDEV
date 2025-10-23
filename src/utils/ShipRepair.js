@@ -12,6 +12,44 @@ export class ShipRepair {
     this.slots = new Array(6).fill(null); // 6 logical slots (3 top, 3 bottom)
 
     this.createInteractionArea();
+    // keep DOM references to slot elements so we can re-populate on HUD reopen
+    this.slotElements = new Array(6).fill(null);
+    // color palette for progress segments (from red -> orange -> yellow -> yellow-green -> light green -> green)
+    this.segmentColors = ['#b72b2b', '#d07020', '#e6b800', '#d0e020', '#9cff9c', '#26a926'];
+    // persistence key and completion callback
+    this._storageKey = 'shipRepairState_v1';
+    this.onRepairComplete = null; // optional callback set by game
+    this._repairCompleted = false;
+    // try load persisted state (overwrites this.slots if present)
+    this.loadState();
+  }
+
+  // Persistence helpers
+  saveState() {
+    try {
+      const state = {
+        slots: this.slots,
+        repairCompleted: !!this._repairCompleted
+      };
+      localStorage.setItem(this._storageKey, JSON.stringify(state));
+    } catch (e) {
+      console.warn('ShipRepair.saveState failed', e);
+    }
+  }
+
+  loadState() {
+    try {
+      const raw = localStorage.getItem(this._storageKey);
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      if (state && Array.isArray(state.slots)) {
+        // normalize to length 6
+        this.slots = state.slots.concat(Array(6)).slice(0,6).map(s => s || null);
+      }
+      this._repairCompleted = !!state.repairCompleted;
+    } catch (e) {
+      console.warn('ShipRepair.loadState failed', e);
+    }
   }
 
   createInteractionArea() {
@@ -70,6 +108,7 @@ export class ShipRepair {
 
   showShipPopup() {
     if (this.isUIOpen) return;
+    if (this.shipPopup) return; // already visible
     // small popup with 'Arreglar la nave' and OK button
     this.shipPopup = document.createElement('div');
     this.shipPopup.id = 'ship-popup';
@@ -108,8 +147,13 @@ export class ShipRepair {
 
   openShipHUD() {
     if (this.isUIOpen) return;
-    this.isUIOpen = true;
+    // Prepare state so referenced arrays exist during creation
+    this.toolButtons = this.toolButtons || [];
+    this.slotElements = this.slotElements || new Array(6).fill(null);
+    // hide small popup first, then attempt to build HUD; only mark UI open after success
     this.hideShipPopup();
+    let hudCreated = false;
+    try {
 
     // Main HUD container (reduced dimensions)
     this.hud = document.createElement('div');
@@ -137,14 +181,28 @@ export class ShipRepair {
     topBar.appendChild(topCloseBtn);
     this.hud.appendChild(topBar);
 
-    // Center column will contain slots+progress; right column will be inventory list
+  // Center column will contain slots+progress; right column will be inventory list
     const centerCol = document.createElement('div');
     centerCol.style.cssText = `flex: 1 1 65%; display:flex; flex-direction:column; align-items:flex-start; gap:24px; justify-content:center; padding-top:80px; padding-left:40px;`;
 
+    // Prepare tool definitions and toolButtons so we can map persisted slot names to labels
+    const toolDefs = [
+      { inv: 'Llave Multiprop\u00f3sito', label: 'Llave' },
+      { inv: 'Membrana de Vac\u00edo', label: 'Membrana' },
+      { inv: 'Chip de Navegaci\u00f3n', label: 'Chip' },
+      { inv: 'Catalizador de Plasma', label: 'Catalizador' },
+      { inv: 'N\u00facleo de Fusi\u00f3n', label: 'N\u00facleo' },
+      { inv: 'Cristal de Poder', label: 'Cristal' }
+    ];
+    this.toolButtons = [];
     // Top slots (1-3) - spaced a bit more
     const topRow = document.createElement('div');
     topRow.style.cssText = `display:flex; gap: 40px; margin-top:20px; justify-content:flex-start;`;
-    for (let i = 0; i < 3; i++) topRow.appendChild(this.createSlotElement(i));
+    for (let i = 0; i < 3; i++) {
+      const el = this.createSlotElement(i);
+      topRow.appendChild(el);
+      this.slotElements[i] = el;
+    }
     centerCol.appendChild(topRow);
 
     // Progress bar (placed below top slots)
@@ -167,56 +225,88 @@ export class ShipRepair {
     // Bottom slots (4-6)
     const bottomRow = document.createElement('div');
     bottomRow.style.cssText = `display:flex; gap: 40px; margin-bottom:10px; margin-top:8px; justify-content:flex-start;`;
-    for (let i = 3; i < 6; i++) bottomRow.appendChild(this.createSlotElement(i));
+    for (let i = 3; i < 6; i++) {
+      const el = this.createSlotElement(i);
+      bottomRow.appendChild(el);
+      this.slotElements[i] = el;
+    }
     centerCol.appendChild(bottomRow);
 
-    this.hud.appendChild(centerCol);
+  this.hud.appendChild(centerCol);
+  // Ensure progress shows persisted state
+  this.updateProgress();
 
-    // Right column: inventory list, positioned lower than the top close button and roughly mid-right
-    const rightCol = document.createElement('div');
+  // Right column: inventory list, positioned lower than the top close button and roughly mid-right
+  const rightCol = document.createElement('div');
     rightCol.style.cssText = `width: 220px; display:flex; flex-direction:column; gap:12px; align-items:stretch; padding-top:140px;`;
     const invTitle = document.createElement('div');
     invTitle.textContent = 'INVENTARIO';
     invTitle.style.cssText = `font-weight:700; color:#fdbb2d; text-align:center;`;
     rightCol.appendChild(invTitle);
 
+  // Tools listed as column on the right (toolDefs already declared above)
+  this.toolButtons = [];
     const invList = document.createElement('div');
     invList.id = 'ship-inv-list';
     invList.style.cssText = `display:flex; flex-direction:column; gap:8px; max-height:420px; overflow:auto; padding:6px; background: rgba(255,255,255,0.02); border-radius:6px;`;
 
-    // Tools listed as column on the right
-    this.toolButtons = [];
-    const tools = ['Llave', 'Soldador', 'Catalizador', 'Membrana', 'Chip', 'Cristal'];
-    tools.forEach((t) => {
+    toolDefs.forEach((def) => {
       const row = document.createElement('div');
       row.style.cssText = `display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px; border-radius:6px; cursor:pointer;`;
       const name = document.createElement('div');
-      name.textContent = t;
+      name.textContent = def.label;
       name.style.cssText = `font-weight:600; color:#e6ffe6;`;
 
       const badge = document.createElement('div');
-      badge.textContent = ''; // will show availability
+      badge.textContent = '';
       badge.style.cssText = `min-width:18px; height:18px; border-radius:8px;`;
 
       row.appendChild(name);
       row.appendChild(badge);
       row.addEventListener('click', () => {
-        // select/unselect
-        if (this.selectedTool === t) {
+        if (this.selectedTool === def.inv) {
           this.selectedTool = null;
           row.style.outline = '';
         } else {
-          this.selectedTool = t;
-          document.querySelectorAll('#ship-inv-list div').forEach(d => d.style.outline='');
+          this.selectedTool = def.inv;
+          // clear outlines in this inv list only
+          invList.querySelectorAll('div').forEach(d => d.style.outline = '');
           row.style.outline = '3px solid rgba(127,255,127,0.12)';
         }
       });
 
-      this.toolButtons.push({ name: t, row, badge });
+      row.addEventListener('dragstart', (e) => {
+        try {
+          e.dataTransfer.setData('text/plain', def.inv);
+          e.dataTransfer.effectAllowed = 'move';
+          const canvas = document.createElement('canvas');
+          canvas.width = 140; canvas.height = 36;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = 'rgba(0,0,0,0.8)';
+          ctx.fillRect(0,0,canvas.width, canvas.height);
+          ctx.fillStyle = '#cfffcc';
+          ctx.font = 'bold 14px Arial';
+          ctx.fillText(def.label, 8, 22);
+          try { e.dataTransfer.setDragImage(canvas, 70, 18); } catch (err) {}
+        } catch (err) {}
+      });
+
+      this.toolButtons.push({ inv: def.inv, label: def.label, row, badge });
       invList.appendChild(row);
     });
 
     rightCol.appendChild(invList);
+
+    // After toolButtons created, render any persisted slot labels
+    for (let i = 0; i < 6; i++) {
+      const toolName = this.slots[i];
+      const el = this.slotElements[i];
+      if (toolName && el) {
+        const label = (this.toolButtons.find(b => b.inv === toolName) || {}).label || toolName;
+        el.textContent = label;
+        el.style.background = 'linear-gradient(180deg, rgba(160,255,160,0.12), rgba(0,170,0,0.08))';
+      }
+    }
 
     // Add the right column to HUD (appears lower than top bar because of padding-top)
     this.hud.appendChild(rightCol);
@@ -243,6 +333,20 @@ export class ShipRepair {
     if (!this._invInterval) this._invInterval = setInterval(() => this.refreshInventoryList(), 1000);
 
     document.body.appendChild(this.hud);
+    hudCreated = true;
+    } catch (err) {
+      console.error('Failed to open Ship HUD', err);
+      // cleanup any partial DOM
+      if (this.hud && this.hud.parentNode) try { this.hud.parentNode.removeChild(this.hud); } catch(e){}
+      this.hud = null;
+      // ensure intervals/handlers cleaned
+      if (this._invInterval) { clearInterval(this._invInterval); this._invInterval = null; }
+      // do not mark UI as open
+      return;
+    }
+
+    // mark UI open after successful creation
+    if (hudCreated) this.isUIOpen = true;
   }
 
   createSlotElement(index) {
@@ -265,30 +369,122 @@ export class ShipRepair {
       }
     });
 
+    // Click to assign selected tool
     slot.addEventListener('click', () => {
       if (this.selectedTool) {
         this.assignToolToSlot(index, this.selectedTool, slot);
       } else {
         // toggle remove
         if (this.slots[index]) {
+          // return tool to inventory
+          const returned = this.slots[index];
           this.slots[index] = null;
           slot.textContent = `Slot ${index + 1}`;
           slot.style.background = 'rgba(255,255,255,0.03)';
+          // add back to inventory if space
+          if (window.inventory && typeof window.inventory.addTool === 'function') {
+            window.inventory.addTool(returned);
+          }
           this.updateProgress();
           this.refreshInventoryList();
+          this.saveState();
         }
       }
+    });
+
+    // Drag & Drop handlers
+    slot.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      slot.style.boxShadow = '0 6px 18px rgba(0,255,0,0.08)';
+    });
+    slot.addEventListener('dragleave', () => {
+      slot.style.boxShadow = '';
+    });
+    slot.addEventListener('drop', (e) => {
+      e.preventDefault();
+      slot.style.boxShadow = '';
+      let toolName = null;
+      try { toolName = e.dataTransfer.getData('text/plain'); } catch (err) { toolName = null; }
+      // fallback: if selectedTool exists
+      if (!toolName && this.selectedTool) toolName = this.selectedTool;
+      if (!toolName) return;
+      // Do not allow drop if slot already occupied
+      if (this.slots[index]) return;
+      // Only allow if tool is available in inventory
+      const inv = window.inventory;
+      const tools = inv ? (inv.getState ? inv.getState().tools : inv.tools) : [];
+      const exists = !!tools.find(t => t === toolName);
+      if (!exists) return; // cannot drop what you don't have
+      this.assignToolToSlot(index, toolName, slot);
     });
 
     return slot;
   }
 
   assignToolToSlot(index, toolName, slotElement) {
-    this.slots[index] = toolName;
-    slotElement.textContent = toolName;
+    // consume tool from inventory if present
+    const inv = window.inventory;
+    let removed = false;
+    if (inv) {
+      // find index in inventory tools
+      const stateTools = inv.getState ? inv.getState().tools : inv.tools;
+      const invIndex = stateTools ? stateTools.findIndex(t => t === toolName) : -1;
+      if (invIndex >= 0 && typeof inv.toggleSlot === 'function') {
+        // remove from inventory by setting slot to null
+        inv.tools[invIndex] = null;
+        if (typeof inv._updateUI === 'function') try { inv._updateUI(); } catch(e){}
+        removed = true;
+      }
+    }
+  this.slots[index] = toolName; // store inventory name internally
+  // display short label if available
+  const label = (this.toolButtons.find(b => b.inv === toolName) || {}).label || toolName;
+  slotElement.textContent = label;
     slotElement.style.background = 'linear-gradient(180deg, rgba(160,255,160,0.12), rgba(0,170,0,0.08))';
-    this.updateProgress();
-    this.refreshInventoryList();
+  this.updateProgress();
+  this.refreshInventoryList();
+  this.saveState();
+    // animate segment and slot
+    this.animateSegment(index);
+    this.pulseSlot(slotElement);
+    this.showToast(`${toolName} colocado en Slot ${index + 1}`);
+    return removed;
+  }
+
+  // small toast in HUD for feedback
+  showToast(msg, ms = 1400) {
+    try {
+      const t = document.createElement('div');
+      t.className = 'ship-toast';
+      t.textContent = msg;
+      Object.assign(t.style, {
+        position: 'fixed', left: '50%', top: '12%', transform: 'translateX(-50%)',
+        background: 'rgba(0,0,0,0.8)', color: '#fff', padding: '8px 12px', borderRadius: '6px', zIndex: 2000000,
+        boxShadow: '0 6px 18px rgba(0,0,0,0.6)', fontFamily: 'Arial', fontSize: '13px'
+      });
+      document.body.appendChild(t);
+      setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(-6px)'; }, ms-300);
+      setTimeout(()=>{ if (t.parentNode) t.parentNode.removeChild(t); }, ms);
+    } catch(e){}
+  }
+
+  animateSegment(index) {
+    try {
+      const seg = this.segments[index];
+      if (!seg) return;
+      seg.style.transform = 'scaleY(1.02)';
+      seg.style.boxShadow = '0 6px 18px rgba(0,255,0,0.12)';
+      setTimeout(()=>{ if(seg){ seg.style.transform=''; seg.style.boxShadow='inset 0 0 12px rgba(0,0,0,0.3)'; } }, 360);
+    } catch(e){}
+  }
+
+  pulseSlot(slotElement) {
+    try {
+      slotElement.style.transition = 'transform 180ms ease';
+      slotElement.style.transform = 'translateY(-6px)';
+      setTimeout(()=>{ slotElement.style.transform = ''; }, 220);
+    } catch(e){}
   }
 
   /**
@@ -300,15 +496,17 @@ export class ShipRepair {
       const toolsInInv = inv ? (inv.getState ? inv.getState().tools : inv.tools) : [];
       // Normalize: array of strings or nulls
       for (const item of this.toolButtons) {
-        const exists = !!toolsInInv.find(t => t === item.name);
+        const exists = !!toolsInInv.find(t => t === item.inv);
         if (exists) {
           item.badge.style.background = '#26a926';
           item.row.style.background = 'rgba(38,169,38,0.06)';
           item.row.style.color = '#cfffcc';
+          item.row.setAttribute('draggable', 'true');
         } else {
           item.badge.style.background = '#b72b2b';
           item.row.style.background = 'rgba(180,43,43,0.04)';
           item.row.style.color = '#ffd6d6';
+          item.row.setAttribute('draggable', 'false');
         }
       }
     } catch (e) {
@@ -318,13 +516,38 @@ export class ShipRepair {
 
   updateProgress() {
     const filled = this.slots.filter(Boolean).length;
-    // distribute fill across 6 segments evenly
+    // set each segment's height and color according to filled count
     for (let i = 0; i < 6; i++) {
       if (i < filled) {
         this.segments[i].style.height = '100%';
+        const color = this.segmentColors[Math.min(i, this.segmentColors.length - 1)];
+        this.segments[i].style.background = color;
       } else {
         this.segments[i].style.height = '0%';
+        this.segments[i].style.background = 'transparent';
       }
+    }
+    // persist changes
+    this.saveState();
+
+    // If completed, trigger callback once
+    if (filled === 6 && !this._repairCompleted) {
+      this._repairCompleted = true;
+      // default behavior: toast + optional reward
+      try {
+        if (typeof this.onRepairComplete === 'function') {
+          try { this.onRepairComplete({ slots: this.slots.slice(), progress: filled }); } catch (e) { console.error('onRepairComplete error', e); }
+        } else {
+          this.showToast('¡Reparación completa!');
+          // default: mark shuttle as repaired and give 200 coins if inventory exists
+          if (window.spaceShuttle) window.spaceShuttle.repaired = true;
+          if (window.inventory && typeof window.inventory.addCoins === 'function') {
+            window.inventory.addCoins(200);
+            window.inventory.notify?.('Reparación completa: recibiste 200 monedas');
+          }
+        }
+      } catch (e) { console.error('Error handling repair complete', e); }
+      this.saveState();
     }
   }
 
@@ -343,5 +566,24 @@ export class ShipRepair {
         window.inventory.onEquipChange = this._prevInvHandler || null;
       } catch (e) {}
     }
+  }
+
+  // Public method to reset the repair state (clears slots and progress)
+  resetRepair() {
+    this.slots = new Array(6).fill(null);
+    this._repairCompleted = false;
+    // update UI if open
+    if (this.hud) {
+      for (let i = 0; i < 6; i++) {
+        const el = this.slotElements[i];
+        if (el) {
+          el.textContent = `Slot ${i+1}`;
+          el.style.background = 'rgba(255,255,255,0.03)';
+        }
+      }
+      this.updateProgress();
+      this.refreshInventoryList();
+    }
+    this.saveState();
   }
 }
