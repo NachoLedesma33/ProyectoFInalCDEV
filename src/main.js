@@ -30,14 +30,128 @@ document.addEventListener("DOMContentLoaded", () => {
   const controlsButton = document.getElementById("controls-button");
   const soundButton = document.getElementById("sound-button");
 
+  // Story slides content
+  const storySlides = [
+    {
+      image: "./src/assets/imagen1.png",
+      text: "BUM! El granjero espacial Kael sintió como su viaje se desmoronaba luego de chocar un asteroide"
+    },
+    {
+      image: "./src/assets/imagen2.png",
+      text: "Con el iban sus preciadas vacas que entregaban el mejor producto lácteo de la galaxia."
+    },
+    {
+      image: "./src/assets/imagen3.png",
+      text: "No le quedo otra que descender a una luna en alfa Centauri cercana y buscar la forma de arreglar su nave..."
+    },
+    {
+      image: "./src/assets/imagen4.png",
+      text: "Luego de tanto buscar encontró a los aliens nativos"
+    },
+    {
+      image: "./src/assets/imagen5.png",
+      text: "Ideo un plan para llegar a un acuerdo con ellos el cual consiste en intercambiar la leche de sus preciadas vacas, con el motivo de comprar herramientas para su nave."
+    },
+    {
+      image: "./src/assets/imagen6.png",
+      text: "Los aliens aceptaron pero le dieron una advertencia al granjero de que algunos aliens malvados trataran de tomar las vacas sin nada a cambio"
+    },
+    {
+      image: "./src/assets/imagen7.png",
+      text: "Kael miro al horizonte y dijo: Protegeré a toda cosa mi ganado!!"
+    }
+  ];
+
+  let currentSlide = 0;
+  
+  function updateCarousel() {
+    const carouselImage = document.querySelector('.carousel-image img');
+    const carouselText = document.querySelector('.carousel-text p');
+    const currentPageNum = document.querySelector('.current-page');
+    
+    // Fade out
+    carouselImage.style.opacity = '0';
+    carouselText.style.opacity = '0';
+    
+    setTimeout(() => {
+      carouselImage.src = storySlides[currentSlide].image;
+      carouselText.textContent = storySlides[currentSlide].text;
+      currentPageNum.textContent = (currentSlide + 1).toString();
+      
+      // Fade in
+      carouselImage.style.opacity = '1';
+      carouselText.style.opacity = '1';
+    }, 300);
+  }
+
+  function startGame() {
+    // Si el juego ya está inicializado, mostrar inmediatamente
+    if (gameInitialized) {
+      document.getElementById("story-carousel").style.display = "none";
+      document.getElementById("game-container").style.display = "block";
+      return;
+    }
+
+    // Si el juego está cargando, esperar a que termine
+    if (gameInitPromise) {
+      gameInitPromise.then(() => {
+        document.getElementById("story-carousel").style.display = "none";
+        document.getElementById("game-container").style.display = "block";
+      });
+    }
+  }
+
+  let gameInitialized = false;
+  let gameInitPromise = null;
+
   // Agregar evento al botón Jugar
   playButton.addEventListener("click", () => {
-    // Ocultar el menú principal
+    // 1. Ocultar el menú principal inmediatamente
     document.getElementById("main-menu").style.display = "none";
-    // Mostrar el contenedor del juego
-    document.getElementById("game-container").style.display = "block";
-    // Iniciar el juego
-    init().catch(console.error);
+    
+    // 2. Mostrar el carousel instantáneamente
+    document.getElementById("story-carousel").style.display = "flex";
+    updateCarousel(); // Mostrar primer slide
+    
+    // 3. Setup carousel controls (una sola vez)
+    const prevButton = document.getElementById("prev-slide");
+    const nextButton = document.getElementById("next-slide");
+    const skipButton = document.getElementById("skip-story");
+    
+    if (!prevButton.onclick) {
+      prevButton.onclick = () => {
+        if (currentSlide > 0) {
+          currentSlide--;
+          updateCarousel();
+        }
+      };
+
+      nextButton.onclick = () => {
+        if (currentSlide < storySlides.length - 1) {
+          currentSlide++;
+          updateCarousel();
+        } else {
+          startGame();
+        }
+      };
+
+      skipButton.onclick = startGame;
+    }
+
+    // 4. Iniciar carga del juego en background (solo si no se inició antes)
+    if (!gameInitPromise) {
+      gameInitPromise = new Promise(resolve => {
+        // Usar setTimeout para no bloquear el rendering del carousel
+        setTimeout(() => {
+          init()
+            .then(() => {
+              gameInitialized = true;
+              resolve();
+            })
+            .catch(console.error);
+        }, 100);
+      });
+    }
   });
 
   // Por ahora, los otros botones no tienen funcionalidad

@@ -21,9 +21,39 @@
       <div class="main-menu-content">
         <div class="menu-buttons">
           <button id="play-button" class="menu-button">Jugar</button>
-          <button id="tutorial-button" class="menu-button">Tutorial</button>
-          <button id="controls-button" class="menu-button">Controles</button>
-          <button id="sound-button" class="menu-button">Sonidos</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Story Carousel (inicialmente oculto) -->
+    <div id="story-carousel" class="story-carousel" style="display: none;">
+      <div class="carousel-container">
+        <div class="carousel-title">
+          <h1>INTRODUCCIÓN</h1>
+          <div class="title-line"></div>
+        </div>
+        <div class="carousel-book">
+          <div class="carousel-page left-page">
+            <div class="carousel-image">
+              <div class="image-frame">
+                <img src="./src/assets/imagen1.png" alt="Historia 1">
+              </div>
+            </div>
+          </div>
+          <div class="carousel-page right-page">
+            <div class="carousel-text">
+              <p>BUM! El granjero espacial Kael sintió como su viaje se desmoronaba luego de chocar un asteroide</p>
+            </div>
+          </div>
+        </div>
+        <div class="carousel-navigation">
+          <button class="nav-button prev" id="prev-slide">&#10094;</button>
+          <div class="page-counter">
+            <span class="current-page">1</span>
+            <span class="total-pages">/7</span>
+          </div>
+          <button class="nav-button next" id="next-slide">&#10095;</button>
+          <button class="skip-button" id="skip-story">Saltar Historia</button>
         </div>
       </div>
     </div>
