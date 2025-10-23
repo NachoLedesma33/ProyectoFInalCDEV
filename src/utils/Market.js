@@ -820,32 +820,92 @@ export class Market {
       });
       
       buyButton.onclick = () => {
-        if (window.inventory?.coins >= item.price) {
-          // Lógica de compra
-          window.inventory.coins -= item.price;
-          item.owned = true;
-          
-          // Actualizar el botón
-          updateButtonState();
-          
-          // Actualizar monedas mostradas
-          if (coinsDisplay) {
-            coinsDisplay.textContent = `Monedas: ${window.inventory.coins} `;
-            coinsDisplay.appendChild(coinIcon);
-          }
-          
-          // Guardar en el inventario
-          if (window.inventory.addItem) {
-            window.inventory.addItem({
-              id: item.id,
-              name: item.name,
-              description: item.description,
-              image: item.image,
-              type: 'item'
-            });
-          }
+        if (!window.inventory) {
+          console.error('No se encontró el inventario');
+          return;
         }
-      };
+
+        // 1. Verificar si el jugador tiene suficientes monedas
+        if (window.inventory.coins < item.price) {
+          window.inventory?.notify?.(`No tienes suficientes monedas. Necesitas $${item.price}`, 'error');
+          return;
+        }
+
+        try {
+          // 2. Mapa de herramientas a sus respectivos slots (0-based)
+          const toolSlots = {
+            'Llave Multipropósito': 0,  // Slot 1
+            'Membrana de Vacío': 1,     // Slot 2
+            'Chip de Navegación': 2,    // Slot 3
+            'Catalizador de Plasma': 3, // Slot 4
+            'Núcleo de Fusión': 4,      // Slot 5
+            'Cristal de Poder': 5       // Slot 6
+          };
+          
+          // 3. Obtener el índice del slot para esta herramienta
+          const slotIndex = toolSlots[item.name];
+          if (slotIndex === undefined) {
+            console.warn(`No se encontró un slot definido para: ${item.name}`);
+            window.inventory?.notify?.(`Error: No se pudo encontrar el slot para ${item.name}`, 'error');
+            return;
+          }
+
+          // 4. Asegurarse de que el array de herramientas tenga el tamaño correcto
+          while (window.inventory.tools.length <= slotIndex) {
+            window.inventory.tools.push(null);
+          }
+
+          // 5. Verificar si el slot ya está ocupado
+          if (window.inventory.tools[slotIndex] !== null) {
+            window.inventory?.notify?.(`El slot ${slotIndex + 1} ya está ocupado`, 'error');
+            return;
+          }
+
+          // 6. Primero intentamos agregar la herramienta al inventario
+          const previousTool = window.inventory.tools[slotIndex];
+          window.inventory.tools[slotIndex] = item.name;
+          
+          // 7. Verificar si se agregó correctamente
+          if (window.inventory.tools[slotIndex] === item.name) {
+            // 8. Si se agregó correctamente, restar las monedas
+            window.inventory.coins -= item.price;
+            item.owned = true;
+            
+            // 9. Actualizar la UI
+            window.inventory._updateUI?.();
+            updateButtonState();
+            
+            // 10. Actualizar el contador de monedas
+            if (coinsDisplay) {
+              coinsDisplay.textContent = `Monedas: ${window.inventory.coins} `;
+              coinsDisplay.appendChild(coinIcon);
+            }
+            
+            // 11. Notificar éxito
+            window.inventory?.notify?.(`¡${item.name} comprado por $${item.price}!`, 'success');
+            console.log(`Herramienta "${item.name}" agregada al inventario en el slot ${slotIndex + 1}`);
+          } else {
+            // Revertir si no se pudo agregar
+            window.inventory.tools[slotIndex] = previousTool;
+            throw new Error('No se pudo agregar la herramienta al inventario');
+          }
+          
+        } catch (error) {
+          console.error('Error al procesar la compra:', error);
+          // Revertir cambios en caso de error
+          item.owned = false;
+          updateButtonState();
+          window.inventory?._updateUI?.();
+          window.inventory?.notify?.('Error al procesar la compra', 'error');
+        }
+      }
+    };
+    
+    // No hay suficientes monedas (moved outside the click handler)
+    if (window.inventory?.coins < item.price) {
+      if (window.inventory.notify) {
+        window.inventory.notify(`No tienes suficientes monedas. Necesitas $${item.price}`, 'error');
+      }
     }
 
     // Ensamblar la vista de detalles

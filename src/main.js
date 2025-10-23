@@ -886,12 +886,6 @@ async function init() {
       // Guardar en window para uso posterior
       window.loadedAxe = axeMesh;
       console.log("Hacha cargada y disponible en window.loadedAxe");
-
-      // Registrar la herramienta en el inventario si existe
-      if (window.inventory && typeof window.inventory.addTool === "function") {
-        window.inventory.addTool("Hacha");
-        console.log("Hacha registrada en el inventario");
-      }
     } catch (err) {
       console.warn("No se pudo cargar el hacha:", err);
     }
@@ -917,21 +911,20 @@ async function init() {
     }
   });
 
-  // Conectar cambio de equipamiento del inventario con el farmerController
+  // Conectar cambio de selección del inventario (sin equipar herramientas)
   if (window.inventory && farmerController) {
     window.inventory.onEquipChange = (slotIndex, toolName) => {
       try {
-        if (!toolName) {
-          // unequip
-          if (typeof farmerController.unequipTool === "function")
-            farmerController.unequipTool();
+        // Mostrar mensaje de herramienta seleccionada
+        if (toolName) {
+          console.log(`Herramienta seleccionada: ${toolName} (slot ${slotIndex + 1})`);
+          // Aquí puedes agregar lógica adicional cuando se selecciona una herramienta
+          // sin necesidad de equiparla visualmente en el personaje
         } else {
-          // equipar por nombre
-          if (typeof farmerController.equipTool === "function")
-            farmerController.equipTool(toolName);
+          console.log('Ninguna herramienta seleccionada');
         }
       } catch (e) {
-        console.warn("Error handling inventory equip change", e);
+        console.warn("Error manejando selección de inventario", e);
       }
     };
   }

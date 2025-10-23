@@ -1,11 +1,10 @@
 export class Inventory {
   constructor({ pricePerLiter = 5 } = {}) {
-    this.milkLiters = 0;
+    this.milkLiters = 30; // Iniciar con 30 litros de leche para pruebas
     // tools represented as array of slot strings (null = empty)
-    this.slotCount = 5;
+    this.slotCount = 6; // Aumentado a 6 slots
     this.tools = new Array(this.slotCount).fill(null);
-    this.equippedSlot = null; // index (0-based) of equipped tool
-    this.coins = 0;
+    this.coins = 100; // Iniciar con 100 monedas para pruebas
     this.pricePerLiter = pricePerLiter;
     this._createUI();
     this._updateUI();
@@ -18,6 +17,13 @@ export class Inventory {
   addMilk(liters = 0) {
     const n = Math.max(0, Number(liters) || 0);
     this.milkLiters += n;
+    this._updateUI();
+    return this.milkLiters;
+  }
+  
+  // Establece directamente la cantidad de leche
+  setMilk(liters) {
+    this.milkLiters = Math.max(0, Number(liters) || 0);
     this._updateUI();
     return this.milkLiters;
   }
@@ -50,30 +56,20 @@ export class Inventory {
     return this.tools[index0];
   }
 
-  // Toggle equip/unequip slot. index0 = 0..slotCount-1
+  // Toggle slot. index0 = 0..slotCount-1
   toggleSlot(index0) {
     if (index0 == null) return;
     if (index0 < 0 || index0 >= this.slotCount) return;
     const tool = this.tools[index0];
     if (!tool) {
-      // nothing to equip
+      // nothing to select
       this._flash('Ranura vacía');
       return;
     }
-
-    console.log('Inventory.toggleSlot called for', index0, 'current equipped:', this.equippedSlot, 'tool:', this.tools[index0]);
-    if (this.equippedSlot === index0) {
-      // unequip
-      this.equippedSlot = null;
-      this._updateUI();
-      if (typeof this.onEquipChange === 'function') this.onEquipChange(null, null);
-      this._flash(`${tool} guardada`);
-    } else {
-      // equip
-      this.equippedSlot = index0;
-      this._updateUI();
-      if (typeof this.onEquipChange === 'function') this.onEquipChange(index0, tool);
-      this._flash(`${tool} equipada`);
+    
+    // Notificar que se seleccionó una herramienta
+    if (typeof this.onEquipChange === 'function') {
+      this.onEquipChange(index0, tool);
     }
   }
 
@@ -139,7 +135,7 @@ export class Inventory {
         <span id="inv-coins" style="font-family:'Courier New', monospace">0</span>
       </div>
       <div style="margin-top:10px;margin-bottom:4px">
-        <div style="font-size:12px;opacity:0.8;margin-bottom:4px"><strong>Herramientas (1-5):</strong></div>
+        <div style="font-size:12px;opacity:0.8;margin-bottom:4px"><strong>Herramientas (1-6):</strong></div>
         <div id="inv-tools" style="display:flex;gap:6px;flex-wrap:wrap"></div>
       </div>
       <div id="inv-msg" style="margin-top:10px;padding:6px;background:rgba(255,255,255,0.1);border-radius:4px;font-size:12px;display:none"></div>
@@ -176,14 +172,9 @@ export class Inventory {
           color: '#a0d8ef',
           fontSize: '12px',
           border: '1px solid rgba(255,255,255,0.04)',
-          cursor: 'default'
+          cursor: 'default',
+          transition: 'all 0.2s ease'
         });
-
-        if (this.equippedSlot === i) {
-          slot.style.background = 'linear-gradient(90deg, rgba(250,200,50,0.15), rgba(250,200,50,0.05))';
-          slot.style.border = '1px solid rgba(250,200,50,0.6)';
-          slot.style.color = '#ffd66b';
-        }
 
         const toolName = this.tools[i] || '';
         slot.textContent = toolName ? `${i + 1}. ${toolName}` : `${i + 1}`;

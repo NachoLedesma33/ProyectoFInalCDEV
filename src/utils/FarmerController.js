@@ -1344,43 +1344,51 @@ export class FarmerController {
     }
   }
 
-  /**
+  /*
    * Equipar una herramienta por nombre (p. ej. 'Hacha')
    * @param {string} toolName
-   */
+   *
   async equipTool(toolName) {
-    console.log(`Intentando equipar herramienta: ${toolName}`);
-
-    // Si el nombre de la herramienta es 'Hacha' o 'Axe', llamar a equipWeapon
-    if (
-      toolName &&
-      (toolName.toLowerCase() === "hacha" || toolName.toLowerCase() === "axe")
-    ) {
-      console.log("Equipando hacha...");
-      await this.equipWeapon();
-    } else {
-      console.log(`Tipo de herramienta no soportado: ${toolName}`);
-    }
+    console.log(`[FUNCIONALIDAD DESHABILITADA] Se intentó equipar: ${toolName}`);
+    // La funcionalidad de equipar herramientas está deshabilitada
+    return;
+    
+    // Código original comentado:
+    // console.log(`Intentando equipar herramienta: ${toolName}`);
+    // if (
+    //   toolName &&
+    //   (toolName.toLowerCase() === "hacha" || toolName.toLowerCase() === "axe")
+    // ) {
+    //   console.log("Equipando hacha...");
+    //   await this.equipWeapon();
+    // } else {
+    //   console.log(`Tipo de herramienta no soportado: ${toolName}`);
+    // }
   }
 
   /**
    * Desequipar herramienta actualmente equipada
-   */
+   *
   unequipTool() {
-    if (this.equippedWeapon) {
-      // Remover el hacha de la escena
-      if (this.equippedWeapon.parent) {
-        this.equippedWeapon.parent.remove(this.equippedWeapon);
-      }
-      this.equippedWeapon = null;
-      this.isEquipped = false;
-      console.log("Herramienta desequipada correctamente");
-    }
+    console.log("[FUNCIONALIDAD DESHABILITADA] Se intentó desequipar herramienta");
+    // La funcionalidad de desequipar herramientas está deshabilitada
+    return;
+    
+    // Código original comentado:
+    // if (this.equippedWeapon) {
+    //   // Remover el hacha de la escena
+    //   if (this.equippedWeapon.parent) {
+    //     this.equippedWeapon.parent.remove(this.equippedWeapon);
+    //   }
+    //   this.equippedWeapon = null;
+    //   this.isEquipped = false;
+    //   console.log("Herramienta desequipada correctamente");
+    // }
 
-    // Volver a la animación de reposo
-    if (this.modelLoader) {
-      this.modelLoader.play("idle", 0.15);
-    }
+    // // Volver a la animación de reposo
+    // if (this.modelLoader) {
+    //   this.modelLoader.play("idle", 0.15);
+    // }
   }
 
   /**
