@@ -20,36 +20,23 @@ export class ShipRepair {
     this._storageKey = 'shipRepairState_v1';
     this.onRepairComplete = null; // optional callback set by game
     this._repairCompleted = false;
-    // try load persisted state (overwrites this.slots if present)
-    this.loadState();
+  // Session-only state: do not load from persistent storage. State will be kept in-memory only.
   }
 
   // Persistence helpers
   saveState() {
+    // Persistence disabled: session-only state. No-op to avoid writing to localStorage.
     try {
-      const state = {
-        slots: this.slots,
-        repairCompleted: !!this._repairCompleted
-      };
-      localStorage.setItem(this._storageKey, JSON.stringify(state));
+      // Intentionally do nothing
+      return;
     } catch (e) {
-      console.warn('ShipRepair.saveState failed', e);
+      // silent
     }
   }
 
   loadState() {
-    try {
-      const raw = localStorage.getItem(this._storageKey);
-      if (!raw) return;
-      const state = JSON.parse(raw);
-      if (state && Array.isArray(state.slots)) {
-        // normalize to length 6
-        this.slots = state.slots.concat(Array(6)).slice(0,6).map(s => s || null);
-      }
-      this._repairCompleted = !!state.repairCompleted;
-    } catch (e) {
-      console.warn('ShipRepair.loadState failed', e);
-    }
+    // Persistence disabled: do not load from localStorage. Keep initial in-memory state.
+    return;
   }
 
   createInteractionArea() {
