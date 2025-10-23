@@ -367,7 +367,7 @@ export class Market {
         name: "Núcleo de Fusión",
         description: "Alimenta el motor principal del transbordador con energía cuántica estable",
         image: "../assets/Núcleo de Fusión.png",
-        price: 500,
+        price: 50,
         owned: false
       },
       {
@@ -375,7 +375,7 @@ export class Market {
         name: "Membrana de Vacío",
         description: "Un panel flexible que se usa para sellar grietas en el casco",
         image: "../assets/Membrana de Vacío.png",
-        price: 300,
+        price: 30,
         owned: false
       },
       {
@@ -383,7 +383,7 @@ export class Market {
         name: "Chip de Navegación",
         description: "Un microprocesador antiguo que predice rutas seguras a través de tormentas espaciales y campos de asteroides",
         image: "../assets/Chip de Navegación.png",
-        price: 400,
+        price: 40,
         owned: false
       },
       {
@@ -391,7 +391,7 @@ export class Market {
         name: "Catalizador de Plasma",
         description: "Cristal flotante que contiene una sustancia incandescente que reacciona al contacto con la electricidad",
         image: "../assets/Catalizador de Plasma.png",
-        price: 450,
+        price: 45,
         owned: false
       },
       {
@@ -399,7 +399,7 @@ export class Market {
         name: "Llave Multipropósito",
         description: "Herramienta de ingeniería avanzada que permite manipular la masa de los objetos para montarlos",
         image: "../assets/Llave de Ajuste multipropósito.png",
-        price: 350,
+        price: 35,
         owned: false
       },
       {
@@ -407,7 +407,7 @@ export class Market {
         name: "Cristal de Poder",
         description: "Potencia el poder del motor para volver a casa",
         image: "../assets/Fragmento de Cristal.png",
-        price: 600,
+        price: 60,
         owned: false
       }
     ];
@@ -455,7 +455,7 @@ export class Market {
     coinsDisplay.textContent = `Monedas: ${window.inventory?.coins || 0} `;
     coins.style.cssText = `
       position: absolute;
-      top: 25px;
+      top: 8px;
       right: 25px;
       font-size: 1.2em;
       color: #ffd700;
