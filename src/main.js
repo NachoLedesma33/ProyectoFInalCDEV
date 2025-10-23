@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     {
       image: "./src/assets/imagen7.png",
-      text: "Kael miro al horizonte y dijo: Protegeré a toda cosa mi ganado!!"
+      text: "Kael miro al horizonte y dijo: ''Protegeré a toda costa mi ganado!!'' "
     }
   ];
 
