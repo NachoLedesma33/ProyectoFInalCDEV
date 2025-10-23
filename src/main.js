@@ -19,6 +19,7 @@ import { House } from "./utils/House.js"; // Casa con puerta interactiva
 import { Market } from "./utils/Market.js"; // Mercado con ventana frontal
 import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
 import { Alien2 } from "./utils/Alien2.js"; // Alien2
+import { ShipRepair } from "./utils/ShipRepair.js";
 import { SmokeEffect } from "./utils/smokeEffect.js"; // Efecto de humo
 
 // Inicialización del menú principal
@@ -85,6 +86,7 @@ let corral;
 
 // Instancia del Space Shuttle Orbiter
 let spaceShuttle;
+let shipRepair;
 
 // Array de vacas en el corral
 let cows = [];
@@ -530,6 +532,16 @@ function createMarket() {
 
   return market;
 }
+
+/**
+ * Crear la interacción de reparación de la nave (círculo y HUD)
+ */
+function createShipRepair() {
+  console.log("Creando interacción de reparación de la nave en coords 39.9,0.0,-21.1");
+  shipRepair = new ShipRepair(scene, { x: 39.9, y: 0.0, z: -21.1 }, 1.5);
+  window.shipRepair = shipRepair;
+  console.log("ShipRepair disponible como 'window.shipRepair' para depuración");
+}
 /**
  * Crear y configurar el alien2 en la escena
  */
@@ -693,6 +705,9 @@ async function init() {
   // Hacer el mercado accesible desde la consola para depuración
   window.market = market;
   console.log("Mercado disponible como 'window.market' para depuración");
+
+  // Crear interacción de reparación de la nave (círculo y HUD)
+  createShipRepair();
 
   // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
@@ -1098,7 +1113,11 @@ function animate(currentTime = 0) {
     if (window.market && farmerController?.model) {
       window.market.update(farmerController.model.position);
     }
-
+    
+    // Actualizar el sistema de reparación de la nave
+    if (shipRepair && farmerController?.model) {
+      shipRepair.update(farmerController.model.position);
+    }
     // 6. Actualizaciones menos frecuentes (optimizadas)
     if (terrainUpdateCounter++ >= terrainUpdateInterval) {
       terrain?.update(camera.position);

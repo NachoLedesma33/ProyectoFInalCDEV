@@ -232,6 +232,41 @@
     scrollbar-width: thin;
     scrollbar-color: #4CAF50 #333;
   }
+
+  /* Ship repair HUD and popup */
+  #ship-popup {
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+
+  #ship-hud {
+    box-sizing: border-box;
+  }
+
+  .ship-slot {
+    transition: background 220ms ease, transform 120ms ease;
+  }
+  .ship-slot:hover { transform: translateY(-4px); }
+
+  .ship-tool-btn { transition: box-shadow 180ms ease, transform 120ms ease; }
+  .ship-tool-btn:active { transform: translateY(1px); }
+
+  .ship-segment { box-shadow: inset 0 0 12px rgba(0,0,0,0.3); }
+
+  /* Ship HUD specific layout refinements */
+  #ship-hud .center-col { display:flex; flex-direction:column; align-items:center }
+  .ship-slot { width:140px; height:70px; }
+
+  /* Inventory column on the right */
+  #ship-inv-list div { padding:8px; display:flex; justify-content:space-between; align-items:center; }
+  #ship-inv-list div:hover { filter: brightness(1.05); }
+
+  /* Tool badge styles */
+  #ship-inv-list div div:last-child { width:18px; height:18px; border-radius:9px; }
+
+  /* Tool row selected outline */
+  #ship-inv-list div[style*="outline"] { box-shadow: 0 0 0 4px rgba(127,255,127,0.04); }
+
   
   #market-hud::-webkit-scrollbar {
     width: 8px;
