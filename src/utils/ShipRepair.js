@@ -146,22 +146,65 @@ export class ShipRepair {
     this.hud = document.createElement('div');
     this.hud.id = 'ship-hud';
     this.hud.style.cssText = `
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 1100px; height: 640px; background: rgba(10,10,10,0.98); color: #fff; z-index: 1000000;
-      border: 3px solid #1fbf1f; border-radius: 8px; padding: 14px; box-sizing: border-box; font-family: Arial, sans-serif;
-      display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 14px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 640px;
+      height: 360px;
+      background: rgba(10,10,10,0.98);
+      color: #fff;
+      z-index: 1000000;
+      border: 2px solid #17a717ff;
+      border-radius: 6px;
+      padding: 8px;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
     `;
 
     // Top bar: title centered, close button on the right
     const topBar = document.createElement('div');
-    topBar.style.cssText = `position:absolute; top:20px; left:0; right:0; display:flex; align-items:center; justify-content:center;`;
+    topBar.style.cssText = `
+      position: absolute;
+      top: 10px;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
     const title = document.createElement('h2');
     title.textContent = 'Estado de la nave';
-    title.style.cssText = `font-size: 28px; color: #7fff7f; margin: 0; text-shadow: 0 0 12px rgba(127,255,127,0.3); font-weight: 700;`;
+    title.style.cssText = `
+      font-size: 22px;
+      color: #169616ff;
+      margin: 0;
+      text-shadow: 0 0 8px rgba(127,255,127,0.3);
+      font-weight: 600;
+      padding: 0;
+    `;
     topBar.appendChild(title);
     const topCloseBtn = document.createElement('button');
     topCloseBtn.textContent = '✕';
-    topCloseBtn.style.cssText = `position:absolute; right:20px; top:0; padding:10px 16px; background:#c94a4a; color:white; border:none; border-radius:6px; cursor:pointer; font-size:18px; font-weight:700; transition: background 0.2s;`;
+    topCloseBtn.style.cssText = `
+      position: absolute;
+      right: 12px;
+      top: 0;
+      padding: 6px 10px;
+      background: #c94a4a;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 400;
+      transition: background 0.2s;
+    `;
     topCloseBtn.addEventListener('mouseenter', () => topCloseBtn.style.background = '#e05555');
     topCloseBtn.addEventListener('mouseleave', () => topCloseBtn.style.background = '#c94a4a');
     topCloseBtn.addEventListener('click', () => this.closeShipHUD());
@@ -170,7 +213,17 @@ export class ShipRepair {
 
   // Center column will contain slots+progress; right column will be inventory list
     const centerCol = document.createElement('div');
-    centerCol.style.cssText = `flex: 1 1 65%; display:flex; flex-direction:column; align-items:flex-start; gap:24px; justify-content:center; padding-top:80px; padding-left:40px;`;
+    centerCol.style.cssText = `
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      justify-content: center;
+      padding-top: 35px;
+      padding-left: 12px;
+      padding-bottom: 8px;
+    `;
 
     // Prepare tool definitions and toolButtons so we can map persisted slot names to labels
     const toolDefs = [
@@ -184,7 +237,13 @@ export class ShipRepair {
     this.toolButtons = [];
     // Top slots (1-3) - spaced a bit more
     const topRow = document.createElement('div');
-    topRow.style.cssText = `display:flex; gap: 40px; margin-top:20px; justify-content:flex-start;`;
+    topRow.style.cssText = `
+      display: flex;
+      gap: 16px;
+      margin-top: 4px;
+      justify-content: flex-start;
+      align-items: center;
+    `;
     for (let i = 0; i < 3; i++) {
       const el = this.createSlotElement(i);
       topRow.appendChild(el);
@@ -195,7 +254,20 @@ export class ShipRepair {
     // Progress bar (placed below top slots)
     const progressContainer = document.createElement('div');
     progressContainer.id = 'ship-progress-container';
-    progressContainer.style.cssText = `width: 100%; max-width:660px; height: 110px; background: rgba(255,255,255,0.04); border-radius: 8px; display:flex; align-items:stretch; position: relative; padding: 8px; box-sizing: border-box; margin-top:8px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);`;
+    progressContainer.style.cssText = `
+      width: 100%;
+      max-width: 500px;
+      height: 90px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 6px;
+      display: flex;
+      align-items: stretch;
+      position: relative;
+      padding: 4px;
+      box-sizing: border-box;
+      margin-top: 6px;
+      box-shadow: inset 0 1px 6px rgba(0,0,0,0.3);
+    `;
     this.segments = [];
     for (let i = 0; i < 6; i++) {
       const seg = document.createElement('div');
@@ -211,7 +283,7 @@ export class ShipRepair {
 
     // Bottom slots (4-6)
     const bottomRow = document.createElement('div');
-    bottomRow.style.cssText = `display:flex; gap: 40px; margin-bottom:10px; margin-top:8px; justify-content:flex-start;`;
+    bottomRow.style.cssText = `display:flex; gap: 16px; margin-bottom:6px; margin-top:8px; justify-content:flex-start;`;
     for (let i = 3; i < 6; i++) {
       const el = this.createSlotElement(i);
       bottomRow.appendChild(el);
@@ -224,29 +296,29 @@ export class ShipRepair {
   this.updateProgress();
 
   // Right column: inventory list, positioned lower than the top close button and roughly mid-right
-  const rightCol = document.createElement('div');
-    rightCol.style.cssText = `width: 220px; display:flex; flex-direction:column; gap:12px; align-items:stretch; padding-top:140px;`;
+    const rightCol = document.createElement('div');
+    rightCol.style.cssText = `width: 160px; display:flex; flex-direction:column; gap:8px; align-items:stretch; padding-top:45px;`;
     const invTitle = document.createElement('div');
     invTitle.textContent = 'INVENTARIO';
-    invTitle.style.cssText = `font-weight:700; color:#fdbb2d; text-align:center;`;
+    invTitle.style.cssText = `font-weight:400; color:#fdbb2d; text-align:center; font-size: 13px;`;
     rightCol.appendChild(invTitle);
 
   // Tools listed as column on the right (toolDefs already declared above)
   this.toolButtons = [];
     const invList = document.createElement('div');
     invList.id = 'ship-inv-list';
-    invList.style.cssText = `display:flex; flex-direction:column; gap:8px; max-height:420px; overflow:auto; padding:6px; background: rgba(255,255,255,0.02); border-radius:6px;`;
+    invList.style.cssText = `display:flex; flex-direction:column; gap:2px; max-height:260px; padding:3px; background: rgba(255,255,255,0.02); border-radius:4px;`;
 
     toolDefs.forEach((def) => {
       const row = document.createElement('div');
-      row.style.cssText = `display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px; border-radius:6px; cursor:pointer;`;
+      row.style.cssText = `display:flex; justify-content:space-between; align-items:center; gap:3px; padding:4px 5px; border-radius:3px; cursor:pointer; font-size: 11px;`;
       const name = document.createElement('div');
       name.textContent = def.label;
-      name.style.cssText = `font-weight:600; color:#e6ffe6;`;
+      name.style.cssText = `font-weight:400; color:#e6ffe6;`;
 
       const badge = document.createElement('div');
       badge.textContent = '';
-      badge.style.cssText = `min-width:18px; height:18px; border-radius:8px;`;
+      badge.style.cssText = `min-width:10px; height:10px; border-radius:6px;`;
 
       row.appendChild(name);
       row.appendChild(badge);
@@ -340,7 +412,7 @@ export class ShipRepair {
     const slot = document.createElement('div');
     slot.className = 'ship-slot';
     slot.dataset.index = index;
-    slot.style.cssText = `width:165px; height:85px; background: rgba(255,255,255,0.03); border:2px dashed rgba(127,255,127,0.12); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#cfefcc; font-weight:600; font-size:16px; transition: all 0.2s; box-shadow: inset 0 1px 4px rgba(0,0,0,0.2);`;
+    slot.style.cssText = `width:120px; height:70px; background: rgba(255,255,255,0.03); border:2px dashed rgba(127,255,127,0.12); border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#cfefcc; font-weight:600; font-size:14px; transition: all 0.2s; box-shadow: inset 0 1px 4px rgba(0,0,0,0.2);`;
     slot.textContent = `Slot ${index + 1}`;
 
     slot.addEventListener('mouseenter', () => {
