@@ -1036,8 +1036,11 @@ export class Alien2 {
     }
   }
 
-  // Abrir diálogo
-  openDialogue() {
+  // Abrir diálogo. Acepta un callback opcional que se ejecuta al cerrarse el diálogo.
+  openDialogue(onClose, opts = {}) {
+    // Guardar callback opcional para ejecutar cuando se cierre el diálogo
+    this._onDialogueClose = typeof onClose === 'function' ? onClose : null;
+
     if (
       this.interactionSystem.dialogueHud &&
       !this.interactionSystem.isDialogueOpen
@@ -1046,8 +1049,10 @@ export class Alien2 {
       this.interactionSystem.dialogueHud.style.display = "block";
       this.interactionSystem.isDialogueOpen = true;
 
-      // Mostrar el diálogo inicial
-      this.showInitialDialogue();
+      // Mostrar el diálogo inicial a menos que opts.skipInitial sea true
+      if (!opts || !opts.skipInitial) {
+        this.showInitialDialogue();
+      }
 
       console.log("✅ Diálogo abierto con Alien2");
 
@@ -1456,6 +1461,18 @@ export class Alien2 {
       this.interactionSystem.isDialogueOpen = false;
       this.interactionSystem.playerStayTime = 0; // Resetear tiempo
       console.log("Diálogo cerrado con Alien2");
+
+      // Ejecutar callback opcional registrado en openDialogue()
+      try {
+        if (this._onDialogueClose && typeof this._onDialogueClose === 'function') {
+          this._onDialogueClose();
+        }
+      } catch (err) {
+        console.warn('Error ejecutando onDialogueClose callback:', err);
+      }
+
+      // Limpiar el callback para evitar llamadas repetidas
+      this._onDialogueClose = null;
     }
   }
 

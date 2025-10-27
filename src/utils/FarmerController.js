@@ -96,12 +96,23 @@ export class FarmerController {
     // Inicializar el controlador
     this.setupEventListeners();
 
+  // Input enabled flag: when false, keyboard movement input is ignored
+  this.inputEnabled = true;
+
     // referencia al bone de la mano (si se encuentra) para seguirla
     this._handBone = null;
 
     // vector y quaternion temporales para cálculos
     this._tmpVec = new THREE.Vector3();
     this._tmpQuat = new THREE.Quaternion();
+
+  // auto-exit state used when leaving market after HUD closes
+  this._autoExitActive = false;
+  this._autoExitTarget = new THREE.Vector3();
+  this._autoExitMarket = null;
+  this._autoExitSpeed = 3.0; // units per second
+  this._autoExitPhase = null; // 'turn' | 'walk'
+  this._autoExitRunPlaying = false;
 
     // Crear HUD de coordenadas
     this.createCoordinateDisplay();
@@ -745,6 +756,9 @@ export class FarmerController {
       return false;
     }
 
+    // Allow passing through the doorway only: when the point is inside the market polygon
+    // we still treat it as collision unless it lies within the door opening area.
+
     // Coordenadas exactas del polígono del mercado (ajustadas manualmente)
     // Basadas en las coordenadas que proporcionaste
     const marketPolygon = [
@@ -780,17 +794,49 @@ export class FarmerController {
       if (intersect) inside = !inside;
     }
 
-    // Para depuración: mostrar la posición y si hay colisión
+    // If inside polygon, check if position is within the door opening (in market local coords)
     if (inside) {
+      try {
+        if (
+          this.market &&
+          typeof this.market.doorWidth === "number" &&
+          typeof this.market.doorHeight === "number" &&
+          this.market.marketGroup
+        ) {
+          // Convert world point to market local space to test against door rect
+          const localPoint = new THREE.Vector3(position.x, position.y, position.z);
+          this.market.marketGroup.worldToLocal(localPoint);
+
+          const halfDoor = this.market.doorWidth / 2;
+          const depthFront = this.market.size.depth / 2;
+          const entryDepth = 1.5; // how far inside the doorway is considered "entry"
+          const margin = 0.2; // small tolerance
+
+          const withinX = localPoint.x >= -halfDoor - margin && localPoint.x <= halfDoor + margin;
+          const withinZ = localPoint.z <= depthFront + 0.5 && localPoint.z >= depthFront - entryDepth;
+
+          if (withinX && withinZ) {
+            // point is within door opening -> allow movement (no collision)
+            return false;
+          }
+        }
+      } catch (e) {
+        // fallback to treating as collision on error
+        console.warn("Error checking doorway area:", e);
+      }
+
+      // Para depuración: mostrar la posición y si hay colisión (cuando no es la puerta)
       console.log(
         "🚫 Colisión con mercado en posición:",
         `X: ${position.x.toFixed(1)}, Z: ${position.z.toFixed(1)}`,
         "Polígono:",
         marketPolygon.map((p) => `(${p.x}, ${p.y})`).join(" -> ")
       );
+
+      return true;
     }
 
-    return inside;
+    return false;
   }
 
   /**
@@ -848,6 +894,8 @@ export class FarmerController {
     document.addEventListener("keydown", (event) => {
       const key = event.key.toLowerCase();
       if (key in this.keys) {
+        // If input is disabled, ignore movement/interaction keys
+        if (!this.inputEnabled) return;
         // Detectar si se presiona S o flecha abajo por primera vez
         if ((key === "s" || key === "arrowdown") && !this.keys[key]) {
           // Guardar rotación original y rotar 180°
@@ -877,6 +925,7 @@ export class FarmerController {
     document.addEventListener("keyup", (event) => {
       const key = event.key.toLowerCase();
       if (key in this.keys) {
+        // Always clear keys on keyup to avoid sticky inputs even when input is disabled
         // Detectar si se suelta S o flecha abajo
         if ((key === "s" || key === "arrowdown") && this.isRotatedForBackward) {
           // Restaurar rotación original
@@ -892,6 +941,23 @@ export class FarmerController {
       }
     });
   }
+
+  /**
+   * Enable or disable player input (keyboard).
+   * When disabling input we also clear any pressed key flags to avoid sticky movement.
+   * @param {boolean} enabled
+   */
+  setInputEnabled(enabled) {
+    this.inputEnabled = !!enabled;
+    if (!this.inputEnabled) {
+      // clear movement keys to avoid stuck movement
+      for (const k in this.keys) this.keys[k] = false;
+      // update animation state to reflect idle
+      try { this.updateAnimationState(); } catch (e) {}
+    }
+  }
+
+  isInputEnabled() { return !!this.inputEnabled; }
 
   /**
    * Busca recursivamente el hueso de la mano en el modelo
@@ -1580,6 +1646,37 @@ export class FarmerController {
   }
 
   /**
+   * Inicia la secuencia automática para salir de un mercado: gira 180° y camina hacia
+   * un punto fuera del mercado. El parámetro `market` puede ser la instancia Market.
+   * @param {Object} market
+   */
+  exitMarket(market) {
+    if (!market || !market.marketGroup) {
+      console.warn("exitMarket: market inválido");
+      return;
+    }
+
+    // Compute a world target point a few units outside the front of the market
+    try {
+      const frontLocal = new THREE.Vector3(0, 0, market.size.depth / 2 + 2.0);
+      const targetWorld = frontLocal.clone();
+      market.marketGroup.localToWorld(targetWorld);
+
+      this._autoExitTarget.copy(targetWorld);
+      // keep a reference to the market so we can query door pivot/detection while exiting
+      this._autoExitMarket = market;
+      this._autoExitActive = true;
+      this._autoExitPhase = 'turn';
+
+      // Start the 180 rotation; update() will detect when rotation completes
+      this.start180Rotation();
+      console.log('Auto-exit iniciado hacia', this._autoExitTarget);
+    } catch (e) {
+      console.warn('Error iniciando auto-exit:', e);
+    }
+  }
+
+  /**
    * Actualiza la rotación del modelo
    * @param {number} delta - Tiempo transcurrido desde el último fotograma
    */
@@ -1651,6 +1748,122 @@ export class FarmerController {
 
     // Actualizar rotación primero
     this.updateRotation(delta);
+
+    // If an auto-exit sequence is active, handle it here (turn then walk out)
+    if (this._autoExitActive) {
+      // If we're in 'turn' phase, wait for rotation to finish
+      if (this._autoExitPhase === 'turn') {
+        if (!this.isRotating) {
+          // rotation finished, switch to walking
+          this._autoExitPhase = 'walk';
+          // start run animation when entering walk phase
+          try {
+            if (this.modelLoader && typeof this.modelLoader.play === 'function') {
+              // pick a reasonable animation speed (tweakable)
+              this.modelLoader.play('run', 0.25);
+              this._autoExitRunPlaying = true;
+            }
+          } catch (e) {
+            console.warn('Error reproduciendo animación run al salir del mercado:', e);
+          }
+        } else {
+          // still rotating: skip normal movement
+          return;
+        }
+      }
+
+      if (this._autoExitPhase === 'walk') {
+        // Move outward until the farmer is outside the market door detection area
+        // (so the door can fully close). Prefer using the market's doorPivot world
+        // position and market.doorOpenDistance. If those aren't available, fall back
+        // to the original target-distance check.
+        const pos = this.model.position;
+
+        let detectionCleared = false;
+        try {
+          const marketRef = this._autoExitMarket || this.market;
+          if (marketRef && marketRef.doorPivot && typeof marketRef.doorOpenDistance === 'number') {
+            const pivotWorld = new THREE.Vector3();
+            marketRef.doorPivot.getWorldPosition(pivotWorld);
+            // distance in XZ plane between farmer and pivot
+            const dx = pos.x - pivotWorld.x;
+            const dz = pos.z - pivotWorld.z;
+            const distXZ = Math.sqrt(dx * dx + dz * dz);
+
+            // Prefer to wait until the door animation has progressed back toward closed
+            const progress = typeof marketRef.doorOpenProgress === 'number' ? marketRef.doorOpenProgress : null;
+
+            if (progress !== null) {
+              // Require the farmer to be beyond a larger margin AND the door progress to be nearly closed
+              const margin = 3.0; // bumped margin so farmer goes a bit further out
+              const threshold = marketRef.doorOpenDistance + margin;
+              if (distXZ > threshold && progress <= 0.05) {
+                detectionCleared = true;
+              }
+            } else {
+              // fallback: door progress not available, use a slightly larger margin
+              const margin = 4.0;
+              const threshold = marketRef.doorOpenDistance + margin;
+              if (distXZ > threshold) detectionCleared = true;
+            }
+          }
+        } catch (e) {
+          console.warn('Error comprobando detección del mercado durante auto-exit:', e);
+        }
+
+        if (detectionCleared) {
+          // Stop auto-exit when detection cleared
+          this._autoExitActive = false;
+          this._autoExitPhase = null;
+          this._autoExitMarket = null;
+          // stop run animation
+          try {
+            if (this._autoExitRunPlaying && this.modelLoader && typeof this.modelLoader.play === 'function') {
+              this.modelLoader.play('idle', 0.15);
+            }
+          } catch (e) {
+            console.warn('Error al detener animación run:', e);
+          }
+          this._autoExitRunPlaying = false;
+        } else {
+          // Continue moving toward the target (ignore collisions during auto-exit)
+          const dir = this._autoExitTarget.clone().sub(pos);
+          const distance = dir.length();
+          if (distance < 0.3) {
+            // fallback: if we reached the computed target, stop
+            this._autoExitActive = false;
+            this._autoExitPhase = null;
+            this._autoExitMarket = null;
+            try {
+              if (this._autoExitRunPlaying && this.modelLoader && typeof this.modelLoader.play === 'function') {
+                this.modelLoader.play('idle', 0.15);
+              }
+            } catch (e) {
+              console.warn('Error al detener animación run:', e);
+            }
+            this._autoExitRunPlaying = false;
+          } else {
+            dir.normalize();
+            const moveStep = dir.multiplyScalar(this._autoExitSpeed * delta);
+            // Avoid overshoot
+            if (moveStep.length() > distance) moveStep.setLength(distance);
+
+            // Rotate model to face movement direction for a natural run
+            try {
+              const desiredY = Math.atan2(dir.x, dir.z);
+              this.model.rotation.y = desiredY;
+            } catch (e) {
+              // ignore rotation errors
+            }
+
+            this.model.position.add(moveStep);
+          }
+        }
+
+        // Skip the rest of the normal update while auto-exiting
+        return;
+      }
+    }
 
     // Actualizar posición del arma si está equipada
     if (this.isEquipped && this.equippedWeapon) {
