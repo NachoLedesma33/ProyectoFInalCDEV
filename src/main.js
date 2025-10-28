@@ -1,11 +1,10 @@
 // Importaciones de Three.js y módulos personalizados
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
-import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/controls/OrbitControls.js";
 
 // Módulos personalizados
 import { Terrain } from "./utils/Terrain.js"; // Manejo del terreno
 import { Lighting } from "./utils/lighting.js"; // Sistema de iluminación
-import { ControlsManager } from "./utils/controls.js"; // Controles de cámara
+// ControlsManager se usa internamente en CameraManager; no es necesario importarlo aquí
 import { ModelLoader } from "./utils/modelLoader.js"; // Carga de modelos 3D
 import { Skybox } from "./utils/Skybox.js"; // Fondo 360°
 import modelConfig from "./config/modelConfig.js"; // Configuración de modelos
@@ -21,6 +20,9 @@ import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
 import { Alien2 } from "./utils/Alien2.js"; // Alien2
 import { ShipRepair } from "./utils/ShipRepair.js";
 import { SmokeEffect } from "./utils/smokeEffect.js"; // Efecto de humo
+import { showFinalScene } from "./utils/finalScene.js";
+import { makeMinimap } from "./utils/minimap.js";
+import { createStoryManager, storySlides } from "./utils/startMenu.js";
 
 // Inicialización del menú principal
 document.addEventListener("DOMContentLoaded", () => {
@@ -30,139 +32,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const controlsButton = document.getElementById("controls-button");
   const soundButton = document.getElementById("sound-button");
 
-  // Story slides content
-  const storySlides = [
-    {
-      image: "./src/assets/imagen1.png",
-      text: "BUM! El granjero espacial Kael sintió como su viaje se desmoronaba luego de chocar un asteroide"
-    },
-    {
-      image: "./src/assets/imagen2.png",
-      text: "Con él iban sus preciadas vacas que otorgaban el mejor producto lácteo de la galaxia."
-    },
-    {
-      image: "./src/assets/imagen3.png",
-      text: "No le quedo otra opción que descender a la luna mas cercana en alfa Centauri y buscar la forma de arreglar su nave..."
-    },
-    {
-      image: "./src/assets/imagen4.png",
-      text: "Luego de tanto buscar, Kael encontró a los aliens nativos"
-    },
-    {
-      image: "./src/assets/imagen5.png",
-      text: "Ideo un plan para llegar a un acuerdo con ellos el cual consiste en intercambiar la leche de sus preciadas vacas, con el motivo de comprar herramientas para su nave."
-    },
-    {
-      image: "./src/assets/imagen6.png",
-      text: "Los aliens aceptaron pero le dieron una advertencia para Kael... Algunos aliens malvados trataran de tomar las vacas sin nada a cambio..."
-    },
-    {
-      image: "./src/assets/imagen7.png",
-      text: "Entonces Kael miro al horizonte y dijo: ''Protegeré a toda costa mi ganado!!'' "
-    }
-  ];
-
-  let currentSlide = 0;
-  
-  function updateCarousel() {
-    const carouselImage = document.querySelector('.carousel-image img');
-    const carouselText = document.querySelector('.carousel-text p');
-    const currentPageNum = document.querySelector('.current-page');
-    
-    // Fade out
-    carouselImage.style.opacity = '0';
-    carouselText.style.opacity = '0';
-    
-    setTimeout(() => {
-      carouselImage.src = storySlides[currentSlide].image;
-      carouselText.textContent = storySlides[currentSlide].text;
-      currentPageNum.textContent = (currentSlide + 1).toString();
-      
-      // Fade in
-      carouselImage.style.opacity = '1';
-      carouselText.style.opacity = '1';
-    }, 300);
-  }
-
-  function startGame() {
-    // Ocultar el carrusel
-    document.getElementById("story-carousel").style.display = "none";
-    
-    // Mostrar tutorial de controles
-    document.getElementById("controls-hud").style.display = "flex";
-    
-    // Evento para el botón de entendido
-    document.getElementById("controls-continue").onclick = () => {
-      // Ocultar tutorial
-      document.getElementById("controls-hud").style.display = "none";
-      
-      // Si el juego ya está inicializado, mostrar inmediatamente
-      if (gameInitialized) {
-        document.getElementById("game-container").style.display = "block";
-        return;
-      }
-
-      // Si el juego está cargando, esperar a que termine
-      if (gameInitPromise) {
-        gameInitPromise.then(() => {
-          document.getElementById("game-container").style.display = "block";
-        });
-      }
-    };
-  }
-
-  let gameInitialized = false;
-  let gameInitPromise = null;
-
-  // Agregar evento al botón Jugar
-  playButton.addEventListener("click", () => {
-    // 1. Ocultar el menú principal inmediatamente
-    document.getElementById("main-menu").style.display = "none";
-    
-    // 2. Mostrar el carousel instantáneamente
-    document.getElementById("story-carousel").style.display = "flex";
-    updateCarousel(); // Mostrar primer slide
-    
-    // 3. Setup carousel controls (una sola vez)
-    const prevButton = document.getElementById("prev-slide");
-    const nextButton = document.getElementById("next-slide");
-    const skipButton = document.getElementById("skip-story");
-    
-    if (!prevButton.onclick) {
-      prevButton.onclick = () => {
-        if (currentSlide > 0) {
-          currentSlide--;
-          updateCarousel();
-        }
-      };
-
-      nextButton.onclick = () => {
-        if (currentSlide < storySlides.length - 1) {
-          currentSlide++;
-          updateCarousel();
-        } else {
-          startGame();
-        }
-      };
-
-      skipButton.onclick = startGame;
-    }
-
-    // 4. Iniciar carga del juego en background (solo si no se inició antes)
-    if (!gameInitPromise) {
-      gameInitPromise = new Promise(resolve => {
-        // Usar setTimeout para no bloquear el rendering del carousel
+  // Usamos el manager del carrusel/historia modular
+  const storyManager = createStoryManager(storySlides, () => {
+    // Este callback se ejecuta una sola vez para iniciar la carga en background
+    if (!window.__gameInitPromise) {
+      window.__gameInitPromise = new Promise((resolve) => {
         setTimeout(() => {
           init()
             .then(() => {
-              gameInitialized = true;
+              window.__gameInitialized = true;
               resolve();
             })
             .catch(console.error);
         }, 100);
       });
     }
+    return window.__gameInitPromise;
   });
+
+  // Conectar el play button al manager
+  storyManager.attachToPlayButton(playButton);
 
   // Por ahora, los otros botones no tienen funcionalidad
   tutorialButton.addEventListener("click", () => {
@@ -193,11 +82,12 @@ let terrain, // Gestor del terreno
   skybox; // Fondo 360°
 
 // Variables para el minimap
-let minimapCanvas,
-  minimapCtx,
-  minimapWidth = 340,
+let minimapWidth = 340,
   minimapHeight = 249;
 let worldBounds = { minX: -250, maxX: 100, minZ: -250, maxZ: 300 }; // Límites del mundo ajustados para todas las piedras
+
+// Minimapa modular
+let minimapManager = makeMinimap({ width: minimapWidth, height: minimapHeight, worldBounds });
 
 // Cargador de modelos
 let modelLoader; // Maneja la carga y animación de modelos 3D
@@ -314,212 +204,32 @@ function createCows() {
  * Inicializar el minimap HUD
  */
 function initMinimap() {
-  console.log("Inicializando minimap...");
-
-  // Obtener el canvas del minimap
-  minimapCanvas = document.getElementById("minimap-canvas");
-  if (!minimapCanvas) {
-    console.error("No se encontró el canvas del minimap");
-    return;
+  // Inicialización delegada al manager modular
+  try {
+    minimapManager.init("minimap-canvas");
+  } catch (e) {
+    console.warn("No se pudo inicializar minimapManager:", e);
   }
-
-  minimapCtx = minimapCanvas.getContext("2d");
-
-  // Configurar el canvas
-  minimapCanvas.width = minimapWidth;
-  minimapCanvas.height = minimapHeight;
-
-  // Configurar el botón de plegado/desplegado
-  const minimapToggle = document.getElementById("minimap-toggle");
-  const minimapClose = document.getElementById("minimap-close");
-  const minimap = document.getElementById("minimap");
-
-  // Estado inicial: plegado
-  let isMinimapExpanded = false;
-
-  // Función para plegar el minimap
-  function collapseMinimap() {
-    minimap.classList.remove("minimap-expanded");
-    minimap.classList.add("minimap-collapsed");
-    minimapToggle.classList.remove("hidden");
-    isMinimapExpanded = false;
-  }
-
-  // Función para desplegar el minimap
-  function expandMinimap() {
-    minimap.classList.remove("minimap-collapsed");
-    minimap.classList.add("minimap-expanded");
-    minimapToggle.classList.add("hidden");
-    isMinimapExpanded = true;
-  }
-
-  // Event listener para el botón principal (Mapa)
-  minimapToggle.addEventListener("click", () => {
-    expandMinimap();
-  });
-
-  // Event listener para el botón de cierre (X)
-  minimapClose.addEventListener("click", () => {
-    collapseMinimap();
-  });
-
-  console.log("✅ Minimap inicializado con funcionalidad plegable");
-}
-
-/**
- * Convertir coordenadas del mundo a coordenadas del minimap
- * @param {number} x - Coordenada X del mundo
- * @param {number} z - Coordenada Z del mundo
- * @returns {Object} - Coordenadas {x, y} en el minimap
- */
-function worldToMinimap(x, z) {
-  // Normalizar coordenadas del mundo a 0-1
-  const normalizedX =
-    (x - worldBounds.minX) / (worldBounds.maxX - worldBounds.minX);
-  const normalizedZ =
-    (z - worldBounds.minZ) / (worldBounds.maxZ - worldBounds.minZ);
-
-  // Convertir a coordenadas del canvas (sin invertir Y para que el mapa muestre la dirección correcta)
-  const minimapX = normalizedX * minimapWidth;
-  const minimapY = normalizedZ * minimapHeight; // Sin invertir Y - ahora muestra la dirección real del movimiento
-
-  return { x: minimapX, y: minimapY };
 }
 
 /**
  * Actualizar el minimap con todos los objetos
  */
 function updateMinimap() {
-  if (!minimapCtx || !minimapCanvas) return;
-
-  // Limpiar el canvas con fondo transparente
-  minimapCtx.fillStyle = "rgba(25, 25, 25, 0.2)";
-  minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight);
-
-  // Dibujar cuadrícula de referencia extremadamente sutil
-  minimapCtx.strokeStyle = "rgba(255, 255, 255, 0.01)";
-  minimapCtx.lineWidth = 0.3;
-
-  // Líneas verticales cada 50 unidades
-  for (let x = worldBounds.minX; x <= worldBounds.maxX; x += 50) {
-    const minimapX =
-      ((x - worldBounds.minX) / (worldBounds.maxX - worldBounds.minX)) *
-      minimapWidth;
-    minimapCtx.beginPath();
-    minimapCtx.moveTo(minimapX, 0);
-    minimapCtx.lineTo(minimapX, minimapHeight);
-    minimapCtx.stroke();
-  }
-
-  // Líneas horizontales cada 50 unidades
-  for (let z = worldBounds.minZ; z <= worldBounds.maxZ; z += 50) {
-    const minimapY =
-      ((z - worldBounds.minZ) / (worldBounds.maxZ - worldBounds.minZ)) *
-      minimapHeight;
-    minimapCtx.beginPath();
-    minimapCtx.moveTo(0, minimapY);
-    minimapCtx.lineTo(minimapWidth, minimapY);
-    minimapCtx.stroke();
-  }
-
-  // Dibujar piedras
-  if (stones && stones.length > 0) {
-    stones.forEach((stone, index) => {
-      if (stone.model) {
-        const pos = stone.model.position;
-        const minimapPos = worldToMinimap(pos.x, pos.z);
-
-        // Verificar si la piedra está dentro de los límites visibles del minimap
-        if (
-          minimapPos.x >= 0 &&
-          minimapPos.x <= minimapWidth &&
-          minimapPos.y >= 0 &&
-          minimapPos.y <= minimapHeight
-        ) {
-          minimapCtx.fillStyle = "rgba(139, 69, 19, 0.6)"; // Color marrón transparente para piedras
-          minimapCtx.beginPath();
-          minimapCtx.arc(minimapPos.x, minimapPos.y, 1.5, 0, Math.PI * 2);
-          minimapCtx.fill();
-        }
-      }
+  // Delegado al manager
+  try {
+    minimapManager.setReferences({
+      stones,
+      house,
+      spaceShuttle,
+      corral,
+      market,
+      cows,
+      farmerController,
     });
-  }
-
-  // Dibujar casa
-  if (house && house.position) {
-    const minimapPos = worldToMinimap(house.position.x, house.position.z);
-
-    minimapCtx.fillStyle = "rgba(139, 69, 19, 0.5)"; // Color marrón transparente para casa
-    minimapCtx.fillRect(minimapPos.x - 3, minimapPos.y - 3, 6, 6);
-  }
-
-  // Dibujar Space Shuttle
-  if (spaceShuttle && spaceShuttle.model) {
-    const pos = spaceShuttle.model.position;
-    const minimapPos = worldToMinimap(pos.x, pos.z);
-
-    minimapCtx.fillStyle = "rgba(192, 192, 192, 0.7)"; // Color plateado transparente para Space Shuttle
-    minimapCtx.beginPath();
-    minimapCtx.arc(minimapPos.x, minimapPos.y, 4, 0, Math.PI * 2);
-    minimapCtx.fill();
-  }
-
-  // Dibujar corral
-  if (corral && corral.position) {
-    const minimapPos = worldToMinimap(corral.position.x, corral.position.z);
-    const size = 20; // Tamaño del corral
-
-    // Convertir tamaño del corral a coordenadas del minimap
-    const sizeX = (size / (worldBounds.maxX - worldBounds.minX)) * minimapWidth;
-    const sizeZ =
-      (size / (worldBounds.maxZ - worldBounds.minZ)) * minimapHeight;
-
-    minimapCtx.strokeStyle = "rgba(139, 69, 19, 0.4)"; // Color marrón transparente para corral
-    minimapCtx.lineWidth = 1;
-    minimapCtx.strokeRect(
-      minimapPos.x - sizeX / 2,
-      minimapPos.y - sizeZ / 2,
-      sizeX,
-      sizeZ
-    );
-  }
-
-  // Dibujar vacas
-  if (cows && cows.length > 0) {
-    cows.forEach((cow) => {
-      if (cow.model) {
-        const pos = cow.model.position;
-        const minimapPos = worldToMinimap(pos.x, pos.z);
-
-        minimapCtx.fillStyle = "rgba(255, 255, 255, 0.7)"; // Color blanco transparente para vacas
-        minimapCtx.beginPath();
-        minimapCtx.arc(minimapPos.x, minimapPos.y, 2, 0, Math.PI * 2);
-        minimapCtx.fill();
-      }
-    });
-  }
-
-  // Dibujar personaje principal (farmer)
-  if (farmerController && farmerController.model) {
-    const pos = farmerController.model.position;
-    const minimapPos = worldToMinimap(pos.x, pos.z);
-
-    // Dibujar el farmer como un triángulo que apunta en la dirección del personaje
-    minimapCtx.fillStyle = "rgba(0, 255, 0, 0.8)"; // Color verde transparente para el jugador
-    minimapCtx.save();
-    minimapCtx.translate(minimapPos.x, minimapPos.y);
-
-    // Obtener la rotación del personaje (farmer) y invertirla para modo espejo
-    const farmerRotation = farmerController.model.rotation.y;
-    minimapCtx.rotate(farmerRotation + Math.PI); // Invertir 180 grados
-
-    minimapCtx.beginPath();
-    minimapCtx.moveTo(0, -5);
-    minimapCtx.lineTo(-3, 3);
-    minimapCtx.lineTo(3, 3);
-    minimapCtx.closePath();
-    minimapCtx.fill();
-    minimapCtx.restore();
+    minimapManager.update();
+  } catch (e) {
+    // No crítico
   }
 }
 
@@ -826,6 +536,11 @@ async function init() {
   // Crear el mercado con ventana frontal
   const market = createMarket();
 
+  // Actualizar minimap inmediatamente con la referencia del mercado
+  try {
+    minimapManager.setReferences({ market });
+  } catch (e) {}
+
   // Hacer el mercado accesible desde la consola para depuración
   window.market = market;
   console.log("Mercado disponible como 'window.market' para depuración");
@@ -837,13 +552,13 @@ async function init() {
     try {
       shipRepair.onRepairComplete = (info) => {
         try {
-          showFinalScene();
+          showFinalScene({ shipRepair, cameraManager });
         } catch (e) {
-          console.error('Error mostrando escena final', e);
+          console.error("Error mostrando escena final", e);
         }
       };
     } catch (e) {
-      console.warn('No se pudo asignar onRepairComplete:', e);
+      console.warn("No se pudo asignar onRepairComplete:", e);
     }
   }
 
@@ -1045,29 +760,6 @@ async function init() {
 }
 
 /**
- * Configura los controles de órbita de la cámara
- * Permite rotar, hacer zoom y desplazarse alrededor de la escena
- * @deprecated Esta función ya no es necesaria, usar CameraManager en su lugar
- */
-function setupOrbitControls() {
-  console.warn(
-    "setupOrbitControls() está obsoleto. Usa CameraManager en su lugar."
-  );
-
-  if (cameraManager) {
-    const controls = cameraManager.getControls();
-    if (controls) {
-      controls.minDistance = 1; // Distancia mínima de acercamiento
-      controls.maxDistance = 50; // Distancia máxima de alejamiento
-      controls.maxPolarAngle = Math.PI / 2; // Ángulo máximo de inclinación (90°)
-      controls.minPolarAngle = 0.1; // Ángulo mínimo de inclinación (casi 0°)
-
-      console.log("Controles de órbita configurados a través de CameraManager");
-    }
-  }
-}
-
-/**
  * Configura los listeners de eventos de la ventana
  */
 function setupEventListeners() {
@@ -1089,98 +781,8 @@ function setupEventListeners() {
   });
 }
 
-/**
- * Muestra la escena final: cierra HUD, hace fade-to-black y muestra la imagen final
- */
-function showFinalScene() {
-  try {
-    // 1) Cerrar HUD si está abierto
-    try { if (shipRepair && typeof shipRepair.closeShipHUD === 'function') shipRepair.closeShipHUD(); } catch(e){}
-
-    // 2) Deshabilitar controles de cámara para evitar movimientos durante la transición
-    try {
-      const controls = cameraManager && typeof cameraManager.getControls === 'function' ? cameraManager.getControls() : null;
-      if (controls && typeof controls.enabled !== 'undefined') controls.enabled = false;
-    } catch (e) {}
-
-    // 3) Crear overlay negro que hará el fade
-    let overlay = document.getElementById('final-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'final-overlay';
-      document.body.appendChild(overlay);
-      // Force style calc then trigger opacity transition
-      requestAnimationFrame(() => { overlay.style.opacity = '1'; });
-    }
-
-    // 4) Cuando el overlay haya terminado su transición, mostrar la UI final
-    const onOverlayEnd = (ev) => {
-      if (ev.propertyName && ev.propertyName !== 'opacity') return;
-      overlay.removeEventListener('transitionend', onOverlayEnd);
-      try { createFinalUI(); } catch (e) { console.error('Error creando UI final', e); }
-    };
-    overlay.addEventListener('transitionend', onOverlayEnd);
-
-    // Fallback: si no hay transición por alguna razón, mostrar UI tras 2400ms
-    setTimeout(() => { if (!document.getElementById('final-card')) createFinalUI(); }, 2400);
-  } catch (e) {
-    console.error('showFinalScene error', e);
-  }
-}
-
-function createFinalUI() {
-  // Evitar múltiples inserciones
-  if (document.getElementById('final-card')) return;
-
-  // Imagen de fondo (reusa la clase .background-image pero aseguramos posición y z-index)
-  const bg = document.createElement('div');
-  bg.className = 'final-scene-bg';
-  // La ruta cumple con la convención del proyecto (archivo en src/assets)
-  bg.style.backgroundImage = 'url("./src/assets/Escena Final.png")';
-  bg.style.opacity = '0';
-  bg.style.transition = 'opacity 1200ms ease';
-  document.body.appendChild(bg);
-  requestAnimationFrame(() => { bg.style.opacity = '1'; });
-
-  // Tarjeta central con texto y botón
-  const card = document.createElement('div');
-  card.id = 'final-card';
-
-  const title = document.createElement('h2');
-  title.textContent = '¡Gracias por tu esfuerzo!';
-  card.appendChild(title);
-
-  const msg = document.createElement('p');
-  msg.textContent = 'Gracias por ayudar a reparar la nave — el granjero puede volver con su ganado a salvo a su planeta.';
-  card.appendChild(msg);
-
-  const credits = document.createElement('div');
-  credits.className = 'final-credits';
-  credits.innerHTML = '<strong>Trabajo realizado por:</strong><br>Ledesma Ignacio Manuel, Sif\u00f3n Monteros Lucas Valent\u00edn, Palacios Mat\u00edas Valent\u00edn y Moyano Tomas.';
-  card.appendChild(credits);
-
-  const restartWrap = document.createElement('div');
-  restartWrap.className = 'restart-button';
-  const restartBtn = document.createElement('button');
-  restartBtn.className = 'menu-button';
-  restartBtn.textContent = 'Reiniciar juego';
-  restartBtn.addEventListener('click', () => {
-    try {
-      // Intenta un reinicio suave: recargar la página
-      location.reload();
-    } catch (e) { console.error(e); }
-  });
-  restartWrap.appendChild(restartBtn);
-  card.appendChild(restartWrap);
-
-  document.body.appendChild(card);
-
-  // Mostrar con transición
-  requestAnimationFrame(() => { card.classList.add('show'); });
-
-  // Mantener referencia global para debug si se necesita
-  window.showFinalScene = showFinalScene;
-}
+// Referencia global para debug: invoca la función modular importada con las dependencias actuales
+window.showFinalScene = () => showFinalScene({ shipRepair, cameraManager });
 
 /**
  * Maneja el redimensionamiento de la ventana
@@ -1205,22 +807,7 @@ function onWindowResize() {
  * Esta función ya no es necesaria ya que el control del personaje
  * ahora se maneja en la clase FarmerController
  */
-function updateAnimationState() {
-  console.warn(
-    "updateAnimationState() está obsoleto. Usa FarmerController en su lugar."
-  );
-}
-
-/**
- * @deprecated Usar FarmerController en su lugar
- * Esta función ya no es necesaria ya que el control del personaje
- * ahora se maneja en la clase FarmerController
- */
-function handleMovement(delta) {
-  console.warn(
-    "handleMovement() está obsoleto. Usa FarmerController en su lugar."
-  );
-}
+// updateAnimationState and handleMovement removed: use FarmerController instead
 
 // Variables para el control de FPS
 let lastTime = 0;
