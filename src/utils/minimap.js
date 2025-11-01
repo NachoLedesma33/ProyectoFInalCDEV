@@ -162,6 +162,35 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
       });
     }
 
+    // Enemigos (puntos rojos)
+    if (refs.enemies && refs.enemies.length) {
+      refs.enemies.forEach((enemy) => {
+        try {
+          let pos = null;
+          if (!enemy) return;
+          // enemy may be a model or an object with .model
+          if (enemy.position) pos = enemy.position;
+          else if (enemy.model && enemy.model.position) pos = enemy.model.position;
+          else if (enemy.instance && enemy.instance.model && enemy.instance.model.position) pos = enemy.instance.model.position;
+          if (!pos) return;
+          const minimapPos = worldToMinimap(pos.x, pos.z);
+          if (
+            minimapPos.x >= 0 &&
+            minimapPos.x <= width &&
+            minimapPos.y >= 0 &&
+            minimapPos.y <= height
+          ) {
+            ctx.fillStyle = "rgba(255, 50, 50, 0.95)"; // rojo fuerte
+            ctx.beginPath();
+            ctx.arc(minimapPos.x, minimapPos.y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } catch (e) {
+          // ignore drawing errors for single enemies
+        }
+      });
+    }
+
     // Farmer
     if (refs.farmerController && refs.farmerController.model) {
       const pos = refs.farmerController.model.position;

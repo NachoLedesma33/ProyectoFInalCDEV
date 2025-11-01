@@ -22,6 +22,17 @@ export class ModelLoader {
       const model = await this.loadModel(modelPath);
       this.model = model;
 
+      // Normalize skin weights to ensure sum==1 and avoid deformation artifacts
+      // when FBXLoader has to drop influences > 4 (three.js supports max 4).
+      // This is a lightweight runtime mitigation; asset fix (re-export with
+      // max 4 influences) is still recommended for best deformation.
+      try {
+        this.normalizeSkinWeightsInModel(this.model);
+      } catch (e) {
+        // non-critical
+        console.warn('ModelLoader: error normalizing skin weights', e);
+      }
+
       this.setupModel();
 
       this.mixer = new THREE.AnimationMixer(this.model);
@@ -42,6 +53,39 @@ export class ModelLoader {
       console.error("Error loading model:", error);
       throw error;
     }
+  }
+
+  // Normalize skin weights helpers
+  normalizeSkinWeightsForSkinnedMesh(skinnedMesh) {
+    if (!skinnedMesh || !skinnedMesh.geometry) return;
+    const geom = skinnedMesh.geometry;
+    const sw = geom.attributes && geom.attributes.skinWeight;
+    if (!sw) return;
+    const arr = sw.array;
+    for (let i = 0; i < arr.length; i += 4) {
+      const x = arr[i] || 0;
+      const y = arr[i + 1] || 0;
+      const z = arr[i + 2] || 0;
+      const w = arr[i + 3] || 0;
+      const sum = x + y + z + w;
+      if (sum === 0) continue;
+      if (Math.abs(sum - 1) > 1e-6) {
+        arr[i] = x / sum;
+        arr[i + 1] = y / sum;
+        arr[i + 2] = z / sum;
+        arr[i + 3] = w / sum;
+      }
+    }
+    sw.needsUpdate = true;
+  }
+
+  normalizeSkinWeightsInModel(root) {
+    if (!root || !root.traverse) return;
+    root.traverse((o) => {
+      if (o.isSkinnedMesh) {
+        this.normalizeSkinWeightsForSkinnedMesh(o);
+      }
+    });
   }
 
   async loadModel(path) {
@@ -142,6 +186,7 @@ export class ModelLoader {
               });
 
               if (modelBoneNames.size > 0 && common === 0) {
+                console.warn(`ModelLoader: skipping animation '${name}' loaded from '${path}' because no common bone names were found between animation and model.`);
                 resolve();
                 return;
               }
@@ -156,11 +201,13 @@ export class ModelLoader {
               action.setLoop(THREE.LoopRepeat, Infinity);
               action.clampWhenFinished = true;
               this.actions[name] = action;
+              console.log(`ModelLoader: registered animation action '${name}' from '${path}'`);
             }
             resolve();
           },
           undefined,
           (error) => {
+            console.warn(`ModelLoader: failed to load animation '${name}' from '${path}':`, error);
             resolve();
           }
         );

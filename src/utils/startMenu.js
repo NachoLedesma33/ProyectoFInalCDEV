@@ -64,6 +64,19 @@ export function createStoryManager(storySlidesArg = storySlides, initStarter) {
     document.getElementById("controls-hud").style.display = "flex";
 
     document.getElementById("controls-continue").onclick = () => {
+      // Señal global: el jugador está listo para empezar a jugar
+      try {
+        if (!window.__gameplayStarted) {
+          window.__gameplayStarted = true;
+          // Callback opcional para integraciones antiguas
+          if (typeof window.onGameplayStart === 'function') {
+            try { window.onGameplayStart(); } catch (_) {}
+          }
+          // Evento para listeners modernos
+          try { window.dispatchEvent(new CustomEvent('gameplaystart')); } catch (_) {}
+        }
+      } catch (_) {}
+
       document.getElementById("controls-hud").style.display = "none";
 
       if (gameInitialized) {

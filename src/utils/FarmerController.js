@@ -1,5 +1,8 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js";
+import modelConfig from "../config/modelConfig.js";
+import CombatSystem, { integrateEntityWithCombat } from "./CombatSystem.js";
+import HealthBar from "./Healthbar.js";
 
 /**
  * Controlador para manejar el movimiento y animaciones del granjero
@@ -28,19 +31,6 @@ export class FarmerController {
       },
       ...config,
     };
-
-    // Referencia al corral para detección de colisiones
-    this.corral = null;
-
-    // Referencia al Space Shuttle para detección de colisiones
-    this.spaceShuttle = null;
-
-    // Referencia a las piedras para detección de colisiones
-    this.stones = null;
-
-    // Referencia a la casa para detección de colisiones
-    this.house = null;
-
     // Referencia a las vacas para detección de colisiones
     this.cows = null;
 
@@ -53,6 +43,9 @@ export class FarmerController {
     // Referencia al arma equipada
     this.equippedWeapon = null;
     this.isEquipped = false;
+
+  // Flag de estado para muerte: evita que otras animaciones sobreescriban 'death'
+  this._isDead = false;
 
     // Estado de las teclas
     this.keys = {
@@ -96,6 +89,207 @@ export class FarmerController {
     // Inicializar el controlador
     this.setupEventListeners();
 
+    // Mecánica de melee / golpes con click izquierdo
+    // Estado relacionado a ataques: si el jugador mantiene click izquierdo
+    this.isAttacking = false; // true mientras mantiene pulsado el botón izquierdo
+    this._nextAttackSide = null; // 'left' o 'right'
+    this._isInMeleeSequence = false; // true mientras estamos en secuencia punch->combat_idle
+    this._nextPunchTimeout = null; // id del timeout para encadenar golpes
+  this._combatExitTimer = null; // timer de 1.5s para volver a idle
+  this._combatIdleUntil = 0; // timestamp until which combat_idle should be held
+    this._mixerFinishedListener = null; // referencia al listener del mixer
+    
+      // Mouse handlers for melee (left click)
+      // Store references so we can remove them in dispose
+      // Single-click melee: play one punch per click (no hold-to-repeat)
+      this._onMouseDown = (event) => {
+        if (event.button !== 0) return; // left button
+        if (!this.inputEnabled || this._isDead) return;
+
+        // Cancel any pending exit-to-idle timer so we stay in combat state briefly
+        this._clearCombatExitTimer();
+
+        // Determine which side to use: alternate each click, start random
+        if (!this._nextAttackSide) this._nextAttackSide = Math.random() < 0.5 ? "left" : "right";
+        const side = this._nextAttackSide;
+
+        // Apply damage instantly on click, before playing the animation
+        try {
+          try {
+            this.attack();
+          } catch (e) {
+            console.warn('Error al aplicar ataque del jugador:', e);
+          }
+
+          // Play the punch animation (or fallback) and enter melee sequence
+          const actionName = side === "left" ? "punch_left" : "punch_right";
+          const action = this.modelLoader?.actions?.[actionName];
+          if (action) {
+            // entering melee sequence: prevent updateAnimationState from overriding until punch finishes
+            this._isInMeleeSequence = true;
+            // cancel any combat idle window so punch appears immediately
+            this._combatIdleUntil = 0;
+            this._clearCombatExitTimer();
+            // ensure one-shot
+            try { action.setLoop(THREE.LoopOnce, 0); action.clampWhenFinished = true; } catch (e) {}
+            // play via modelLoader (handles crossfade)
+            this.modelLoader.play(actionName, 0.06);
+
+            // No direct scheduling here: the mixer 'finished' handler will play `combat_idle`
+            // when the punch action completes. This avoids duplicate timers and ensures
+            // the idle starts exactly when the clip finishes.
+          } else {
+            // fallback: if punch action missing, play combat_idle briefly and enforce 1s combat window
+            try {
+              this._isInMeleeSequence = true;
+              this._clearCombatExitTimer();
+              this._combatIdleUntil = Date.now() + 1000;
+              console.warn(`FarmerController: punch action '${actionName}' not found. Available actions:`, Object.keys(this.modelLoader?.actions || {}));
+              this.modelLoader.play("combat_idle", 0.08);
+              this._combatExitTimer = setTimeout(() => {
+                // only exit if the combat idle window has passed
+                if (!this._combatIdleUntil || Date.now() < this._combatIdleUntil) return;
+                try { if (this.modelLoader) this.modelLoader.play("idle", 0.15); } catch (e) {}
+                this._combatExitTimer = null;
+                this._combatIdleUntil = 0;
+                this._nextAttackSide = null;
+                this._isInMeleeSequence = false;
+                try { this.updateAnimationState(); } catch (e) {}
+              }, 1000);
+            } catch (e) {
+              console.warn('Error al reproducir combat_idle fallback:', e);
+            }
+          }
+        } catch (e) {
+          console.warn("Error reproduciendo punch:", e);
+        }
+
+        // Alternate for next click
+        this._nextAttackSide = side === "left" ? "right" : "left";
+      };
+
+      this._onMouseUp = (event) => {
+        if (event.button !== 0) return;
+        // For single-click behavior we don't trigger combat_idle on mouseup.
+        // Just clear any transient attacking flag.
+        this.isAttacking = false;
+      };
+
+      document.addEventListener("mousedown", this._onMouseDown);
+      document.addEventListener("mouseup", this._onMouseUp);
+
+      // Intentar cargar/registrar las animaciones de combate y muerte si existen en modelConfig
+    try {
+      // Rutas esperadas (si los archivos están en src/models/...)
+      const anims = {
+        combat_idle: modelConfig.getPath(
+          "characters/farmer/Granjero2_combat_idle.fbx"
+        ),
+        punch_left: modelConfig.getPath(
+          "characters/farmer/Granjero2_Punching_Left.fbx"
+        ),
+            punch_right: modelConfig.getPath(
+              "characters/farmer/Granjero2_Punching_Right.fbx"
+            ),
+          // Death (opcional)
+          death: modelConfig.getPath(
+            (modelConfig.characters?.farmer2?.animations?.death) || "characters/farmer/Granjero2_Death.fbx"
+          ),
+      };
+
+      // Cargar animaciones de forma asíncrona (no bloqueante)
+      if (this.modelLoader && typeof this.modelLoader.loadAnimations === "function") {
+        this.modelLoader
+          .loadAnimations(anims)
+          .then(async () => {
+            // Configurar acciones para que los punches se reproduzcan una sola vez
+            try {
+              const actions = this.modelLoader.actions || {};
+              if (actions.punch_left) {
+                actions.punch_left.setLoop(THREE.LoopOnce, 0);
+                actions.punch_left.clampWhenFinished = true;
+              }
+              if (actions.punch_right) {
+                actions.punch_right.setLoop(THREE.LoopOnce, 0);
+                actions.punch_right.clampWhenFinished = true;
+              }
+              if (actions.combat_idle) {
+                // combat_idle normalmente debe loopear
+                actions.combat_idle.setLoop(THREE.LoopRepeat, Infinity);
+              }
+              if (actions.death) {
+                try { actions.death.setLoop(THREE.LoopOnce, 0); actions.death.clampWhenFinished = true; } catch (e) {}
+              }
+
+              // Añadir listener al mixer para detectar cuando una acción finaliza
+              if (this.modelLoader.mixer && !this._mixerFinishedListener) {
+                this._mixerFinishedListener = (e) => this._onMixerFinished(e);
+                this.modelLoader.mixer.addEventListener(
+                  "finished",
+                  this._mixerFinishedListener
+                );
+              }
+              // If punch actions are missing, try to auto-map available actions
+              try {
+                const available = Object.keys(this.modelLoader.actions || {});
+                const actionsObj = this.modelLoader.actions || {};
+                // helper to find candidate by substrings
+                const findBy = (subs) => available.find((k) => subs.some(s => k.toLowerCase().includes(s)));
+
+                if (!actionsObj.punch_left || !actionsObj.punch_right) {
+                  // Prefer explicit punch names
+                  const leftCandidate = findBy(['punch', 'left', 'punch_left', 'punching']) || findBy(['hit', 'attack', 'melee']);
+                  const rightCandidate = findBy(['punch_right','right']) || leftCandidate;
+
+                  if (leftCandidate && !actionsObj.punch_left) {
+                    actionsObj.punch_left = actionsObj[leftCandidate];
+                    console.log(`FarmerController: auto-mapped punch_left -> '${leftCandidate}'`);
+                  }
+                  if (rightCandidate && !actionsObj.punch_right) {
+                    actionsObj.punch_right = actionsObj[rightCandidate];
+                    console.log(`FarmerController: auto-mapped punch_right -> '${rightCandidate}'`);
+                  }
+
+                  // Ensure they are configured as one-shot
+                  try {
+                    if (actionsObj.punch_left) { actionsObj.punch_left.setLoop(THREE.LoopOnce, 0); actionsObj.punch_left.clampWhenFinished = true; }
+                    if (actionsObj.punch_right) { actionsObj.punch_right.setLoop(THREE.LoopOnce, 0); actionsObj.punch_right.clampWhenFinished = true; }
+                  } catch (e) {}
+                }
+              } catch (e) {
+                console.warn('FarmerController: error auto-mapping punch actions', e);
+              }
+              // Si no se cargó punch_right (404 por nombre con typo), intentar una ruta alternativa común
+              if (!actions.punch_right) {
+                try {
+                  const altPath = modelConfig.getPath(
+                    "characters/farmer/Granjero2_Punching_Right.fbx"
+                  );
+                  console.log("Intentando cargar fallback para punch_right:", altPath);
+                  await this.modelLoader.loadAnimations({ punch_right: altPath });
+                  const refreshed = this.modelLoader.actions || {};
+                  if (refreshed.punch_right) {
+                    refreshed.punch_right.setLoop(THREE.LoopOnce, 0);
+                    refreshed.punch_right.clampWhenFinished = true;
+                    console.log("Fallback punch_right cargado con éxito");
+                  }
+                } catch (e) {
+                  // ignorar
+                }
+              }
+            } catch (e) {
+              console.warn("No se pudieron configurar acciones de melee:", e);
+            }
+          })
+          .catch((e) => {
+            console.warn("Error cargando animaciones de melee:", e);
+          });
+      }
+    } catch (e) {
+      // no bloquear si algo falla
+      console.warn("Error inicializando animaciones de melee:", e);
+    }
+
   // Input enabled flag: when false, keyboard movement input is ignored
   this.inputEnabled = true;
 
@@ -116,6 +310,206 @@ export class FarmerController {
 
     // Crear HUD de coordenadas
     this.createCoordinateDisplay();
+
+    // Integrar con el sistema de combate y crear HUD de vida del jugador
+    try {
+      // Exponer controlador en model.userData para callbacks (integración con integrateEntityWithCombat)
+      this.model.userData = this.model.userData || {};
+      this.model.userData.controller = this;
+
+      // Obtener o crear el sistema de combate global
+      this.combat = window.createCombatSystem ? window.createCombatSystem() : new CombatSystem();
+
+      // Identificador de entidad (configurable)
+      this.entityId = this.config.id || "farmer";
+
+      // Registrar entidad en el CombatSystem
+      this.healthComponent = integrateEntityWithCombat(
+        this.combat,
+        this.entityId,
+        this.model,
+        this.config.maxHealth || 100,
+        {
+          team: "player",
+          disableOnDeath: true,
+          hideDelayMs: 1500,
+          onDeath: () => {
+            try {
+              if (this.modelLoader && typeof this.modelLoader.play === "function") {
+                this.modelLoader.play("death", 0.15);
+              }
+            } catch (e) {}
+            // Mostrar pantalla de muerte tras la animación
+            try {
+              let delay = 1200;
+              const deathAction = this.modelLoader?.actions?.death;
+              if (deathAction && typeof deathAction.getClip === 'function') {
+                const clip = deathAction.getClip();
+                if (clip && clip.duration) delay = Math.max(800, clip.duration * 1000);
+              }
+              setTimeout(() => {
+                try { if (window && typeof window.showDeathScreen === 'function') window.showDeathScreen(); }
+                catch (e) { /* fallback: reload */ try { window.location.reload(); } catch (e2) {} }
+              }, delay);
+            } catch (e) {}
+          },
+        }
+      );
+
+      // Crear HUD de vida del jugador solo cuando el juego realmente inicia (tras pantalla de controles)
+      const spawnPlayerHealthbar = () => {
+        try {
+          if (window.playerHealthBar) return; // evitar duplicados
+          if (window.createPlayerHealthBar) {
+            window.createPlayerHealthBar(this.healthComponent, { position: 'bottom-center', y: 28, width: 320 });
+          } else {
+            // Fallback: crear directamente la HealthBar si el helper no está registrado
+            try {
+              const hb = new HealthBar({ position: 'bottom-center', y: 28, width: 320 });
+              hb.attachTo(this.healthComponent, { position: 'bottom-center', y: 28 });
+              window.playerHealthBar = hb;
+            } catch (e) {
+              console.warn('No se pudo crear HealthBar fallback:', e);
+            }
+          }
+        } catch (e) { console.warn('Error creando HUD de vida:', e); }
+      };
+
+      // Gate por señal global de inicio de gameplay
+      try {
+        if (window.__gameplayStarted) {
+          spawnPlayerHealthbar();
+        } else {
+          // una sola vez cuando empiece el gameplay
+          const onStart = () => {
+            window.removeEventListener('gameplaystart', onStart);
+            spawnPlayerHealthbar();
+          };
+          window.addEventListener('gameplaystart', onStart, { once: true });
+        }
+      } catch (_) { spawnPlayerHealthbar(); }
+
+      // Exponer referencia global para depuración rápida
+      try { window.farmerController = this; } catch (e) {}
+
+      console.log("Farmer registrado en CombatSystem como:", this.entityId);
+    } catch (e) {
+      console.warn("No se pudo integrar CombatSystem en FarmerController:", e);
+    }
+  }
+
+  /**
+   * Reproduce un golpe (left/right). Internamente maneja el flag _isInMeleeSequence
+   * @param {string} side 'left'|'right'
+   */
+  _playPunch(side) {
+    if (!this.modelLoader) return;
+
+    const actionName = side === "left" ? "punch_left" : "punch_right";
+
+    const action = this.modelLoader.actions?.[actionName];
+    if (!action) {
+      // Si no existe la animación específica, reproducir combat_idle temporalmente
+      try {
+        this.modelLoader.play("combat_idle", 0.12);
+      } catch (e) {}
+      return;
+    }
+
+    // Ajustar un poco la velocidad de los puñetazos (ambos un poco más lentos)
+    try {
+      if (side === 'right') {
+        if (typeof action.setEffectiveTimeScale === 'function') action.setEffectiveTimeScale(0.85);
+        else action.timeScale = 0.85;
+      } else {
+        // Izquierdo un poquito más lento
+        if (typeof action.setEffectiveTimeScale === 'function') action.setEffectiveTimeScale(0.9);
+        else action.timeScale = 0.9;
+      }
+    } catch (e) {}
+
+    // Marcar que estamos en secuencia (evita que updateAnimationState la sobreescriba)
+    this._isInMeleeSequence = true;
+
+    // Asegurar que el action esté en modo una sola reproducción
+    try {
+      action.setLoop(THREE.LoopOnce, 0);
+      action.clampWhenFinished = true;
+    } catch (e) {}
+
+    // Reproducir el golpe con un pequeño crossfade
+    try {
+      this.modelLoader.play(actionName, 0.08);
+    } catch (e) {}
+  }
+
+  /**
+   * Listener del mixer para detectar cuando termina una animación.
+   * Encadena punch -> combat_idle -> siguiente punch si el jugador mantiene click.
+   */
+  _onMixerFinished(event) {
+    try {
+      // Si está muerto, no encadenar más animaciones ni sobrescribir 'death'
+      if (this._isDead) return;
+      if (!event || !event.action) return;
+
+      const actions = this.modelLoader.actions || {};
+      const isPunchAction =
+        event.action === actions.punch_left ||
+        event.action === actions.punch_right;
+
+      if (!isPunchAction) return;
+
+      // Reproducir combat_idle inmediatamente al terminar el punch
+      try {
+        this.modelLoader.play("combat_idle", 0.08);
+        // mark combat idle window (1 second)
+        this._combatIdleUntil = Date.now() + 1000;
+        // schedule exit to normal idle after 1s unless cancelled by movement or another punch
+        this._clearCombatExitTimer();
+        this._combatExitTimer = setTimeout(() => {
+          // only exit if the combat idle window has passed
+          if (!this._combatIdleUntil || Date.now() < this._combatIdleUntil) return;
+          try { if (this.modelLoader) this.modelLoader.play("idle", 0.15); } catch (e) {}
+          this._combatExitTimer = null;
+          this._combatIdleUntil = 0;
+          this._nextAttackSide = null;
+          try { this.updateAnimationState(); } catch (e) {}
+        }, 1000);
+      } catch (e) {}
+
+      // Si el jugador sigue manteniendo el click, programar el siguiente golpe alternado
+      if (this.isAttacking) {
+        // Alternar el lado
+        this._nextAttackSide = this._nextAttackSide === "left" ? "right" : "left";
+
+        // pequeño delay para que el combat_idle tenga tiempo de mezclarse
+        this._clearNextPunchTimeout();
+        this._nextPunchTimeout = setTimeout(() => {
+          this._playPunch(this._nextAttackSide);
+        }, 120);
+      } else {
+        // Si no está atacando, terminar la secuencia (combat_idle window/timer already set above)
+        this._isInMeleeSequence = false;
+        try { this.updateAnimationState(); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn("Error en mixer finished handler:", e);
+    }
+  }
+
+  _clearNextPunchTimeout() {
+    if (this._nextPunchTimeout) {
+      clearTimeout(this._nextPunchTimeout);
+      this._nextPunchTimeout = null;
+    }
+  }
+
+  _clearCombatExitTimer() {
+    if (this._combatExitTimer) {
+      clearTimeout(this._combatExitTimer);
+      this._combatExitTimer = null;
+    }
   }
 
   /**
@@ -904,6 +1298,13 @@ export class FarmerController {
           this.isRotatedForBackward = true;
         }
 
+        // Si es una tecla de movimiento, cancelar timers de combat_idle para que el movimiento interrumpa
+        const movementKeys = ["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"];
+        if (movementKeys.includes(key)) {
+          try { this._clearCombatExitTimer(); } catch (e) {}
+          this._isInMeleeSequence = false;
+        }
+
         this.keys[key] = true;
         this.updateAnimationState();
 
@@ -1461,9 +1862,37 @@ export class FarmerController {
    * Ejecutar un ataque corto usando la animación meleeAttack
    */
   attack() {
-    console.log("La funcionalidad de ataque está deshabilitada temporalmente");
-    // No hacer nada cuando se intente atacar
-    return;
+    // cooldown simple
+    const now = Date.now();
+    const cooldown = this.attackCooldown || 400; // ms
+    if (this._lastAttackTime && now - this._lastAttackTime < cooldown) return null;
+    this._lastAttackTime = now;
+
+    try {
+      // reproducir animación de ataque si existe
+      try {
+        if (this.modelLoader && typeof this.modelLoader.play === "function") {
+          this.modelLoader.play("meleeAttack", 0.08);
+        }
+      } catch (e) {}
+
+      // aplicar hitbox frontal mediante el CombatSystem
+      if (!this.combat) this.combat = window.createCombatSystem ? window.createCombatSystem() : new CombatSystem();
+      const damage = this.config.attackDamage || 15;
+      const hb = this.combat.applyFrontalAttack(this.entityId || "farmer", {
+        damage,
+        range: 1.6,
+        radius: 0.9,
+        duration: 0.18,
+        offsetHeight: 1.0,
+        friendlyFire: false,
+      });
+
+      return hb;
+    } catch (err) {
+      console.warn("Error ejecutando attack():", err);
+      return null;
+    }
   }
 
   /**
@@ -1472,6 +1901,12 @@ export class FarmerController {
   updateAnimationState() {
     if (!this.modelLoader || !this.modelLoader.model) {
       console.warn("No se puede actualizar animación: modelo no cargado");
+      return;
+    }
+
+    // Si el personaje está muerto, mantener la animación de muerte
+    if (this._isDead) {
+      try { this.modelLoader.play("death", 0.0); } catch (e) {}
       return;
     }
 
@@ -1542,6 +1977,27 @@ export class FarmerController {
       this.keys.ArrowLeft ||
       this.keys.ArrowRight;
     const isRunning = this.keys.shift;
+
+    // Si estamos en la ventana de combat_idle (después de golpear), mantener esa animación
+    // a menos que el jugador intente moverse, lo que la cancela inmediatamente.
+    if (this._combatIdleUntil && Date.now() < this._combatIdleUntil) {
+      if (isMoving) {
+        // Movimiento interrumpe el combat_idle
+        this._clearCombatExitTimer();
+        this._combatIdleUntil = 0;
+        // dejar que la lógica normal de movimiento continúe
+      } else {
+        // Mantener combat_idle
+        try { this.modelLoader.play("combat_idle", 0.08); } catch (e) {}
+        return;
+      }
+    }
+
+    // Si estamos ejecutando la secuencia de melee (punch -> combat_idle -> punch)
+    // o el jugador está manteniendo el clic izquierdo, no sobreescribir esas animaciones
+    if (this._isInMeleeSequence || this.isAttacking) {
+      return;
+    }
     // Deshabilitar temporalmente el sistema de melee
     const usingMelee = false; // Siempre falso para deshabilitar las animaciones de melee
 
@@ -2054,6 +2510,23 @@ export class FarmerController {
     // Limpiar event listeners
     document.removeEventListener("keydown", this.handleKeyDown);
     document.removeEventListener("keyup", this.handleKeyUp);
+    // Limpiar mouse handlers si existen
+    try {
+      if (this._onMouseDown) document.removeEventListener("mousedown", this._onMouseDown);
+      if (this._onMouseUp) document.removeEventListener("mouseup", this._onMouseUp);
+    } catch (e) {}
+
+    // Remover listener del mixer
+    try {
+      if (this._mixerFinishedListener && this.modelLoader && this.modelLoader.mixer) {
+        this.modelLoader.mixer.removeEventListener("finished", this._mixerFinishedListener);
+        this._mixerFinishedListener = null;
+      }
+    } catch (e) {}
+
+    // Limpiar timers pendientes
+    try { this._clearNextPunchTimeout(); } catch (e) {}
+    try { this._clearCombatExitTimer(); } catch (e) {}
 
     // Limpiar el HUD de coordenadas
     if (this.coordinateHUD && this.coordinateHUD.parentNode) {

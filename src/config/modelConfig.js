@@ -56,6 +56,31 @@ export const modelConfig = {
       },
     },
 
+    // Configuración del Alien1 (enemigos que spawnearán en oleadas)
+    alien1: {
+      // Modelo principal
+      model: "characters/aliens/Alieni1.fbx",
+      // increase default scale a bit so aliens are more visible
+      scale: 1.5,
+      // Animaciones principales (idle, walk, attack, death)
+      animations: {
+        idle: "characters/aliens/Alieni1_idle.fbx",
+        run: "characters/aliens/Alieni1_walk.fbx",
+        walk: "characters/aliens/Alieni1_walk.fbx",
+        combatIdle: "characters/aliens/Alieni1_combat_idle.fbx",
+        death: "characters/aliens/Alieni1_Death.fbx",
+        // golpes izquierdos/derechos para el Alien1
+        punch_left: "characters/aliens/Alieni1_Punch_Left.fbx",
+        punch_right: "characters/aliens/Alieni1_Punch_Right.fbx",
+      },
+      // Ajustes específicos
+      settings: {
+        height: 2.05,
+        castShadow: true,
+        receiveShadow: true,
+      },
+    },
+
     farmer2: {
       // Modelo principal
       model: "characters/farmer/Granjero2.fbx",
@@ -90,6 +115,12 @@ export const modelConfig = {
         meleeAttack:
           "characters/farmer/Standing_Melee_Attack_Horizontal_Granjero2.fbx",
         meleeRun: "characters/farmer/Combat_Run_Forward_Granjero2.fbx",
+        // Animaciones de combate individuales (punchs y estado de combate)
+        combat_idle: "characters/farmer/Granjero2_combat_idle.fbx",
+        punch_left: "characters/farmer/Granjero2_Punching_Left.fbx",
+        punch_right: "characters/farmer/Granjero2_Punching_Right.fbx",
+        // Animación de muerte
+        death: "characters/farmer/Granjero2_Death.fbx",
       },
 
       // Ajustes específicos

@@ -403,14 +403,21 @@ export class Alien2 {
 
   // Iniciar el sistema de movimiento automático después de 5 minutos
   startMovementSequence() {
-    console.log("Iniciando secuencia de movimiento del Alien2 en 5 minutos...");
+    // Auto-movimiento deshabilitado para evitar que el alien se vaya del mercado.
+    // Antes esta función programaba un setTimeout de 5 minutos que llamaba a
+    // activateMovementSystem(). Lo dejamos como no-op para que el Alien2
+    // permanezca en el mercado.
+    console.log(
+      "Auto-movimiento deshabilitado: el Alien2 no iniciará la secuencia de movimiento automática."
+    );
 
-    this.movementSystem.timer = setTimeout(() => {
-      console.log(
-        "¡5 minutos transcurridos! Iniciando movimiento del Alien2..."
-      );
-      this.activateMovementSystem();
-    }, 5 * 60 * 1000); // 5 minutos en milisegundos
+    // Si existiera un timer previo, limpiarlo para evitar ejecuciones pendientes.
+    if (this.movementSystem.timer) {
+      clearTimeout(this.movementSystem.timer);
+      this.movementSystem.timer = null;
+      console.log("Temporizador previo de movimiento limpiado.");
+    }
+    return;
   }
 
   // Activar el sistema de movimiento

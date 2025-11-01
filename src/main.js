@@ -23,6 +23,9 @@ import { SmokeEffect } from "./utils/smokeEffect.js"; // Efecto de humo
 import { showFinalScene } from "./utils/finalScene.js";
 import { makeMinimap } from "./utils/minimap.js";
 import { createStoryManager, storySlides } from "./utils/startMenu.js";
+import CombatSystem from "./utils/CombatSystem.js";
+import showDeathScreen from "./utils/DeathScreen.js";
+import WaveManager from "./utils/waves.js";
 
 // Inicialización del menú principal
 document.addEventListener("DOMContentLoaded", () => {
@@ -94,6 +97,18 @@ let modelLoader; // Maneja la carga y animación de modelos 3D
 
 // Instancia del controlador del granjero
 let farmerController;
+
+// Sistema de combate y gestor de oleadas
+let combatSystem;
+let waveManager;
+// Contador de tiempo para la primera oleada (timestamp en ms)
+let waveStartAt = null;
+// Elemento DOM del contador
+let waveCountdownEl = null;
+// Elemento DOM de advertencia previa a la oleada
+let waveWarningEl = null;
+// Flag para etiquetar el contador como 'Primera oleada'
+let isFirstWaveCountdown = false;
 
 // Instancia del corral
 let corral;
@@ -218,6 +233,21 @@ function initMinimap() {
 function updateMinimap() {
   // Delegado al manager
   try {
+    // collect active enemy models from waveManager (if present)
+    const enemyModels = [];
+    try {
+      const wm = window.waveManager || waveManager;
+      if (wm && wm.activeEnemies) {
+        for (const entry of wm.activeEnemies.values()) {
+          if (!entry) continue;
+          if (entry.instance && entry.instance.model) enemyModels.push(entry.instance.model);
+          else if (entry.model) enemyModels.push(entry.model);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
     minimapManager.setReferences({
       stones,
       house,
@@ -226,6 +256,7 @@ function updateMinimap() {
       market,
       cows,
       farmerController,
+      enemies: enemyModels,
     });
     minimapManager.update();
   } catch (e) {
@@ -437,6 +468,8 @@ async function init() {
 
   // Obtener la cámara para compatibilidad con el código existente
   camera = cameraManager.getCamera();
+  // Exponer cámara también en la escena para utilidades que hacen billboard (healthbars, etc.)
+  try { scene.userData = scene.userData || {}; scene.userData.camera = camera; } catch (e) {}
 
   // Inicializar reloj para animaciones
   clock = new THREE.Clock();
@@ -490,6 +523,9 @@ async function init() {
   lighting = new Lighting(scene);
   console.log("Sistema de iluminación inicializado");
 
+  // Expose DeathScreen helper globally (redundant but explicit)
+  try { window.showDeathScreen = showDeathScreen; } catch (e) {}
+
   // Crear y configurar el terreno
   terrain = new Terrain(scene, renderer);
   console.log("Terreno inicializado");
@@ -497,6 +533,19 @@ async function init() {
   // Inicializar el cargador de modelos 3D
   modelLoader = new ModelLoader(scene);
   console.log("Cargador de modelos inicializado");
+
+  // Crear un CombatSystem global temprano para que FarmerController y WaveManager
+  // se registren en la misma instancia (evita tener múltiples instancias aisladas)
+  if (!window.combatSystem) {
+    try {
+      window.combatSystem = new CombatSystem();
+      console.log('CombatSystem global creado en window.combatSystem');
+    } catch (e) {
+      console.warn('No se pudo crear CombatSystem global temprano:', e);
+    }
+  }
+  // asignar a la variable local también (se reasignará más tarde si es necesario)
+  combatSystem = window.combatSystem;
 
   // Crear el corral para vacas
   corral = new Corral(
@@ -660,6 +709,67 @@ async function init() {
           console.log("Modelo disponible como 'window.farmer' para depuración");
           console.log("Corral disponible como 'window.corral' para depuración");
 
+          // Inicializar CombatSystem y WaveManager usando SIEMPRE la instancia global existente
+          // Esto evita que el farmer y los enemigos queden registrados en instancias distintas
+          try {
+            combatSystem = window.combatSystem || new CombatSystem();
+            window.combatSystem = combatSystem;
+
+            // Crear wave manager con helpers para localizar jugador y vacas
+            waveManager = new WaveManager(scene, modelLoader, window.combatSystem, {
+              getPlayer: () => (window.farmerController ? window.farmerController.model : null),
+              getCows: () => window.cows || [],
+              getCorral: () => window.corral || corral,
+              getStones: () => window.stones || stones || [],
+              getMarket: () => window.market || market,
+              getHouse: () => window.house || house,
+              getSpaceShuttle: () => window.spaceShuttle || spaceShuttle,
+              // Generar spawns alrededor del corral (alrededores), evitando piedras
+              spawnPoints: [ ], // fallback vacío: el WaveManager generará alrededor del corral
+              // Spawns todavía más alejados del corral
+              spawnRingMin: 100, // mucho más lejos del corral
+              spawnRingMax: 200, // anillo amplio
+              alienDetectionRange: 220, // ampliar para detectar antes al acercarse
+              playerAggroRadius: 14, // si el jugador está muy cerca, priorizarlo sobre vacas
+              baseCount: 3,
+              waveCount: 6,
+            });
+
+            window.waveManager = waveManager;
+            // Programar oleadas solo cuando el jugador empiece el gameplay (tras pantalla de controles)
+            const scheduleWavesAfterStart = () => {
+              try {
+                // Evitar reprogramar si ya existe una cuenta regresiva activa
+                if (waveStartAt) return;
+                // Mostrar advertencia previa a la primera oleada
+                try { createWaveWarningElement(); } catch (e) {}
+                isFirstWaveCountdown = true;
+                waveStartAt = performance.now() + 60000;
+                try { createWaveCountdownElement(); } catch (e) {}
+                setTimeout(() => {
+                  try {
+                    waveManager.start();
+                    console.log('WaveManager iniciado');
+                  } catch (e) {
+                    console.warn('No se pudo iniciar WaveManager', e);
+                  }
+                }, 60000);
+              } catch (e) { console.warn('No se pudo programar oleadas:', e); }
+            };
+
+            try {
+              if (window.__gameplayStarted) {
+                scheduleWavesAfterStart();
+              } else {
+                window.addEventListener('gameplaystart', scheduleWavesAfterStart, { once: true });
+              }
+            } catch (_) {
+              scheduleWavesAfterStart();
+            }
+          } catch (e) {
+            console.warn('No se pudo inicializar CombatSystem/WaveManager:', e);
+          }
+
           // Conectar el farmerController con las piedras para detección de colisiones
           if (farmerController && stones && stones.length > 0) {
             farmerController.setStones(stones);
@@ -781,6 +891,73 @@ function setupEventListeners() {
   });
 }
 
+// --- Wave countdown HUD helpers ---
+function createWaveCountdownElement() {
+  if (waveCountdownEl) return waveCountdownEl;
+  const el = document.createElement('div');
+  el.id = 'wave-countdown';
+  el.style.position = 'fixed';
+  el.style.top = '12px';
+  el.style.left = '50%';
+  el.style.transform = 'translateX(-50%)';
+  el.style.padding = '8px 12px';
+  el.style.background = 'rgba(0,0,0,0.65)';
+  el.style.color = '#fff';
+  el.style.fontFamily = 'Arial, sans-serif';
+  el.style.fontSize = '18px';
+  el.style.borderRadius = '6px';
+  el.style.zIndex = '9999';
+  el.style.pointerEvents = 'none';
+  el.style.opacity = '0.95';
+  el.textContent = 'Primera oleada: 1:00';
+  document.body.appendChild(el);
+  waveCountdownEl = el;
+  return el;
+}
+
+// Advertencia previa a la primera oleada
+function createWaveWarningElement() {
+  if (waveWarningEl) return waveWarningEl;
+  const el = document.createElement('div');
+  el.id = 'wave-warning';
+  el.style.position = 'fixed';
+  el.style.top = '28%';
+  el.style.left = '50%';
+  el.style.transform = 'translate(-50%, -50%)';
+  el.style.maxWidth = '80%';
+  el.style.padding = '16px 20px';
+  el.style.background = 'rgba(180,0,0,0.85)';
+  el.style.color = '#fff';
+  el.style.fontFamily = 'Arial, sans-serif';
+  el.style.fontSize = '20px';
+  el.style.fontWeight = '700';
+  el.style.border = '2px solid rgba(255,255,255,0.2)';
+  el.style.borderRadius = '8px';
+  el.style.boxShadow = '0 10px 24px rgba(0,0,0,0.6)';
+  el.style.textAlign = 'center';
+  el.style.zIndex = '10000';
+  el.style.pointerEvents = 'none';
+  el.textContent = 'Cuidado: los aliens comenzarán a atacar para llevarse las vacas. Debes defenderlas y escapar';
+  document.body.appendChild(el);
+
+  // Auto-ocultar luego de unos segundos
+  setTimeout(() => {
+    try {
+      if (el && el.parentElement) el.parentElement.removeChild(el);
+      waveWarningEl = null;
+    } catch (e) {}
+  }, 7000);
+
+  waveWarningEl = el;
+  return el;
+}
+
+function formatTimeMMSS(totalSeconds) {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
 // Referencia global para debug: invoca la función modular importada con las dependencias actuales
 window.showFinalScene = () => showFinalScene({ shipRepair, cameraManager });
 
@@ -849,6 +1026,46 @@ function animate(currentTime = 0) {
     }
     if (window.alien2 && window.alien2.update) {
       window.alien2.update(delta);
+    }
+
+    // actualizar y mostrar contador de la primera oleada si está programado
+    try {
+      if (waveStartAt && waveStartAt > 0) {
+        const now = performance.now();
+        const remainingMs = Math.max(0, waveStartAt - now);
+        if (remainingMs > 0) {
+          const remainingSec = Math.ceil(remainingMs / 1000);
+          // crear elemento si no existe
+          if (!waveCountdownEl) createWaveCountdownElement();
+          if (waveCountdownEl) waveCountdownEl.textContent = `${isFirstWaveCountdown ? 'Primera oleada' : 'Siguiente oleada'}: ${formatTimeMMSS(remainingSec)}`;
+        } else {
+          // oculta cuando llegue la hora
+          if (waveCountdownEl && waveCountdownEl.parentElement) waveCountdownEl.parentElement.removeChild(waveCountdownEl);
+          waveCountdownEl = null;
+          waveStartAt = null; // no necesitamos más el timestamp
+          isFirstWaveCountdown = false;
+        }
+      }
+    } catch (e) {
+      // no crítico
+    }
+
+    // actualizar sistema de combate (procesa hitboxes)
+    if (combatSystem && typeof combatSystem.update === 'function') {
+      try {
+        combatSystem.update(delta);
+      } catch (e) {
+        console.warn('CombatSystem update error', e);
+      }
+    }
+
+    // actualizar wave manager (spawns + actualiza enemigos)
+    if (waveManager && typeof waveManager.update === 'function') {
+      try {
+        waveManager.update(delta);
+      } catch (e) {
+        console.warn('WaveManager update error', e);
+      }
     }
 
     // 4. Actualización de objetos del juego (prioridad media-baja)
