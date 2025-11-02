@@ -1,5 +1,6 @@
 // src/utils/Market.js
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
+import { playSfxWhenReady, safePlaySfx } from './audioHelpers.js';
 
 export class Market {
   constructor(
@@ -78,6 +79,8 @@ export class Market {
     this._lastUpdateTime = Date.now();
   // how close the player must be to start opening the door (units)
   this.doorOpenDistance = 3.5;
+    // track previous open/close intent so we can play SFX on transitions
+    this._lastDoorShouldOpen = false;
     // Allow entry flag - FarmerController will check this to allow entering the market
     this.allowEntry = true;
   }
@@ -675,6 +678,8 @@ export class Market {
 
     document.body.appendChild(hud);
     this._interactionChoiceHud = hud;
+  // play popup when chooser fallback appears
+  try { safePlaySfx('popup', { volume: 0.9 }); } catch (_) {}
 
   // Disable player input while the chooser fallback is visible
   try { if (typeof window !== 'undefined' && window.farmerController && typeof window.farmerController.setInputEnabled === 'function') window.farmerController.setInputEnabled(false); } catch (e) {}
@@ -753,6 +758,21 @@ export class Market {
   // If player is within approach distance, request door open
   const approachDistance = typeof this.doorOpenDistance === 'number' ? this.doorOpenDistance : 3.5;
   const shouldOpen = distance <= approachDistance;
+
+    // Play open/close SFX on transition (start opening / start closing)
+    try {
+      if (shouldOpen !== !!this._lastDoorShouldOpen) {
+        // transitioned
+        this._lastDoorShouldOpen = !!shouldOpen;
+        if (shouldOpen) {
+          try { safePlaySfx('openDoor', { object3D: this.door }); } catch (_) {}
+        } else {
+          try { safePlaySfx('closeDoor', { object3D: this.door }); } catch (_) {}
+        }
+      }
+    } catch (e) {
+      // don't let audio errors break animation
+    }
 
     // Adjust target progress
     const openSpeed = 2.5; // progress units per second
@@ -918,6 +938,8 @@ export class Market {
     const coins = document.createElement("div");
     const coinsDisplay = document.createElement("span");
     coinsDisplay.textContent = `Monedas: ${window.inventory?.coins || 0} `;
+  // expose coins display so other methods (showItemDetails) can update it
+  this.coinsDisplay = coinsDisplay;
     coins.style.cssText = `
       position: absolute;
       top: 8px;
@@ -1087,6 +1109,8 @@ export class Market {
 
     // Añadir al documento
     document.body.appendChild(this.marketUI);
+  // play popup when market UI opens
+  try { safePlaySfx('popup', { volume: 0.9 }); } catch (_) {}
     this.marketUI.onclick = (e) => e.stopPropagation();
     document.addEventListener("click", this.handleOutsideClick);
   }
@@ -1353,15 +1377,21 @@ export class Market {
             window.inventory._updateUI?.();
             updateButtonState();
             
-            // 10. Actualizar el contador de monedas
-            if (coinsDisplay) {
-              coinsDisplay.textContent = `Monedas: ${window.inventory.coins} `;
-              coinsDisplay.appendChild(coinIcon);
-            }
+            // 10. Actualizar el contador de monedas (usar this.coinsDisplay para evitar scope issues)
+            try {
+              if (this.coinsDisplay) {
+                this.coinsDisplay.textContent = `Monedas: ${window.inventory.coins} `;
+                const coinSpan = document.createElement('span');
+                coinSpan.innerHTML = '🪙';
+                this.coinsDisplay.appendChild(coinSpan);
+              }
+            } catch (_) {}
             
             // 11. Notificar éxito
             window.inventory?.notify?.(`¡${item.name} comprado por $${item.price}!`, 'success');
             console.log(`Herramienta "${item.name}" agregada al inventario en el slot ${slotIndex + 1}`);
+            // Reproducir sonido de caja registradora al completar la compra (asegurar play aunque audio no esté listo)
+            try { playSfxWhenReady('cashRegister', { volume: 0.9 }); } catch (_) {}
           } else {
             // Revertir si no se pudo agregar
             window.inventory.tools[slotIndex] = previousTool;
@@ -1398,6 +1428,8 @@ export class Market {
     
     // Añadir al documento
     document.body.appendChild(detailsView);
+  // play popup when item details view opens
+  try { safePlaySfx('popup', { volume: 0.9 }); } catch (_) {}
     
     // While the details view is open we must suppress the market-level outside click
     // handler (this.handleOutsideClick) because clicks inside the detailsView are

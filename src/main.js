@@ -1,4 +1,5 @@
 // Importaciones de Three.js y módulos personalizados
+import PauseMenu from './utils/pauseMenu.js';
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
 
 // Módulos personalizados
@@ -23,9 +24,12 @@ import { SmokeEffect } from "./utils/smokeEffect.js"; // Efecto de humo
 import { showFinalScene } from "./utils/finalScene.js";
 import { makeMinimap } from "./utils/minimap.js";
 import { createStoryManager, storySlides } from "./utils/startMenu.js";
+import createSoundHUD from "./utils/soundHUD.js";
 import CombatSystem from "./utils/CombatSystem.js";
 import showDeathScreen from "./utils/DeathScreen.js";
 import WaveManager from "./utils/waves.js";
+import { AudioManager } from "./utils/AudioManager.js";
+import { safePlaySfx } from './utils/audioHelpers.js';
 
 // Inicialización del menú principal
 document.addEventListener("DOMContentLoaded", () => {
@@ -33,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const playButton = document.getElementById("play-button");
   const tutorialButton = document.getElementById("tutorial-button");
   const controlsButton = document.getElementById("controls-button");
-  const soundButton = document.getElementById("sound-button");
+  let soundButton = document.getElementById("sound-button");
 
   // Usamos el manager del carrusel/historia modular
   const storyManager = createStoryManager(storySlides, () => {
@@ -56,27 +60,187 @@ document.addEventListener("DOMContentLoaded", () => {
   // Conectar el play button al manager
   storyManager.attachToPlayButton(playButton);
 
-  // Por ahora, los otros botones no tienen funcionalidad
-  tutorialButton.addEventListener("click", () => {
-    console.log("Tutorial button clicked");
-  });
+  // Ensure there's a visible sound button under the Play button. If the
+  // element is missing in the HTML, create it dynamically so the HUD can
+  // be toggled and the UI SFX play.
+  try {
+    if (!soundButton && playButton && playButton.parentNode) {
+      soundButton = document.createElement('button');
+      soundButton.id = 'sound-button';
+      soundButton.className = 'menu-button';
+      soundButton.type = 'button';
+      soundButton.innerText = 'Sonido';
+      playButton.parentNode.insertBefore(soundButton, playButton.nextSibling);
+    } else if (playButton && soundButton && playButton.parentNode) {
+      // If the button exists in the DOM, ensure it's right after the Play button
+      try { playButton.parentNode.insertBefore(soundButton, playButton.nextSibling); } catch(_) {}
+    }
+  } catch (e) {
+    console.warn('No se pudo reordenar/crear soundButton:', e);
+  }
 
-  controlsButton.addEventListener("click", () => {
-    console.log("Controls button clicked");
-  });
+  // Inicializar AudioManager lo antes posible (sin cámara) para que la música del menú pueda reproducirse
+  try {
+    if (!window.audio) {
+      const earlyAudio = new AudioManager(null);
+      window.audio = earlyAudio;
+      // Intentar reproducir la música del menú. Si el autoplay es bloqueado,
+      // reproduciremos tras el primer gesto del usuario.
+      earlyAudio.playMusic("main", { loop: true }).catch(() => {
+        const startMenuMusic = () => {
+          try {
+            window.audio && window.audio.playMusic("main", { loop: true });
+          } catch (_) {}
+          window.removeEventListener("pointerdown", startMenuMusic, true);
+          window.removeEventListener("keydown", startMenuMusic, true);
+        };
+        window.addEventListener("pointerdown", startMenuMusic, true);
+        window.addEventListener("keydown", startMenuMusic, true);
+      });
+    }
+  } catch (e) {
+    console.warn("No se pudo inicializar audio temprano:", e);
+  }
 
-  soundButton.addEventListener("click", () => {
-    console.log("Sound button clicked");
-  });
+  // Por ahora, los otros botones no tienen funcionalidad. Guardamos las
+  // comprobaciones por si no existen en el markup (evita que el script se
+  // detenga con un TypeError y deje sin listeners al botón de sonido).
+  if (tutorialButton && typeof tutorialButton.addEventListener === 'function') {
+    tutorialButton.addEventListener("click", () => {
+      try { safePlaySfx('uiClick', { volume: 0.9 }); } catch(_){}
+      console.log("Tutorial button clicked");
+    });
+  }
+
+  if (controlsButton && typeof controlsButton.addEventListener === 'function') {
+    controlsButton.addEventListener("click", () => {
+      try { safePlaySfx('uiClick', { volume: 0.9 }); } catch(_){}
+      console.log("Controls button clicked");
+    });
+  }
+
+  // Mostrar/ocultar HUD de sonido al pulsar el botón
+  const soundHud = (typeof createSoundHUD === 'function') ? createSoundHUD({ container: document.body }) : null;
+  try { if (soundHud) soundHud.style.display = 'none'; } catch(_) {}
+
+  // Crear el menú de pausa (overlay) y mantenerlo oculto por defecto
+    let pauseMenu = null;
+    try {
+      if (typeof PauseMenu === 'function') {
+        pauseMenu = new PauseMenu({ container: document.body });
+        // hide immediately in case constructor left it visible
+        try { if (pauseMenu && typeof pauseMenu.hide === 'function') pauseMenu.hide(); } catch (_) {}
+      }
+    } catch (e) { console.warn('No se pudo crear PauseMenu:', e); }
+    // expose for debugging from console
+    try { window.pauseMenu = pauseMenu; } catch (_) {}
+  try { if (pauseMenu && typeof pauseMenu.hide === 'function') pauseMenu.hide(); } catch(_) {}
+
+  if (soundButton) {
+    // Play hover SFX when the user moves the pointer over the button
+      try {
+        soundButton.addEventListener("pointerenter", () => { try { safePlaySfx('uiHover', { volume: 0.6 }); } catch(_){} });
+        // fallback for older browsers
+        soundButton.addEventListener("mouseenter", () => { try { safePlaySfx('uiHover', { volume: 0.6 }); } catch(_){} });
+      } catch (e) {
+        // non-fatal
+      }
+
+    soundButton.addEventListener("click", () => {
+    try { safePlaySfx('uiClick', { volume: 0.9 }); } catch(_) {}
+
+    try {
+      // Only allow the sound HUD to be opened while the main menu is visible.
+      const mainMenu = document.getElementById('main-menu');
+      const menuVisible = mainMenu && window.getComputedStyle(mainMenu).display !== 'none';
+      if (!menuVisible) {
+        // do not open HUD outside of the start screen
+        return;
+      }
+
+      if (!soundHud) return;
+      const visible = soundHud.style.display !== 'none' && soundHud.style.display !== '';
+      soundHud.style.display = visible ? 'none' : 'block';
+    } catch (e) {
+      console.warn('Error toggling sound HUD:', e);
+    }
+    });
+  } else {
+    console.warn('sound-button not found and could not be created; sound HUD will not be toggleable via button');
+  }
+
+  // Toggle pause menu with Escape while gameplay is active
+  try {
+    window.addEventListener('keydown', (ev) => {
+      if (!ev || !ev.key) return;
+      if (ev.key === 'Escape' || ev.key === 'Esc') {
+        // Toggle pause when the game container is visible (allow flows that didn't set __gameplayStarted)
+        try {
+          const tag = (document.activeElement && document.activeElement.tagName) || '';
+          if (tag === 'INPUT' || tag === 'TEXTAREA') return; // don't toggle while typing
+          const gameCont = document.getElementById('game-container');
+          if (!gameCont) return;
+          const visible = window.getComputedStyle ? getComputedStyle(gameCont).display !== 'none' : (gameCont.style.display !== 'none');
+          if (!visible) return;
+
+          // debug log to help trace if handler runs
+          try { console.debug('[pause] Escape pressed, toggling pause'); } catch (_) {}
+
+          // Prefer using the created pauseMenu object's API if present
+          try {
+            if (pauseMenu && typeof pauseMenu.show === 'function' && typeof pauseMenu.hide === 'function' && typeof pauseMenu.isShown === 'function') {
+              // use PauseMenu instance API
+              const isShown = pauseMenu.isShown();
+              if (isShown) pauseMenu.hide(); else pauseMenu.show();
+              return;
+            }
+          } catch (err) { console.warn('[pause] error toggling pauseMenu API', err); }
+
+          const overlay = document.getElementById('pause-overlay');
+          if (!overlay) return;
+          const overlayVisible = window.getComputedStyle ? getComputedStyle(overlay).display !== 'none' && getComputedStyle(overlay).opacity !== '0' : (overlay.style.display === 'block');
+          if (overlayVisible) {
+            overlay.style.display = 'none';
+            window.__gamePaused = false;
+          } else {
+            overlay.style.display = 'block';
+            window.__gamePaused = true;
+          }
+        } catch (e) {
+          try { console.error('[pause] ESC handler error', e); } catch (_) {}
+        }
+      }
+    });
+  } catch (_) {}
+
+  // Iniciar música cuando arranca el gameplay (tras controles)
+  try {
+    window.addEventListener('gameplaystart', () => {
+      try { if (window.audio && typeof window.audio.stopMusic === 'function') window.audio.stopMusic(); } catch (_) {}
+      // start background ambience when gameplay begins
+      try {
+        if (window.audio && typeof window.audio.playAmbience === 'function') {
+          window.audio.playAmbience('noise', { loop: true, volume: 0.6 });
+        }
+        // Start occasional ambient music cues (randomly play ambient1 or ambient2 every so often)
+        if (window.audio && typeof window.audio.startRandomAmbient === 'function') {
+          // casual: between 30s and 180s, ~60% chance each window, moderate volume
+          window.audio.startRandomAmbient({ minDelay: 30, maxDelay: 180, playProbability: 0.6, volume: 0.7 });
+        }
+      } catch (_) {}
+    });
+  } catch (_) {}
 });
 
 // Variables globales principales de Three.js
-let scene, // Escena 3D que contiene todos los objetos
-  renderer, // Motor de renderizado WebGL
-  cameraManager, // Gestor de cámara
-  camera, // Cámara que define la vista del usuario (accesible a través de cameraManager)
-  controls, // Controles de la cámara (accesibles a través de cameraManager)
-  smokeEffect; // Efecto de humo
+let scene; // Escena 3D que contiene todos los objetos
+let renderer; // Motor de renderizado WebGL
+let cameraManager; // Gestor de cámara
+let camera; // Cámara que define la vista del usuario (accesible a través de cameraManager)
+let controls; // Controles de la cámara (accesibles a través de cameraManager)
+let smokeEffect; // Efecto de humo
+// Audio
+let audioManager; // Gestor de audio
 
 // Componentes personalizados
 let terrain, // Gestor del terreno
@@ -103,6 +267,20 @@ let combatSystem;
 let waveManager;
 // Contador de tiempo para la primera oleada (timestamp en ms)
 let waveStartAt = null;
+// helper to pause/resume absolute timestamps (avoid countdowns advancing while paused)
+let __globalPauseAt = null;
+try {
+  window.addEventListener('gamepause', () => { __globalPauseAt = Date.now(); });
+  window.addEventListener('gameresume', () => {
+    try {
+      if (__globalPauseAt) {
+        const pausedMs = Date.now() - __globalPauseAt;
+        if (waveStartAt) waveStartAt += pausedMs;
+      }
+    } catch (_) {}
+    __globalPauseAt = null;
+  });
+} catch (_) {}
 // Elemento DOM del contador
 let waveCountdownEl = null;
 // Elemento DOM de advertencia previa a la oleada
@@ -471,6 +649,22 @@ async function init() {
   // Exponer cámara también en la escena para utilidades que hacen billboard (healthbars, etc.)
   try { scene.userData = scene.userData || {}; scene.userData.camera = camera; } catch (e) {}
 
+  // Inicializar audio manager (ligado a la cámara para audio 3D)
+  try {
+    if (!window.audio) {
+      audioManager = new AudioManager(camera);
+      window.audio = audioManager;
+    } else {
+      // Reusar la instancia creada previamente en DOMContentLoaded. Adjuntar listener a la cámara si es necesario.
+      audioManager = window.audio;
+      try {
+        if (camera && typeof camera.add === 'function') camera.add(audioManager.listener);
+      } catch (e) {}
+    }
+  } catch (e) {
+    console.warn("No se pudo inicializar AudioManager:", e);
+  }
+
   // Inicializar reloj para animaciones
   clock = new THREE.Clock();
 
@@ -746,14 +940,7 @@ async function init() {
                 isFirstWaveCountdown = true;
                 waveStartAt = performance.now() + 60000;
                 try { createWaveCountdownElement(); } catch (e) {}
-                setTimeout(() => {
-                  try {
-                    waveManager.start();
-                    console.log('WaveManager iniciado');
-                  } catch (e) {
-                    console.warn('No se pudo iniciar WaveManager', e);
-                  }
-                }, 60000);
+                // waveManager will be started from the main loop when waveStartAt elapses
               } catch (e) { console.warn('No se pudo programar oleadas:', e); }
             };
 
@@ -1009,6 +1196,16 @@ function animate(currentTime = 0) {
 
   const delta = Math.min(0.05, clock.getDelta()); // Reducir el delta máximo para mayor suavidad
 
+  // If the game is paused via the pause menu, skip updates but keep rendering the current frame
+  try {
+    if (window.__gamePaused) {
+      if (renderer && scene && camera) {
+        try { renderer.render(scene, camera); } catch (e) {}
+      }
+      return;
+    }
+  } catch (_) {}
+
   try {
     // 1. Actualización de cámara (prioridad alta)
     if (cameraManager) {
@@ -1040,6 +1237,11 @@ function animate(currentTime = 0) {
           if (waveCountdownEl) waveCountdownEl.textContent = `${isFirstWaveCountdown ? 'Primera oleada' : 'Siguiente oleada'}: ${formatTimeMMSS(remainingSec)}`;
         } else {
           // oculta cuando llegue la hora
+          try {
+            if (waveManager && typeof waveManager.start === 'function' && !waveManager._running) {
+              try { waveManager.start(); console.log('WaveManager iniciado desde main loop'); } catch (e) { console.warn('No se pudo iniciar WaveManager', e); }
+            }
+          } catch (_) {}
           if (waveCountdownEl && waveCountdownEl.parentElement) waveCountdownEl.parentElement.removeChild(waveCountdownEl);
           waveCountdownEl = null;
           waveStartAt = null; // no necesitamos más el timestamp

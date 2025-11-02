@@ -46,7 +46,9 @@ export class HealthBar {
     wrapper.style.borderRadius = '6px';
     wrapper.style.boxShadow = '0 6px 18px rgba(0,0,0,0.6)';
     wrapper.style.padding = '4px';
-    wrapper.style.zIndex = 99999;
+  // Keep HUD elements behind modal overlays (pause/menu). Pause overlay uses z-index ~10005,
+  // so choose a value lower than that so the pause modal visually appears on top.
+  wrapper.style.zIndex = 9000;
     wrapper.style.display = 'flex';
     wrapper.style.alignItems = 'center';
     wrapper.style.gap = '8px';

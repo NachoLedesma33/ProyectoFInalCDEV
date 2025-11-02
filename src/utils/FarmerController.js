@@ -3,6 +3,7 @@ import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/j
 import modelConfig from "../config/modelConfig.js";
 import CombatSystem, { integrateEntityWithCombat } from "./CombatSystem.js";
 import HealthBar from "./Healthbar.js";
+import { safePlaySfx } from './audioHelpers.js';
 
 /**
  * Controlador para manejar el movimiento y animaciones del granjero
@@ -134,6 +135,9 @@ export class FarmerController {
             try { action.setLoop(THREE.LoopOnce, 0); action.clampWhenFinished = true; } catch (e) {}
             // play via modelLoader (handles crossfade)
             this.modelLoader.play(actionName, 0.06);
+
+            // Play punch SFX (positional)
+            try { safePlaySfx('punch', { object3D: this.model, volume: 0.9 }); } catch (_) {}
 
             // No direct scheduling here: the mixer 'finished' handler will play `combat_idle`
             // when the punch action completes. This avoids duplicate timers and ensures
@@ -307,6 +311,8 @@ export class FarmerController {
   this._autoExitSpeed = 3.0; // units per second
   this._autoExitPhase = null; // 'turn' | 'walk'
   this._autoExitRunPlaying = false;
+  this._runAudio = null; // reference (Promise or Audio instance) for looping run SFX
+  this._milkingAudio = null; // reference (Promise or Audio instance) for milking loop SFX
 
     // Crear HUD de coordenadas
     this.createCoordinateDisplay();
@@ -335,6 +341,7 @@ export class FarmerController {
           hideDelayMs: 1500,
           onDeath: () => {
             try {
+              try { safePlaySfx('farmerDeath', { object3D: this.model, volume: 0.95 }); } catch(_) {}
               if (this.modelLoader && typeof this.modelLoader.play === "function") {
                 this.modelLoader.play("death", 0.15);
               }
@@ -353,6 +360,9 @@ export class FarmerController {
               }, delay);
             } catch (e) {}
           },
+          onDamage: (amount, source) => {
+            try { safePlaySfx('hit', { object3D: this.model, volume: 0.9 }); } catch(_) {}
+          }
         }
       );
 
@@ -786,6 +796,19 @@ export class FarmerController {
         "🐄 Iniciando secuencia de animación de colisión con vaca que tiene signo de exclamación"
       );
 
+      // Stop run audio immediately when starting cow interaction so it doesn't bleed into milking
+      try {
+        if (this._runAudio) {
+          const ra = this._runAudio;
+          if (ra && typeof ra.then === 'function') {
+            ra.then((inst) => { try { if (inst && typeof inst.stop === 'function') inst.stop(); } catch(e){}; }).catch(()=>{});
+          } else if (ra && typeof ra.stop === 'function') {
+            try { ra.stop(); } catch(e) {}
+          }
+        }
+      } catch (e) {}
+      this._runAudio = null;
+
       // Actualizar el estado de animación inmediatamente
       this.updateAnimationState();
     }
@@ -806,6 +829,20 @@ export class FarmerController {
           this.cowCollisionStartTime = Date.now(); // Reiniciar el tiempo para el estado kneeling
           console.log("🐄 Transición a estado final agachado");
 
+            // Start milking loop SFX (positional if available)
+            try {
+              if (window.audio && typeof window.audio.playSFX === 'function' && this.model) {
+                const p = window.audio.playSFX('milking', { loop: true, object3D: this.model, volume: 0.9 });
+                this._milkingAudio = p;
+                if (p && typeof p.then === 'function') {
+                  p.then((inst) => { this._milkingAudio = inst; }).catch(() => { this._milkingAudio = null; });
+                }
+              } else {
+                // fallback to one-shot while we don't have positional audio
+                try { safePlaySfx('milking', { volume: 0.9 }); } catch(_) {}
+              }
+            } catch (e) { /* ignore milking start errors */ }
+
           // Actualizar el estado de animación para reproducir la animación final
           this.updateAnimationState();
         }
@@ -823,6 +860,19 @@ export class FarmerController {
           this.isCollidingWithCow = false;
           this.cowCollisionState = "none";
           this.cowCollisionStartTime = 0;
+
+          // Stop milking loop SFX now that milking is finished
+          try {
+            if (this._milkingAudio) {
+              const ma = this._milkingAudio;
+              if (ma && typeof ma.then === 'function') {
+                ma.then((inst) => { try { if (inst && typeof inst.stop === 'function') inst.stop(); } catch(e){}; }).catch(()=>{});
+              } else if (ma && typeof ma.stop === 'function') {
+                try { ma.stop(); } catch(e) {}
+              }
+            }
+          } catch (e) {}
+          this._milkingAudio = null;
           // Al finalizar el kneeling, otorgar leche al inventario si está conectado
           try {
             // Generar cantidad aleatoria entre 1.2 y 2.5 litros
@@ -1945,6 +1995,19 @@ export class FarmerController {
           this.cowCollisionStartTime = 0;
           console.log("🐄 Animación de colisión interrumpida por el jugador");
 
+          // Stop milking audio if player interrupts milking
+          try {
+            if (this._milkingAudio) {
+              const ma = this._milkingAudio;
+              if (ma && typeof ma.then === 'function') {
+                ma.then((inst) => { try { if (inst && typeof inst.stop === 'function') inst.stop(); } catch(e){}; }).catch(()=>{});
+              } else if (ma && typeof ma.stop === 'function') {
+                try { ma.stop(); } catch(e) {}
+              }
+            }
+          } catch (e) {}
+          this._milkingAudio = null;
+
           // No hacer return aquí, dejar que continúe con la lógica normal de movimiento
         } else {
           // Reproducir la animación correspondiente según el estado
@@ -1977,6 +2040,40 @@ export class FarmerController {
       this.keys.ArrowLeft ||
       this.keys.ArrowRight;
     const isRunning = this.keys.shift;
+
+    // Manage looping run SFX: start when moving, stop when not
+    try {
+      const shouldPlayRunSfx = !!isMoving;
+      if (shouldPlayRunSfx && !this._runAudio) {
+        // start positional looping run sound tied to the model
+        try {
+          if (window.audio && typeof window.audio.playSFX === 'function' && this.model) {
+            const p = window.audio.playSFX('run', { loop: true, object3D: this.model, volume: 0.6 });
+            // store promise/instance; resolve to instance when ready
+            this._runAudio = p;
+            if (p && typeof p.then === 'function') {
+              p.then((inst) => { this._runAudio = inst; }).catch(() => { this._runAudio = null; });
+            }
+          } else {
+            // fallback: play one-shot footsteps (non-positional)
+            try { safePlaySfx('run', { volume: 0.6 }); } catch(_) {}
+          }
+        } catch (e) { /* ignore run SFX start errors */ }
+      } else if (!shouldPlayRunSfx && this._runAudio) {
+        // stop run audio whether it's a promise or an instance
+        try {
+          const ra = this._runAudio;
+          if (ra && typeof ra.then === 'function') {
+            ra.then((inst) => { try { if (inst && typeof inst.stop === 'function') inst.stop(); } catch(e){}; this._runAudio = null; }).catch(() => { this._runAudio = null; });
+          } else if (ra && typeof ra.stop === 'function') {
+            try { ra.stop(); } catch(e) {}
+            this._runAudio = null;
+          } else {
+            this._runAudio = null;
+          }
+        } catch (e) { this._runAudio = null; }
+      }
+    } catch (e) {}
 
     // Si estamos en la ventana de combat_idle (después de golpear), mantener esa animación
     // a menos que el jugador intente moverse, lo que la cancela inmediatamente.
@@ -2542,6 +2639,29 @@ export class FarmerController {
     // Limpiar referencias
     this._handBone = null;
     this.isEquipped = false;
+    // Ensure any looping audios are stopped
+    try {
+      if (this._runAudio) {
+        const ra = this._runAudio;
+        if (ra && typeof ra.then === 'function') {
+          ra.then((inst) => { try { if (inst && typeof inst.stop === 'function') inst.stop(); } catch(e){}; }).catch(()=>{});
+        } else if (ra && typeof ra.stop === 'function') {
+          try { ra.stop(); } catch(e) {}
+        }
+      }
+    } catch (e) {}
+    this._runAudio = null;
+    try {
+      if (this._milkingAudio) {
+        const ma = this._milkingAudio;
+        if (ma && typeof ma.then === 'function') {
+          ma.then((inst) => { try { if (inst && typeof inst.stop === 'function') inst.stop(); } catch(e){}; }).catch(()=>{});
+        } else if (ma && typeof ma.stop === 'function') {
+          try { ma.stop(); } catch(e) {}
+        }
+      }
+    } catch (e) {}
+    this._milkingAudio = null;
   }
 }
 

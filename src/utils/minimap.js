@@ -1,47 +1,52 @@
 import { worldToMinimap as coordsWorldToMinimap } from "./coords.js";
 
-export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
-  let canvas = null;
-  let ctx = null;
-  let isMinimapExpanded = false;
-  let refs = {
-    stones: [],
-    house: null,
-    spaceShuttle: null,
-    corral: null,
-    cows: [],
-    farmerController: null,
-  };
+export class Minimap {
+  constructor({ width = 340, height = 249, worldBounds } = {}) {
+    this.width = width;
+    this.height = height;
+    this.worldBounds = worldBounds;
+    this.canvas = null;
+    this.ctx = null;
+    this.isMinimapExpanded = false;
+    this.refs = {
+      stones: [],
+      house: null,
+      spaceShuttle: null,
+      corral: null,
+      cows: [],
+      farmerController: null,
+    };
+  }
 
-  function init(canvasId = "minimap-canvas") {
-    canvas = document.getElementById(canvasId);
-    if (!canvas) {
+  init(canvasId = "minimap-canvas") {
+    this.canvas = document.getElementById(canvasId);
+    if (!this.canvas) {
       console.error("No se encontró el canvas del minimap (id: " + canvasId + ")");
       return;
     }
-    ctx = canvas.getContext("2d");
-    canvas.width = width;
-    canvas.height = height;
+    this.ctx = this.canvas.getContext("2d");
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
 
     const minimapToggle = document.getElementById("minimap-toggle");
     const minimapClose = document.getElementById("minimap-close");
     const minimap = document.getElementById("minimap");
 
-    function collapseMinimap() {
+    const collapseMinimap = () => {
       if (!minimap) return;
       minimap.classList.remove("minimap-expanded");
       minimap.classList.add("minimap-collapsed");
       if (minimapToggle) minimapToggle.classList.remove("hidden");
-      isMinimapExpanded = false;
-    }
+      this.isMinimapExpanded = false;
+    };
 
-    function expandMinimap() {
+    const expandMinimap = () => {
       if (!minimap) return;
       minimap.classList.remove("minimap-collapsed");
       minimap.classList.add("minimap-expanded");
       if (minimapToggle) minimapToggle.classList.add("hidden");
-      isMinimapExpanded = true;
-    }
+      this.isMinimapExpanded = true;
+    };
 
     if (minimapToggle) {
       minimapToggle.addEventListener("click", () => expandMinimap());
@@ -50,19 +55,25 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
       minimapClose.addEventListener("click", () => collapseMinimap());
     }
 
-    console.log("✅ Minimap inicializado (modular)");
+    console.log("✅ Minimap inicializado (clase)");
   }
 
-  function setReferences(newRefs = {}) {
-    refs = Object.assign(refs, newRefs);
+  setReferences(newRefs = {}) {
+    this.refs = Object.assign(this.refs, newRefs);
   }
 
-  function worldToMinimap(x, z) {
-    return coordsWorldToMinimap(x, z, worldBounds, width, height);
+  worldToMinimap(x, z) {
+    return coordsWorldToMinimap(x, z, this.worldBounds, this.width, this.height);
   }
 
-  function update() {
+  update() {
+    const ctx = this.ctx;
+    const canvas = this.canvas;
     if (!ctx || !canvas) return;
+
+    const width = this.width;
+    const height = this.height;
+    const worldBounds = this.worldBounds;
 
     // Fondo sutil
     ctx.fillStyle = "rgba(25, 25, 25, 0.2)";
@@ -88,11 +99,11 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
     }
 
     // Dibujar piedras
-    if (refs.stones && refs.stones.length) {
-      refs.stones.forEach((stone) => {
+    if (this.refs.stones && this.refs.stones.length) {
+      this.refs.stones.forEach((stone) => {
         if (stone.model) {
           const pos = stone.model.position;
-          const minimapPos = worldToMinimap(pos.x, pos.z);
+          const minimapPos = this.worldToMinimap(pos.x, pos.z);
           if (
             minimapPos.x >= 0 &&
             minimapPos.x <= width &&
@@ -109,16 +120,16 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
     }
 
     // Casa
-    if (refs.house && refs.house.position) {
-      const minimapPos = worldToMinimap(refs.house.position.x, refs.house.position.z);
+    if (this.refs.house && this.refs.house.position) {
+      const minimapPos = this.worldToMinimap(this.refs.house.position.x, this.refs.house.position.z);
       ctx.fillStyle = "rgba(139, 69, 19, 0.5)";
       ctx.fillRect(minimapPos.x - 3, minimapPos.y - 3, 6, 6);
     }
 
     // Space Shuttle
-    if (refs.spaceShuttle && refs.spaceShuttle.model) {
-      const pos = refs.spaceShuttle.model.position;
-      const minimapPos = worldToMinimap(pos.x, pos.z);
+    if (this.refs.spaceShuttle && this.refs.spaceShuttle.model) {
+      const pos = this.refs.spaceShuttle.model.position;
+      const minimapPos = this.worldToMinimap(pos.x, pos.z);
       ctx.fillStyle = "rgba(192, 192, 192, 0.7)";
       ctx.beginPath();
       ctx.arc(minimapPos.x, minimapPos.y, 4, 0, Math.PI * 2);
@@ -126,8 +137,8 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
     }
 
     // Mercado (dibujar como un cuadrado púrpura)
-    if (refs.market && refs.market.position) {
-      const minimapPos = worldToMinimap(refs.market.position.x, refs.market.position.z);
+    if (this.refs.market && this.refs.market.position) {
+      const minimapPos = this.worldToMinimap(this.refs.market.position.x, this.refs.market.position.z);
       ctx.fillStyle = "rgba(153, 102, 204, 0.9)"; // púrpura
       const s = 5; // tamaño del icono del mercado
       ctx.fillRect(minimapPos.x - s/2, minimapPos.y - s/2, s, s);
@@ -138,8 +149,8 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
     }
 
     // Corral
-    if (refs.corral && refs.corral.position) {
-      const minimapPos = worldToMinimap(refs.corral.position.x, refs.corral.position.z);
+    if (this.refs.corral && this.refs.corral.position) {
+      const minimapPos = this.worldToMinimap(this.refs.corral.position.x, this.refs.corral.position.z);
       const size = 20;
       const sizeX = (size / (worldBounds.maxX - worldBounds.minX)) * width;
       const sizeZ = (size / (worldBounds.maxZ - worldBounds.minZ)) * height;
@@ -149,11 +160,11 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
     }
 
     // Vacas
-    if (refs.cows && refs.cows.length) {
-      refs.cows.forEach((cow) => {
+    if (this.refs.cows && this.refs.cows.length) {
+      this.refs.cows.forEach((cow) => {
         if (cow.model) {
           const pos = cow.model.position;
-          const minimapPos = worldToMinimap(pos.x, pos.z);
+          const minimapPos = this.worldToMinimap(pos.x, pos.z);
           ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
           ctx.beginPath();
           ctx.arc(minimapPos.x, minimapPos.y, 2, 0, Math.PI * 2);
@@ -163,8 +174,8 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
     }
 
     // Enemigos (puntos rojos)
-    if (refs.enemies && refs.enemies.length) {
-      refs.enemies.forEach((enemy) => {
+    if (this.refs.enemies && this.refs.enemies.length) {
+      this.refs.enemies.forEach((enemy) => {
         try {
           let pos = null;
           if (!enemy) return;
@@ -173,7 +184,7 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
           else if (enemy.model && enemy.model.position) pos = enemy.model.position;
           else if (enemy.instance && enemy.instance.model && enemy.instance.model.position) pos = enemy.instance.model.position;
           if (!pos) return;
-          const minimapPos = worldToMinimap(pos.x, pos.z);
+          const minimapPos = this.worldToMinimap(pos.x, pos.z);
           if (
             minimapPos.x >= 0 &&
             minimapPos.x <= width &&
@@ -192,14 +203,14 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
     }
 
     // Farmer
-    if (refs.farmerController && refs.farmerController.model) {
-      const pos = refs.farmerController.model.position;
-      const minimapPos = worldToMinimap(pos.x, pos.z);
+    if (this.refs.farmerController && this.refs.farmerController.model) {
+      const pos = this.refs.farmerController.model.position;
+      const minimapPos = this.worldToMinimap(pos.x, pos.z);
 
       ctx.fillStyle = "rgba(0, 255, 0, 0.8)";
       ctx.save();
       ctx.translate(minimapPos.x, minimapPos.y);
-      const farmerRotation = refs.farmerController.model.rotation.y || 0;
+      const farmerRotation = this.refs.farmerController.model.rotation.y || 0;
       ctx.rotate(farmerRotation + Math.PI);
       ctx.beginPath();
       ctx.moveTo(0, -5);
@@ -210,11 +221,11 @@ export function makeMinimap({ width = 340, height = 249, worldBounds } = {}) {
       ctx.restore();
     }
   }
-
-  return {
-    init,
-    setReferences,
-    update,
-    worldToMinimap,
-  };
 }
+
+// Keep the factory function name for backward compatibility
+export function makeMinimap(opts = {}) {
+  return new Minimap(opts);
+}
+
+export default makeMinimap;

@@ -1,4 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
+import { safePlaySfx } from './audioHelpers.js';
 
 /**
  * Clase para crear un corral para vacas con sistema de colisiones y puerta interactiva
@@ -22,6 +23,8 @@ export class Corral {
 
     this.createCorral();
   }
+
+  // audio helper import is at top via patch below
 
   /**
    * Crea el corral con sus paredes, sistema de colisiones y puerta interactiva
@@ -541,6 +544,12 @@ export class Corral {
 
     console.log(`Puerta ${gateData.side} del corral abierta`);
 
+    // play open SFX positional on the gate mesh
+    try {
+      if (gateData && gateData.mesh) {
+        try { safePlaySfx('corralOpen', { object3D: gateData.mesh, volume: 0.95 }); } catch(_) {}
+      }
+    } catch(_) {}
     // Configurar autocierre
     this.scheduleAutoClose(gateData);
   }
@@ -554,6 +563,13 @@ export class Corral {
 
     gateData.open = false;
     gateData.targetRotation = 0;
+
+    // play close SFX positional on the gate mesh
+    try {
+      if (gateData && gateData.mesh) {
+        try { safePlaySfx('corralClose', { object3D: gateData.mesh, volume: 0.95 }); } catch(_) {}
+      }
+    } catch(_) {}
 
   }
 

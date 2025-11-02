@@ -1,6 +1,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js";
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/loaders/FBXLoader.js";
 import { ProgressBar } from "./ProgressBar.js";
+import { safePlaySfx } from './audioHelpers.js';
 
 export class Cow {
   constructor(scene, position = { x: 0, y: 0, z: 0 }) {
@@ -34,6 +35,9 @@ export class Cow {
     
     // Barra de progreso 3D
     this.progressBar = null;
+
+  // Audio: schedule rare moos
+  this._nextMooAt = 0; // timestamp ms for next allowed moo attempt
 
     this.init();
   }
@@ -226,6 +230,19 @@ export class Cow {
     if (this.progressBar) {
       this.progressBar.update();
     }
+
+    // Very occasional cow moo (positional)
+    try {
+      const now = performance.now();
+      if (!this._nextMooAt || now >= this._nextMooAt) {
+        // Small chance to moo when idle or moving
+        if (Math.random() < 0.12) {
+          try { safePlaySfx('cowMoo', { object3D: this.model, volume: 0.9 }); } catch(_) {}
+        }
+        // schedule next attempt in 20-120s
+        this._nextMooAt = now + (20000 + Math.floor(Math.random() * 100000));
+      }
+    } catch (e) {}
   }
 
   // Obtener referencia al modelo

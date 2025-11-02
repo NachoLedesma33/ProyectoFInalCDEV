@@ -2,6 +2,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.m
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js";
 import * as SkeletonUtils from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/utils/SkeletonUtils.js";
 import modelConfig from "../config/modelConfig.js";
+import { safePlaySfx } from './audioHelpers.js';
 
 export class Alien1 {
 	constructor(scene, modelLoader, position = { x: 0, y: 0, z: 0 }, lookAt = { x: 0, y: 0, z: 0 }) {
@@ -70,6 +71,10 @@ export class Alien1 {
 				visible: true,
 				_damageTexts: [] // floating damage text sprites
 			};
+
+		// Audio runtime refs
+		this._runAudio = null; // Promise or Audio instance for looping run SFX
+		this._nextVoiceAt = 0; // timestamp ms for next allowed alienVoice
 	}
 
 	// Carga el modelo y las animaciones listadas en modelConfig.characters.alien1
@@ -213,11 +218,11 @@ export class Alien1 {
 					if (candidate) { this.animations.walk = this.animations[candidate]; console.log(`Alien1: auto-mapped walk -> '${candidate}'`); }
 				}
 				if (!this.animations.run) {
-					const candidate = findKey(['run','running','sprint']);
+					const candidate = findKey(['run','sprint','fast','jog']);
 					if (candidate) { this.animations.run = this.animations[candidate]; console.log(`Alien1: auto-mapped run -> '${candidate}'`); }
 				}
 			} catch (e) {
-				// ignore
+				// non-critical auto-mapping failure
 			}
 
 			// Ajustar altura para que los pies del modelo estén en el nivel del suelo (usar bounding box)
@@ -559,23 +564,71 @@ export class Alien1 {
 				if (dist > this.attackRange) {
 					// mover hacia target
 					this.state = this.target.type === 'cow' ? 'seekCow' : 'seekPlayer';
+					// start run SFX (positional if available)
+					try {
+						if (!this._runAudio) {
+							if (window.audio && typeof window.audio.playSFX === 'function' && this.model) {
+								const p = window.audio.playSFX('run', { loop: true, object3D: this.model, volume: 0.6 });
+								this._runAudio = p;
+								if (p && typeof p.then === 'function') p.then((inst) => { this._runAudio = inst; }).catch(() => { this._runAudio = null; });
+							} else {
+								try { safePlaySfx('run', { volume: 0.6 }); } catch(_) {}
+							}
+						}
+					} catch (e) {}
 					this._moveTowards(targetPos, delta);
 					// play a safe locomotion animation (prefer 'run', then 'walk', else 'combatIdle')
 					if (this.animations.run) this.playAnimation('run');
 					else if (this.animations.walk) this.playAnimation('walk');
 					else if (this.animations.combatIdle) this.playAnimation('combatIdle');
+
+					// Random occasional alien voice (throttle by _nextVoiceAt)
+					try {
+						const now = performance.now();
+						if (!this._nextVoiceAt || now >= this._nextVoiceAt) {
+							if (Math.random() < 0.18) {
+								try { safePlaySfx('alienVoice', { object3D: this.model, volume: 0.9 }); } catch(_) {}
+							}
+							// schedule next attempt in 5-20s
+							this._nextVoiceAt = now + (5000 + Math.floor(Math.random() * 15000));
+						}
+					} catch (e) {}
 				} else {
 					// en rango de ataque
 					this.state = this.target.type === 'cow' ? 'attackCow' : 'attackPlayer';
 					this._tryAttack();
+					// stop run SFX when attacking (we're stationary during attack)
+					try {
+						if (this._runAudio) {
+							const ra = this._runAudio;
+							if (ra && typeof ra.then === 'function') {
+								ra.then((inst) => { try { if (inst && typeof inst.stop === 'function') inst.stop(); } catch(e){}; }).catch(()=>{});
+							} else if (ra && typeof ra.stop === 'function') {
+								try { ra.stop(); } catch(e) {}
+							}
+						}
+					} catch (e) {}
+					this._runAudio = null;
 				}
-			} else {
-				// sin target: idle
-				this.state = 'idle';
-				if (this.animations.idle) this.playAnimation('idle');
-				else if (this.animations.combatIdle) this.playAnimation('combatIdle');
-				else if (this.animations.run) this.playAnimation('run', { timeScale: 0.6 });
-			}
+				} else {
+					// sin target: idle
+					this.state = 'idle';
+					// stop run loop when idle
+					try {
+						if (this._runAudio) {
+							const ra = this._runAudio;
+							if (ra && typeof ra.then === 'function') {
+								ra.then((inst) => { try { if (inst && typeof inst.stop === 'function') inst.stop(); } catch(e){}; }).catch(()=>{});
+							} else if (ra && typeof ra.stop === 'function') {
+								try { ra.stop(); } catch(e) {}
+							}
+						}
+					} catch (e) {}
+					this._runAudio = null;
+					if (this.animations.idle) this.playAnimation('idle');
+					else if (this.animations.combatIdle) this.playAnimation('combatIdle');
+					else if (this.animations.run) this.playAnimation('run', { timeScale: 0.6 });
+				}
 		} catch (err) {
 			console.warn('Alien1 AI update error:', err);
 		}
@@ -993,7 +1046,7 @@ export class Alien1 {
 						const impactRatio = 0.45; // timing relativo del impacto dentro del punch
 						const impactMs = Math.max(50, clip.duration * impactRatio * 1000);
 						if (this._impactTimeoutId) clearTimeout(this._impactTimeoutId);
-						this._impactTimeoutId = setTimeout(() => {
+							this._impactTimeoutId = setTimeout(() => {
 							// aplicar hitbox justo en el momento del impacto
 							try {
 								if (this.combat && this.entityId) {
@@ -1013,6 +1066,8 @@ export class Alien1 {
 							} catch (err) {
 								console.warn('Alien1 impact error:', err);
 							}
+							// play punch SFX positionally at impact
+							try { safePlaySfx('punch', { object3D: this.model, volume: 0.95 }); } catch(_) {}
 							this._impactTimeoutId = null;
 						}, impactMs);
 					} catch (e) {
@@ -1021,6 +1076,7 @@ export class Alien1 {
 				} else if (this.animations.attack) {
 					// fallback: no punch clips, play generic attack and schedule immediate hit
 					this.playAnimation('attack', { loop: THREE.LoopOnce, fadeIn: 0.06 });
+					try { safePlaySfx('punch', { object3D: this.model, volume: 0.95 }); } catch(_) {}
 					try {
 						if (this.combat && this.entityId) {
 							this.combat.applyFrontalAttack(this.entityId, {
@@ -1077,6 +1133,8 @@ export class Alien1 {
 					this.healthComponent.onDamage = (amount, source) => {
 						try { if (prevOnDamage) prevOnDamage(amount, source); } catch (_) {}
 						try { this._spawnDamageText(`-${Math.round(amount)}`); } catch (_) {}
+						// play hit SFX (positional)
+						try { safePlaySfx('hit', { object3D: this.model, volume: 0.9 }); } catch(_) {}
 					};
 				} catch (_) {}
 				try {
@@ -1088,8 +1146,22 @@ export class Alien1 {
 						try { if (this._impactTimeoutId) { clearTimeout(this._impactTimeoutId); this._impactTimeoutId = null; } } catch (_) {}
 						this._currentPunchClip = null;
 						this._postAttackUntil = 0;
+						// stop run loop audio if playing
+						try {
+							if (this._runAudio) {
+								const ra = this._runAudio;
+								if (ra && typeof ra.then === 'function') {
+									ra.then((inst) => { try { if (inst && typeof inst.stop === 'function') inst.stop(); } catch(e){}; }).catch(()=>{});
+								} else if (ra && typeof ra.stop === 'function') {
+									try { ra.stop(); } catch(e) {}
+								}
+							}
+						} catch(_) {}
+						this._runAudio = null;
 						// reproducir animación de muerte (una sola vez y clamp)
 						try { if (this.animations.death) this.playAnimation('death', { loop: THREE.LoopOnce, fadeIn: 0.06, timeScale: 1.0 }); } catch (_) {}
+						// play death scream SFX (positional)
+						try { safePlaySfx('alienScream', { object3D: this.model, volume: 1.0 }); } catch(_) {}
 						// ocultar barra de vida
 						try { if (this._hb && this._hb.group) this._hb.group.visible = false; } catch (_) {}
 						// limpiar target para evitar lógica de IA posterior

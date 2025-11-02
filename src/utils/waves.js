@@ -1,5 +1,7 @@
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
 import { Alien1 } from "./Alien1.js";
 import { integrateEntityWithCombat } from "./CombatSystem.js";
+import { safePlaySfx } from './audioHelpers.js';
 
 /**
  * WaveManager: controla oleadas de enemigos (Alien1)
@@ -68,6 +70,19 @@ export class WaveManager {
     this._nextTimeout = null;
     // prevent multiple schedules between waves
     this._waitingNextWave = false;
+    // pause/resume helpers
+    this._nextEndAt = null; // timestamp ms when next wave should start
+    this._restEndAt = null; // timestamp ms when rest ends
+    this._nextRemaining = null; // ms remaining while paused
+    this._restRemaining = null; // ms remaining while paused
+    this._paused = false;
+  this._inCombat = false; // flag: true while player is engaged with enemies
+
+    // listen for global pause/resume events
+    try {
+      window.addEventListener('gamepause', () => this.pause());
+      window.addEventListener('gameresume', () => this.resume());
+    } catch (_) {}
   }
 
   start() {
@@ -109,7 +124,9 @@ export class WaveManager {
     this._lastSpawnAt = 0;
 
     // notify
-    this.onWaveStart(this.currentWaveIndex, waveCfg);
+  this.onWaveStart(this.currentWaveIndex, waveCfg);
+  // play an alert SFX when a wave starts (aliens spawning)
+  try { safePlaySfx('alienSound', { volume: 0.9 }); } catch (_) {}
     this._currentWaveCfg = waveCfg;
   }
 
@@ -365,6 +382,18 @@ export class WaveManager {
       const waveNumber = finishedWave + 1;
       const finishedCfg = this._currentWaveCfg || {};
       this.onWaveComplete(finishedWave, finishedCfg);
+      // Force-stop combat music immediately to avoid lingering audio
+      try {
+        if (window.audio && typeof window.audio.stopCombatMusic === 'function') {
+          try { window.audio.stopCombatMusic({ fadeOutMs: 0 }); } catch(_) {}
+        }
+      } catch(_) {}
+      // stop/dilute combat music when wave completes
+      try {
+        if (window.audio && typeof window.audio.stopCombatMusic === 'function') {
+          try { window.audio.stopCombatMusic({ fadeOutMs: 1200 }); } catch(_) {}
+        }
+      } catch(_) {}
       // every N waves -> rest period
       if (this.restEvery > 0 && waveNumber % this.restEvery === 0) {
         this._scheduleRestThenNext();
@@ -378,6 +407,7 @@ export class WaveManager {
   // update should be called from main loop. delta in seconds
   update(delta) {
     if (!this._running) return;
+    if (this._paused) return; // while paused, halt update-driven progress (spawns, enemy updates)
     const now = performance.now();
 
     // spawn logic: respect spawnInterval (ms)
@@ -399,6 +429,49 @@ export class WaveManager {
         console.warn('Error updating enemy', id, err);
       }
     }
+
+    // Combat state detection: if any enemy is near player, enter combat (once) and start combat music.
+    try {
+      if (this.activeEnemies.size > 0 && !this._inCombat && window.audio) {
+        const playerModel = (typeof this.getPlayer === 'function') ? this.getPlayer() : (window.farmerController ? window.farmerController.model : null);
+        if (playerModel && playerModel.position) {
+          const pPos = playerModel.position;
+          for (const [id, entry] of this.activeEnemies.entries()) {
+            try {
+              const mdl = entry.instance && entry.instance.model ? entry.instance.model : (entry.model || null);
+              if (!mdl) continue;
+              const box = new THREE.Box3().setFromObject(mdl);
+              const sph = new THREE.Sphere();
+              box.getBoundingSphere(sph);
+              const dx = (sph.center.x || 0) - pPos.x;
+              const dy = (sph.center.y || 0) - pPos.y;
+              const dz = (sph.center.z || 0) - pPos.z;
+              const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+              const threshold = (this.playerAggroRadius || 14) + (sph.radius || 1);
+              if (dist <= threshold) {
+                // enter combat and start combat music (only once per combat)
+                this._inCombat = true;
+                try {
+                  const choice = Math.random() < 0.5 ? 'combat1' : 'combat2';
+                  if (typeof window.audio.playCombatMusic === 'function') window.audio.playCombatMusic(choice, { loop: true, volume: 1, fadeInMs: 700 });
+                } catch(_) {}
+                break;
+              }
+            } catch(_) {}
+          }
+        }
+      }
+    } catch (_) {}
+
+    // If no active enemies remain, exit combat and stop combat music
+    try {
+      if (this._inCombat && this.enemiesToSpawn <= 0 && this.activeEnemies.size === 0) {
+        this._inCombat = false;
+        try {
+          if (window.audio && typeof window.audio.stopCombatMusic === 'function') window.audio.stopCombatMusic({ fadeOutMs: 800 });
+        } catch(_) {}
+      }
+    } catch(_) {}
   }
 
   // debug: spawn all remaining immediately
@@ -413,10 +486,11 @@ export class WaveManager {
     this._resting = true;
     this._waitingNextWave = true;
     const endAt = Date.now() + this.restDurationMs;
+    this._restEndAt = endAt;
     // Create simple countdown UI
     this._ensureRestCountdownEl();
     const tick = () => {
-      const remainMs = Math.max(0, endAt - Date.now());
+      const remainMs = Math.max(0, this._restEndAt - Date.now());
       const sec = Math.ceil(remainMs / 1000);
       const mins = Math.floor(sec / 60);
       const s = String(sec % 60).padStart(2, '0');
@@ -430,6 +504,7 @@ export class WaveManager {
     this._restCountdownTimer = setInterval(tick, 1000);
     this._restTimeout = setTimeout(() => {
       this._resting = false;
+      this._restEndAt = null;
       this._clearRestUI();
       this._startNextWave();
     }, this.restDurationMs);
@@ -475,9 +550,10 @@ export class WaveManager {
   _scheduleNextWaveThenStart(delayMs) {
     this._waitingNextWave = true;
     const endAt = Date.now() + delayMs;
+    this._nextEndAt = endAt;
     this._ensureNextWaveCountdownEl();
     const tick = () => {
-      const remainMs = Math.max(0, endAt - Date.now());
+      const remainMs = Math.max(0, this._nextEndAt - Date.now());
       const sec = Math.ceil(remainMs / 1000);
       const mins = Math.floor(sec / 60);
       const s = String(sec % 60).padStart(2, '0');
@@ -490,6 +566,7 @@ export class WaveManager {
     tick();
     this._nextCountdownTimer = setInterval(tick, 1000);
     this._nextTimeout = setTimeout(() => {
+      this._nextEndAt = null;
       this._clearNextWaveUI();
       this._startNextWave();
     }, delayMs);
@@ -528,6 +605,104 @@ export class WaveManager {
         this._nextCountdownEl.parentElement.removeChild(this._nextCountdownEl);
       }
       this._nextCountdownEl = null;
+    } catch (_) {}
+  }
+
+  // Pause timers (countdowns) and store remaining time
+  pause() {
+    if (this._paused) return;
+    this._paused = true;
+    try {
+      // pause rest countdown
+      if (this._restEndAt != null) {
+        let remaining = Math.max(0, this._restEndAt - Date.now());
+        // small grace window to avoid races where pause happens right as timeout fires
+        if (remaining < 250) remaining = 250;
+        this._restRemaining = remaining;
+        if (this._restTimeout) { clearTimeout(this._restTimeout); this._restTimeout = null; }
+      }
+      if (this._restCountdownTimer) { clearInterval(this._restCountdownTimer); this._restCountdownTimer = null; }
+
+      // pause next wave countdown
+      if (this._nextEndAt != null) {
+        let remaining = Math.max(0, this._nextEndAt - Date.now());
+        // small grace window to avoid races where pause happens right as timeout fires
+        if (remaining < 250) remaining = 250;
+        this._nextRemaining = remaining;
+        if (this._nextTimeout) { clearTimeout(this._nextTimeout); this._nextTimeout = null; }
+      }
+      if (this._nextCountdownTimer) { clearInterval(this._nextCountdownTimer); this._nextCountdownTimer = null; }
+    } catch (_) {}
+  }
+
+  // Resume timers from stored remaining values
+  resume() {
+    if (!this._paused) return;
+    this._paused = false;
+    try {
+      // resume rest countdown
+      if (this._restRemaining != null) {
+        // if remaining is 0 or negative, immediately finish
+        const rem = Math.max(0, this._restRemaining);
+        if (rem <= 0) {
+          this._restRemaining = null;
+          this._restEndAt = null;
+          // ensure UI cleared and start next wave
+          this._resting = false;
+          this._clearRestUI();
+          this._startNextWave();
+        } else {
+          this._restEndAt = Date.now() + rem;
+          this._ensureRestCountdownEl();
+          const tickRest = () => {
+            const remainMs = Math.max(0, this._restEndAt - Date.now());
+            const sec = Math.ceil(remainMs / 1000);
+            const mins = Math.floor(sec / 60);
+            const s = String(sec % 60).padStart(2, '0');
+            if (this._restCountdownEl) this._restCountdownEl.textContent = `Descanso: ${mins}:${s}`;
+            if (remainMs <= 0) { clearInterval(this._restCountdownTimer); this._restCountdownTimer = null; }
+          };
+          tickRest();
+          this._restCountdownTimer = setInterval(tickRest, 1000);
+          this._restTimeout = setTimeout(() => {
+            this._resting = false;
+            this._restEndAt = null;
+            this._restRemaining = null;
+            this._clearRestUI();
+            this._startNextWave();
+          }, rem);
+        }
+      }
+
+      // resume next wave countdown
+      if (this._nextRemaining != null) {
+        const rem2 = Math.max(0, this._nextRemaining);
+        if (rem2 <= 0) {
+          this._nextRemaining = null;
+          this._nextEndAt = null;
+          this._clearNextWaveUI();
+          this._startNextWave();
+        } else {
+          this._nextEndAt = Date.now() + rem2;
+          this._ensureNextWaveCountdownEl();
+          const tickNext = () => {
+            const remainMs = Math.max(0, this._nextEndAt - Date.now());
+            const sec = Math.ceil(remainMs / 1000);
+            const mins = Math.floor(sec / 60);
+            const s = String(sec % 60).padStart(2, '0');
+            if (this._nextCountdownEl) this._nextCountdownEl.textContent = `Siguiente oleada: ${mins}:${s}`;
+            if (remainMs <= 0) { clearInterval(this._nextCountdownTimer); this._nextCountdownTimer = null; }
+          };
+          tickNext();
+          this._nextCountdownTimer = setInterval(tickNext, 1000);
+          this._nextTimeout = setTimeout(() => {
+            this._nextEndAt = null;
+            this._nextRemaining = null;
+            this._clearNextWaveUI();
+            this._startNextWave();
+          }, rem2);
+        }
+      }
     } catch (_) {}
   }
 }

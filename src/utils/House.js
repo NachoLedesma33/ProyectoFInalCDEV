@@ -1,5 +1,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
 
+import { safePlaySfx } from './audioHelpers.js';
+
 /**
  * Clase para crear una casa con textura de piedra y puerta interactiva
  */
@@ -428,6 +430,13 @@ export class House {
     // Eliminar la colisión de la puerta
     this.updateSingleGateCollisionBox(gateData);
 
+    // Reproducir sonido posicional de apertura de puerta
+    try {
+      safePlaySfx('openDoor', { object3D: gateData.mesh });
+    } catch (e) {
+      // No bloquear si falla el audio
+    }
+
     // Configurar autocierre
     this.scheduleAutoClose(gateData);
   }
@@ -441,6 +450,13 @@ export class House {
 
     gateData.open = false;
     gateData.targetRotation = 0;
+
+    // Reproducir sonido posicional de cierre de puerta
+    try {
+      safePlaySfx('closeDoor', { object3D: gateData.mesh });
+    } catch (e) {
+      // Silenciar errores de audio
+    }
   }
 
   /**

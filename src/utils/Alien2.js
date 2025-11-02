@@ -1,4 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
+import { safePlaySfx } from './audioHelpers.js';
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js";
 import * as BufferGeometryUtils from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/utils/BufferGeometryUtils.js";
 import modelConfig from "../config/modelConfig.js";
@@ -63,6 +64,9 @@ export class Alien2 {
       dialogueHud: null,
       isDialogueOpen: false,
     };
+
+    // Schedule for random laugh SFX (timestamp in ms)
+    this._nextLaughAt = 0;
   }
 
   async load() {
@@ -399,6 +403,26 @@ export class Alien2 {
     if (this.interactionSystem.isAtFinalPosition) {
       this.updateInteraction(delta);
     }
+
+    // Random positional laugh occasionally when idle/interaction active
+    try {
+      // only attempt if model is loaded and helper exists
+      if (this.model && typeof safePlaySfx === 'function') {
+        const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        if (!this._nextLaughAt || now >= this._nextLaughAt) {
+          // Chance to laugh each attempt (12% per attempt)
+          if (Math.random() < 0.12) {
+            try {
+              // debug trace to help confirm behaviour during testing
+              try { console.debug && console.debug('Alien2: attempting alienLaugh'); } catch (_) {}
+              safePlaySfx('alienLaugh', { object3D: this.model, volume: 0.95 });
+            } catch (_) {}
+          }
+          // schedule next attempt in 15-90s
+          this._nextLaughAt = now + (15000 + Math.floor(Math.random() * 75000));
+        }
+      }
+    } catch (e) {}
   }
 
   // Iniciar el sistema de movimiento automático después de 5 minutos
@@ -988,6 +1012,9 @@ export class Alien2 {
     // Ensamblar el HUD
     document.body.appendChild(hudContainer);
 
+  // play popup sound when alien dialogue HUD is created
+  try { safePlaySfx('popup', { volume: 0.9 }); } catch (_) {}
+
     this.interactionSystem.dialogueHud = hudContainer;
     this.interactionSystem.buttonArea = buttonArea;
     this.interactionSystem.dialogueArea = dialogueArea;
@@ -1055,6 +1082,9 @@ export class Alien2 {
       console.log("Abriendo diálogo con Alien2...");
       this.interactionSystem.dialogueHud.style.display = "block";
       this.interactionSystem.isDialogueOpen = true;
+
+  // play popup sound when dialogue is shown
+  try { safePlaySfx('popup', { volume: 0.9 }); } catch (_) {}
 
       // Mostrar el diálogo inicial a menos que opts.skipInitial sea true
       if (!opts || !opts.skipInitial) {

@@ -1,4 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
+import { safePlaySfx } from './audioHelpers.js';
 
 export class ShipRepair {
   constructor(scene, position = { x: 39.9, y: 0.0, z: -21.1 }, radius = 1.5) {
@@ -118,11 +119,14 @@ export class ShipRepair {
       padding: 8px 14px; background: #00aa00; color: #001100; border: none; border-radius: 6px; cursor: pointer; font-weight: 700;
     `;
     okBtn.addEventListener('click', () => {
+      try { safePlaySfx('spaceshipRepair', { volume: 0.95 }); } catch(_) {}
       this.openShipHUD();
     });
     this.shipPopup.appendChild(okBtn);
 
-    document.body.appendChild(this.shipPopup);
+  document.body.appendChild(this.shipPopup);
+  // play popup sound when the ship popup appears
+  try { safePlaySfx('popup', { volume: 0.9 }); } catch(_) {}
   }
 
   hideShipPopup() {
@@ -391,7 +395,25 @@ export class ShipRepair {
     // Fallback: refrescar cada 1s si no hay callback
     if (!this._invInterval) this._invInterval = setInterval(() => this.refreshInventoryList(), 1000);
 
-    document.body.appendChild(this.hud);
+  document.body.appendChild(this.hud);
+  // play popup sound when the ship HUD opens
+  try { safePlaySfx('popup', { volume: 0.9 }); } catch(_) {}
+  // start looping panel ambience for the ship HUD (kept while HUD is open)
+  // Note: AudioManager.playSFX is async and returns a Promise — store the eventual
+  // Audio instance so we can stop it later. Be defensive if playSFX isn't available.
+  try {
+    if (window.audio && typeof window.audio.playSFX === 'function') {
+      try {
+        // assign the Promise first; once resolved we keep the audio instance
+        const p = window.audio.playSFX('spaceshipPanel', { loop: true, volume: 0.6 });
+        // store promise/object; callers must handle both cases
+        this._panelAudio = p;
+        try { if (p && typeof p.then === 'function') p.then(a => { this._panelAudio = a; }).catch(() => { this._panelAudio = null; }); } catch(_) {}
+      } catch (_) { this._panelAudio = null; }
+    } else {
+      this._panelAudio = null;
+    }
+  } catch (_) { this._panelAudio = null; }
     hudCreated = true;
     } catch (err) {
       console.error('Failed to open Ship HUD', err);
@@ -633,6 +655,18 @@ export class ShipRepair {
   closeShipHUD() {
     if (this.hud && this.hud.parentNode) this.hud.parentNode.removeChild(this.hud);
     this.hud = null;
+    // stop panel ambience audio if it was playing
+    try {
+      if (this._panelAudio) {
+        // If it's a Promise (playSFX is async), wait for it to resolve then stop
+        if (typeof this._panelAudio.then === 'function') {
+          try { this._panelAudio.then(a => { try { if (a && a.isPlaying) a.stop(); } catch(_) { try { a.stop(); } catch(_) {} } }).catch(() => {}); } catch(_) {}
+        } else {
+          try { if (this._panelAudio.isPlaying) this._panelAudio.stop(); } catch(_) { try { this._panelAudio.stop(); } catch(_) {} }
+        }
+      }
+    } catch(_) {}
+    this._panelAudio = null;
     this.isUIOpen = false;
     this.selectedTool = null;
     // cleanup inventory interval and restore handler

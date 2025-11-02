@@ -20,6 +20,27 @@ export class SpaceShuttle {
       this.scene.add(this.model);
       
       window.spaceShuttle = this;
+      // start a positional ambient SFX around the shuttle (broken spaceship hum)
+      // Play only when gameplay actually starts to avoid loud audio during menu/load.
+      this._brokenAudio = null;
+      const _startBroken = () => {
+        try {
+          if (window.audio && typeof window.audio.playSFX === 'function' && this.model) {
+            const p = window.audio.playSFX('brokenSpaceship', { object3D: this.model, loop: true, volume: 0.6 });
+            this._brokenAudio = p;
+            try { if (p && typeof p.then === 'function') p.then(a => { this._brokenAudio = a; }).catch(() => { this._brokenAudio = null; }); } catch(_) {}
+          }
+        } catch (_) { this._brokenAudio = null; }
+      };
+      try {
+        if (window.__gameplayStarted) {
+          _startBroken();
+        } else {
+          window.addEventListener('gameplaystart', _startBroken, { once: true });
+        }
+      } catch (_) {
+        try { _startBroken(); } catch(_) {}
+      }
       
     } catch (error) {
       console.error("Error al cargar el Space Shuttle Orbiter:", error);
