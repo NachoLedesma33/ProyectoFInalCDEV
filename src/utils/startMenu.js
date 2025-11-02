@@ -37,7 +37,7 @@ export const storySlides = [
  *
  * El manager se encarga de mostrar el carousel y manejar los botones prev/next/skip.
  */
-import { safePlaySfx } from './audioHelpers.js';
+import { safePlaySfx } from "./audioHelpers.js";
 
 export class StoryManager {
   constructor(storySlidesArg = storySlides, initStarter) {
@@ -46,8 +46,16 @@ export class StoryManager {
     this.currentSlide = 0;
     this.gameInitPromise = null;
     this.gameInitialized = false;
-    this.playUIClick = () => { try { safePlaySfx('uiClick', { volume: 0.9 }); } catch (_) {} };
-    this.playUIHover = () => { try { safePlaySfx('uiHover', { volume: 0.6 }); } catch (_) {} };
+    this.playUIClick = () => {
+      try {
+        safePlaySfx("uiClick", { volume: 0.9 });
+      } catch (_) {}
+    };
+    this.playUIHover = () => {
+      try {
+        safePlaySfx("uiHover", { volume: 0.6 });
+      } catch (_) {}
+    };
   }
 
   updateCarousel() {
@@ -72,15 +80,19 @@ export class StoryManager {
     document.getElementById("controls-hud").style.display = "flex";
 
     try {
-      const soundHud = document.getElementById('sound-hud');
-      if (soundHud) soundHud.style.display = 'none';
+      const soundHud = document.getElementById("sound-hud");
+      if (soundHud) soundHud.style.display = "none";
     } catch (_) {}
 
     const controlsContinueBtn = document.getElementById("controls-continue");
     if (controlsContinueBtn) {
       try {
-        controlsContinueBtn.addEventListener("pointerenter", () => this.playUIHover());
-        controlsContinueBtn.addEventListener("mouseenter", () => this.playUIHover());
+        controlsContinueBtn.addEventListener("pointerenter", () =>
+          this.playUIHover()
+        );
+        controlsContinueBtn.addEventListener("mouseenter", () =>
+          this.playUIHover()
+        );
       } catch (_) {}
 
       controlsContinueBtn.onclick = () => {
@@ -88,10 +100,14 @@ export class StoryManager {
         try {
           if (!window.__gameplayStarted) {
             window.__gameplayStarted = true;
-            if (typeof window.onGameplayStart === 'function') {
-              try { window.onGameplayStart(); } catch (_) {}
+            if (typeof window.onGameplayStart === "function") {
+              try {
+                window.onGameplayStart();
+              } catch (_) {}
             }
-            try { window.dispatchEvent(new CustomEvent('gameplaystart')); } catch (_) {}
+            try {
+              window.dispatchEvent(new CustomEvent("gameplaystart"));
+            } catch (_) {}
           }
         } catch (_) {}
 
@@ -117,8 +133,8 @@ export class StoryManager {
     playButton.addEventListener("click", () => {
       this.playUIClick();
       try {
-        const soundHudEl = document.getElementById('sound-hud');
-        if (soundHudEl) soundHudEl.style.display = 'none';
+        const soundHudEl = document.getElementById("sound-hud");
+        if (soundHudEl) soundHudEl.style.display = "none";
       } catch (_) {}
       document.getElementById("main-menu").style.display = "none";
       document.getElementById("story-carousel").style.display = "flex";
@@ -158,10 +174,15 @@ export class StoryManager {
 
       if (!this.gameInitPromise && typeof this.initStarter === "function") {
         this.gameInitPromise = this.initStarter();
-        if (this.gameInitPromise && typeof this.gameInitPromise.then === "function") {
-          this.gameInitPromise.then(() => {
-            this.gameInitialized = true;
-          }).catch((e) => console.error(e));
+        if (
+          this.gameInitPromise &&
+          typeof this.gameInitPromise.then === "function"
+        ) {
+          this.gameInitPromise
+            .then(() => {
+              this.gameInitialized = true;
+            })
+            .catch((e) => console.error(e));
         }
       }
     });

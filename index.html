@@ -20,9 +20,9 @@
       <div class="background-image"></div>
       <div class="main-menu-content">
         <div class="menu-buttons">
-        <button id="play-button" class="menu-button">Jugar</button>
+        <button type="button" id="play-button" class="menu-button">Jugar</button>
         <!-- Botón de sonido: abre el HUD de configuración de audio -->
-        <button id="sound-button" class="menu-button">Sonido</button>
+        <button type="button" id="sound-button" class="menu-button">Sonido</button>
         </div>
       </div>
     </div>
@@ -60,8 +60,12 @@
             <div class="key long-key">SHIFT</div>
             <span>Correr</span>
           </div>
+          <div class="control-item">
+            <div class="key long-key">CLICK IZQ</div>
+            <span>Pegar</span>
+          </div>
         </div>
-        <button id="controls-continue" class="controls-button">Entendido</button>
+        <button type="button" id="controls-continue" class="controls-button">Entendido</button>
       </div>
     </div>
 
@@ -87,13 +91,13 @@
           </div>
         </div>
         <div class="carousel-navigation">
-          <button class="nav-button prev" id="prev-slide">&#10094;</button>
+          <button type="button" class="nav-button prev" id="prev-slide">&#10094;</button>
           <div class="page-counter">
             <span class="current-page">1</span>
             <span class="total-pages">/7</span>
           </div>
-          <button class="nav-button next" id="next-slide">&#10095;</button>
-          <button class="skip-button" id="skip-story">Saltar Historia</button>
+          <button type="button" class="nav-button next" id="next-slide">&#10095;</button>
+          <button type="button" class="skip-button"  id="skip-story">Saltar Historia</button>
         </div>
       </div>
     </div>
@@ -101,16 +105,26 @@
     <!-- Contenedor del juego (inicialmente oculto) -->
     <div id="game-container" style="display: none;">
       <div id="container"></div>
-      <!-- Minimap HUD Plegable -->
-      <div id="minimap-container">
-        <button id="minimap-toggle" type="button">Mapa</button>
-        <div id="minimap" class="minimap-collapsed">
-          <button id="minimap-close" type="button">×</button>
-          <canvas id="minimap-canvas" width="340" height="249"></canvas>
+      <!-- Contenedor para los botones de HUD -->
+      <div id="hud-buttons-container">
+        <!-- Inventory HUD Plegable -->
+        <div id="inventory-container">
+          <button id="inventory-toggle" type="button">Inventario</button>
+          <div id="inventory-hud" class="inventory-collapsed">
+            <button id="inventory-close" type="button">×</button>
+            <!-- El contenido del inventario se insertará aquí dinámicamente por JavaScript -->
+          </div>
+        </div>
+        <!-- Minimap HUD Plegable -->
+        <div id="minimap-container">
+          <button id="minimap-toggle" type="button">Mapa</button>
+          <div id="minimap-hud" class="minimap-collapsed">
+            <button id="minimap-close" type="button">×</button>
+            <canvas id="minimap-canvas" width="340" height="249"></canvas>
+          </div>
         </div>
       </div>
     </div>
-    
     <!-- Configuración de módulos ES -->
     <script type="importmap">
       {

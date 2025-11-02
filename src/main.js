@@ -253,8 +253,8 @@ let minimapWidth = 340,
   minimapHeight = 249;
 let worldBounds = { minX: -250, maxX: 100, minZ: -250, maxZ: 300 }; // Límites del mundo ajustados para todas las piedras
 
-// Minimapa modular
-let minimapManager = makeMinimap({ width: minimapWidth, height: minimapHeight, worldBounds });
+// Minimapa modular - Solo creamos la instancia aquí, la inicialización se hará más tarde
+let minimapManager = null;
 
 // Cargador de modelos
 let modelLoader; // Maneja la carga y animación de modelos 3D
@@ -397,11 +397,16 @@ function createCows() {
  * Inicializar el minimap HUD
  */
 function initMinimap() {
-  // Inicialización delegada al manager modular
-  try {
-    minimapManager.init("minimap-canvas");
-  } catch (e) {
-    console.warn("No se pudo inicializar minimapManager:", e);
+  // Solo inicializar si no se ha hecho ya
+  if (!minimapManager) {
+    minimapManager = makeMinimap({ width: minimapWidth, height: minimapHeight, worldBounds });
+    
+    // Inicialización del manager
+    try {
+      minimapManager.init("minimap-canvas");
+    } catch (e) {
+      console.warn("No se pudo inicializar minimapManager:", e);
+    }
   }
 }
 
@@ -1067,15 +1072,10 @@ function setupEventListeners() {
   // Tecla 'i' para mostrar/ocultar el inventario
   window.addEventListener("keydown", (ev) => {
     // Ignorar si el usuario está escribiendo en un input/textarea
-    const tag =
-      (document.activeElement && document.activeElement.tagName) || "";
-    if (tag === "INPUT" || tag === "TEXTAREA") return;
-    if (ev.key && ev.key.toLowerCase() === "i") {
-      if (window.inventory && typeof window.inventory.toggle === "function") {
-        window.inventory.toggle();
-      }
-    }
-  });
+    // Se eliminó el manejo de la tecla 'i' para abrir/cerrar el inventario
+    // Ahora solo se puede interactuar con el botón del inventario
+  }
+  );
 }
 
 // --- Wave countdown HUD helpers ---

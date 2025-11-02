@@ -8,8 +8,8 @@
     this.pricePerLiter = pricePerLiter;
     this._createUI();
     this._updateUI();
-    // Mostrar el inventario por defecto
-    this.show();
+    // Iniciar con el inventario cerrado
+    this.hide();
     // callback cuando cambia equipamiento: (slotIndex, toolName|null)
     this.onEquipChange = null;
   }
@@ -101,29 +101,71 @@
   // UI helpers (minimal, auto-insert HUD)
   _createUI() {
     const id = "inventory-hud";
-    let el = document.getElementById(id);
-    if (!el) {
-      el = document.createElement("div");
-      el.id = id;
-      Object.assign(el.style, {
-        position: "fixed",
-        right: "12px",
-        top: "12px",
-        width: "200px",
-        padding: "12px",
-        background: "rgba(0, 0, 0, 0.7)",
-        color: "#fff",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        fontSize: "14px",
-        borderRadius: "8px",
-        border: "1px solid rgba(255, 255, 255, 0.1)",
-        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.3)",
-        zIndex: 1000,
-        backdropFilter: "blur(4px)",
-        transition: "all 0.3s ease"
-      });
-      document.body.appendChild(el);
+    
+    // Obtener o crear el contenedor de botones HUD
+    let hudButtonsContainer = document.getElementById('hud-buttons-container');
+    if (!hudButtonsContainer) {
+      hudButtonsContainer = document.createElement('div');
+      hudButtonsContainer.id = 'hud-buttons-container';
+      document.body.appendChild(hudButtonsContainer);
     }
+    
+    // Eliminar cualquier instancia previa del inventario
+    const existingContainer = document.getElementById('inventory-container');
+    if (existingContainer) {
+      existingContainer.remove();
+    }
+    
+    // Crear el contenedor del inventario
+    const container = document.createElement('div');
+    container.id = 'inventory-container';
+    container.className = 'hud-button-container';
+    container.innerHTML = `
+      <button id="inventory-toggle" type="button">Inventario</button>
+      <div id="${id}" class="inventory-collapsed">
+        <button id="inventory-close" type="button">×</button>
+      </div>
+    `;
+    
+    // Insertar el contenedor del inventario en el contenedor de botones HUD
+    hudButtonsContainer.appendChild(container);
+    
+    // Obtener referencias a los elementos
+    const el = document.getElementById(id);
+    const toggleBtn = document.getElementById('inventory-toggle');
+    const closeBtn = document.getElementById('inventory-close');
+    
+    // Configurar eventos de toggle
+    const toggleInventory = () => {
+      const isExpanded = el.classList.contains('inventory-expanded');
+      if (isExpanded) {
+        this.hide();
+      } else {
+        this.show();
+      }
+    };
+    
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleInventory();
+    });
+    
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.hide();
+    });
+    
+    // Cerrar al hacer clic fuera del inventario
+    document.addEventListener('click', (e) => {
+      if (!el.contains(e.target) && e.target !== toggleBtn) {
+        this.hide();
+      }
+    });
+    
+    // Prevenir que los clics en el inventario se propaguen al documento
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
     el.innerHTML = `
       <div style="font-weight:600;margin-bottom:8px;font-size:16px;color:#fdbb2d;text-shadow:0 1px 2px rgba(0,0,0,0.5)">INVENTARIO</div>
       <div style="display:flex;justify-content:space-between;margin-bottom:6px">
@@ -298,20 +340,68 @@
 
   // Public methods to show/hide/toggle the HUD
   show() {
-    if (!this._ui || !this._ui.container) return;
-    this._ui.container.style.display = ""; // revert to default
-    this._updateUI();
+    const el = document.getElementById('inventory-hud');
+    const inventoryToggle = document.getElementById('inventory-toggle');
+    const minimapEl = document.getElementById('minimap-hud');
+    const minimapToggle = document.getElementById('minimap-toggle');
+    const inventoryClose = document.getElementById('inventory-close');
+    
+    if (el) {
+      // Cerrar el minimapa si está abierto
+      if (minimapEl && minimapEl.classList.contains('minimap-expanded')) {
+        minimapEl.classList.remove('minimap-expanded');
+        minimapEl.classList.add('minimap-collapsed');
+        if (minimapToggle) minimapToggle.style.display = 'block';
+      }
+      
+      // Asegurarse de que el contenedor sea visible
+      el.style.display = 'block';
+      
+      // Mostrar el inventario
+      el.classList.remove('inventory-collapsed');
+      el.classList.add('inventory-expanded');
+      
+      // Ocultar el botón de toggle y mostrar el de cierre
+      if (inventoryToggle) {
+        inventoryToggle.style.display = 'none';
+      }
+      
+      if (inventoryClose) {
+        inventoryClose.style.display = 'flex';
+      }
+      
+      this._updateUI();
+    }
   }
 
   hide() {
-    if (!this._ui || !this._ui.container) return;
-    this._ui.container.style.display = "none";
+    const el = document.getElementById('inventory-hud');
+    const inventoryToggle = document.getElementById('inventory-toggle');
+    const inventoryClose = document.getElementById('inventory-close');
+    
+    if (el) {
+      el.classList.remove('inventory-expanded');
+      el.classList.add('inventory-collapsed');
+      
+      // Mostrar el botón de toggle y ocultar el de cierre
+      if (inventoryToggle) {
+        inventoryToggle.style.display = 'block';
+      }
+      
+      if (inventoryClose) {
+        inventoryClose.style.display = 'none';
+      }
+    }
   }
 
   toggle() {
-    if (!this._ui || !this._ui.container) return;
-    const d = this._ui.container.style.display;
-    if (d === "none") this.show();
-    else this.hide();
+    const el = document.getElementById('inventory-hud');
+    if (el) {
+      if (el.classList.contains('inventory-expanded')) {
+        this.hide();
+      } else {
+        this.show();
+      }
+    }
   }
 }

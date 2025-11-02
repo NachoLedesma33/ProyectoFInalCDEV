@@ -30,30 +30,97 @@ export class Minimap {
 
     const minimapToggle = document.getElementById("minimap-toggle");
     const minimapClose = document.getElementById("minimap-close");
-    const minimap = document.getElementById("minimap");
+    const minimap = document.getElementById("minimap-hud");
+
+    // Asegurarse de que el minimapa empiece cerrado
+    if (minimap) {
+      minimap.classList.add("minimap-collapsed");
+      minimap.classList.remove("minimap-expanded");
+      minimap.style.display = 'block'; // Asegurar que el contenedor sea visible
+    }
 
     const collapseMinimap = () => {
       if (!minimap) return;
+      
+      // Aplicar clases para la animación de cierre
       minimap.classList.remove("minimap-expanded");
       minimap.classList.add("minimap-collapsed");
-      if (minimapToggle) minimapToggle.classList.remove("hidden");
+      
+      // Mostrar el botón de toggle
+      if (minimapToggle) {
+        minimapToggle.style.display = 'block';
+      }
+      
+      // Ocultar el botón de cierre
+      if (minimapClose) {
+        minimapClose.style.display = 'none';
+      }
+      
       this.isMinimapExpanded = false;
     };
 
     const expandMinimap = () => {
       if (!minimap) return;
+      
+      // Cerrar el inventario si está abierto
+      const inventoryHud = document.getElementById('inventory-hud');
+      const inventoryToggle = document.getElementById('inventory-toggle');
+      
+      if (inventoryHud && inventoryHud.classList.contains('inventory-expanded')) {
+        inventoryHud.classList.remove('inventory-expanded');
+        inventoryHud.classList.add('inventory-collapsed');
+        if (inventoryToggle) inventoryToggle.style.display = 'block';
+      }
+      
+      // Asegurarse de que el contenedor sea visible
+      minimap.style.display = 'block';
+      
+      // Aplicar clases para la animación de apertura
       minimap.classList.remove("minimap-collapsed");
       minimap.classList.add("minimap-expanded");
-      if (minimapToggle) minimapToggle.classList.add("hidden");
+      
+      // Ocultar el botón de toggle y mostrar el de cierre
+      if (minimapToggle) {
+        minimapToggle.style.display = 'none';
+      }
+      
+      if (minimapClose) {
+        minimapClose.style.display = 'flex';
+      }
+      
       this.isMinimapExpanded = true;
     };
 
+    // Manejar clic en el botón de toggle
     if (minimapToggle) {
-      minimapToggle.addEventListener("click", () => expandMinimap());
+      minimapToggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (this.isMinimapExpanded) {
+          collapseMinimap();
+        } else {
+          expandMinimap();
+        }
+      });
+      
+      // Asegurarse de que el botón de toggle sea visible al inicio
+      minimapToggle.style.display = 'block';
     }
+
+    // Manejar clic en el botón de cierre
     if (minimapClose) {
-      minimapClose.addEventListener("click", () => collapseMinimap());
+      minimapClose.addEventListener("click", (e) => {
+        e.stopPropagation();
+        collapseMinimap();
+      });
     }
+
+    // Cerrar el minimapa al hacer clic fuera de él
+    document.addEventListener('click', (e) => {
+      if (this.isMinimapExpanded && minimap && !minimap.contains(e.target) && 
+          minimapToggle && !minimapToggle.contains(e.target)) {
+        collapseMinimap();
+      }
+    });
 
     console.log("✅ Minimap inicializado (clase)");
   }
