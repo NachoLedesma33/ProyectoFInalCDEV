@@ -1,18 +1,8 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
 import { ControlsManager } from "./controls.js";
 
-/**
- * Clase para gestionar la cámara y sus comportamientos
- */
+
 export class CameraManager {
-  /**
-   * Crea una instancia de CameraManager
-   * @param {THREE.Scene} scene - Escena de Three.js
-   * @param {Object} options - Opciones de configuración de la cámara
-   * @param {number} [options.fov=75] - Campo de visión en grados
-   * @param {number} [options.near=0.5] - Plano cercano de recorte
-   * @param {number} [options.far=2000] - Plano lejano de recorte
-   */
   constructor(scene, options = {}) {
     this.scene = scene;
     this.options = {
@@ -31,10 +21,6 @@ export class CameraManager {
     this.setupCamera();
   }
 
-  /**
-   * Crea una cámara perspectiva con vista isométrica
-   * @returns {THREE.PerspectiveCamera} - Instancia de la cámara
-   */
   createCamera() {
     const aspect = window.innerWidth / window.innerHeight;
     const camera = new THREE.PerspectiveCamera(
@@ -98,8 +84,6 @@ export class CameraManager {
         domElement,
         isometric: true,
       });
-
-      console.log("Controles de cámara isométrica configurados");
     }
   }
 
@@ -113,11 +97,6 @@ export class CameraManager {
     }
   }
 
-  /**
-   * Establece el objetivo que la cámara debe seguir
-   * @param {THREE.Object3D} target - Objeto a seguir
-   * @param {THREE.Vector3} [offset] - Desplazamiento de la cámara respecto al objetivo
-   */
   setTarget(target, offset = new THREE.Vector3(0, 2, -2)) {
     if (this.controls) {
       this.controls.setTarget(target, offset);

@@ -147,7 +147,6 @@ export class Corral {
     const plankHeight = 0.2;
     const spacing = 0.1;
 
-    console.log(`Creando puerta en esquina ${side}...`);
 
     this.createSingleGate(
       woodMaterial,
@@ -516,12 +515,6 @@ export class Corral {
     });
   }
 
-  /**
-   * Verifica si el farmer está cerca de una puerta específica
-   * @param {THREE.Vector3} farmerPosition - Posición del farmer
-   * @param {Object} gateData - Datos de la puerta
-   * @returns {boolean} - True si el farmer está cerca de la puerta
-   */
   isFarmerNearGate(farmerPosition, gateData) {
     const distance = farmerPosition.distanceTo(gateData.mesh.position);
     return distance <= this.detectionDistance;

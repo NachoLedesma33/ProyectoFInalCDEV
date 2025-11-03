@@ -26,7 +26,7 @@ export class HealthComponent {
     try {
       this.onDamage(amount, source);
     } catch (err) {
-      console.warn('onDamage callback error', err);
+      return err;
     }
 
     if (this.current <= 0) {
@@ -34,7 +34,7 @@ export class HealthComponent {
       try {
         this.onDeath(source);
       } catch (err) {
-        console.warn('onDeath callback error', err);
+        return err;
       }
       return true; // murió
     }
@@ -111,9 +111,6 @@ export class CombatSystem {
       hurtRadius: opts.hurtRadius || 0.8, // fallback
       onDeath: opts.onDeath || null,
     });
-    try {
-      console.log(`CombatSystem: registerEntity -> id='${id}', team='${opts.team || 'neutral'}'`);
-    } catch (e) {}
   }
 
   unregisterEntity(id) {
@@ -157,7 +154,6 @@ export class CombatSystem {
       friendlyFire,
     });
 
-    try { console.log(`CombatSystem: spawnHitbox owner='${ownerId}' dmg=${damage} range=${range} radius=${radius}`); } catch (e) {}
     return hb;
   }
 
@@ -230,8 +226,6 @@ export class CombatSystem {
             const dist = hb._worldSphere.center.distanceTo(entPos);
             const targetRadius = (entity.hurtRadius || targetSphere.radius || 0.8);
             if (dist <= (hb._worldSphere.radius + targetRadius + 0.15)) {
-              // consider a hit by proximity
-              try { console.log(`CombatSystem: fallback-distance hit owner='${hb.ownerId}' -> target='${id}' dist=${dist.toFixed(2)} threshold=${(hb._worldSphere.radius + targetRadius + 0.15).toFixed(2)}`); } catch (e) {}
               didHit = true;
             }
           } catch (e) {
@@ -246,14 +240,13 @@ export class CombatSystem {
             const died = entity.health.takeDamage(hb.damage, { from: hb.ownerId });
             hb.consumed = true;
             const after = entity.health.current;
-            try { console.log(`CombatSystem: hit owner='${hb.ownerId}' -> target='${id}' damage=${hb.damage} hp:${before}->${after}`); } catch (e) {}
             try {
               if (entity.onDeath && died) entity.onDeath(hb.ownerId);
             } catch (err) {
-              console.warn('onDeath callback failed', err);
+              return err;
             }
           } catch (err) {
-            console.warn('CombatSystem: error applying damage', err);
+            return err;
           }
         }
       }
@@ -350,13 +343,10 @@ export default CombatSystem;
 window.printCombatEntities = function () {
   try {
     const sys = window.combatSystem;
-    if (!sys) return console.warn('No combatSystem on window');
-    console.log('CombatSystem entities:');
     for (const [id, ent] of sys.entities.entries()) {
       try {
         const sphere = sys._getEntitySphere(ent);
-        console.log(id, { team: ent.team, model: !!ent.model, pos: ent.model ? (ent.model.getWorldPosition ? ent.model.getWorldPosition(new THREE.Vector3()) : ent.model.position) : null, sphere });
-      } catch (e) { console.warn('Error printing entity', id, e); }
+      } catch (e) { return e }
     }
-  } catch (e) { console.warn('printCombatEntities error', e); }
+  } catch (e) { return e }
 };

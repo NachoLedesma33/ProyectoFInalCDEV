@@ -124,13 +124,7 @@ export class Alien2 {
 
       // Verificar si el modelo base tiene animaciones incluidas
       if (this.model.animations && this.model.animations.length > 0) {
-        console.log(
-          "Modelo base tiene animaciones incluidas:",
-          this.model.animations.length
-        );
-        this.model.animations.forEach((anim, index) => {
-          console.log(`  Animación ${index}: ${anim.name} (${anim.duration}s)`);
-        });
+
 
         // Si hay animaciones en el modelo base, usar la primera como idle
         const baseIdleClip = this.model.animations[0];

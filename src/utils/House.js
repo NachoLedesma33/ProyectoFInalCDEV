@@ -38,7 +38,6 @@ export class House {
     textureLoader.load(
       "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/coral_gravel/coral_gravel_diff_4k.jpg",
       (texture) => {
-        console.log("✅ Textura de grava de coral cargada para la casa");
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(2, 2); // Repetir la textura para mejor cobertura

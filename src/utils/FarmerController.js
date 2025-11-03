@@ -1146,14 +1146,6 @@ export class FarmerController {
 
   setMarket(market) {
     this.market = market;
-    if (market && market.marketGroup) {
-      console.log("✅ Market reference set in FarmerController", {
-        position: market.marketGroup.position,
-        rotation: market.marketGroup.rotation,
-      });
-    } else {
-      console.warn("⚠️ Se pasó una referencia de mercado no válida");
-    }
   }
 
   isFacingCamera() {
