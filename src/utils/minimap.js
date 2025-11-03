@@ -72,6 +72,21 @@ export class Minimap {
         if (inventoryToggle) inventoryToggle.style.display = 'block';
       }
       
+      // Cerrar el panel de objetivos si está abierto
+      const objectivesHud = document.getElementById('objectives-hud');
+      const objectivesToggle = document.getElementById('objectives-toggle');
+      
+      if (objectivesHud && objectivesHud.classList.contains('objectives-expanded')) {
+        objectivesHud.classList.remove('objectives-expanded');
+        objectivesHud.classList.add('objectives-collapsed');
+        if (objectivesToggle) objectivesToggle.style.display = 'block';
+        
+        // También actualizar el estado del gestor de objetivos si está disponible
+        if (window.ObjectivesManager) {
+          window.ObjectivesManager.isExpanded = false;
+        }
+      }
+      
       // Asegurarse de que el contenedor sea visible
       minimap.style.display = 'block';
       

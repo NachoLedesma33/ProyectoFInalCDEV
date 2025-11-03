@@ -342,9 +342,11 @@
   show() {
     const el = document.getElementById('inventory-hud');
     const inventoryToggle = document.getElementById('inventory-toggle');
+    const inventoryClose = document.getElementById('inventory-close');
     const minimapEl = document.getElementById('minimap-hud');
     const minimapToggle = document.getElementById('minimap-toggle');
-    const inventoryClose = document.getElementById('inventory-close');
+    const objectivesHud = document.getElementById('objectives-hud');
+    const objectivesToggle = document.getElementById('objectives-toggle');
     
     if (el) {
       // Cerrar el minimapa si está abierto
@@ -352,6 +354,18 @@
         minimapEl.classList.remove('minimap-expanded');
         minimapEl.classList.add('minimap-collapsed');
         if (minimapToggle) minimapToggle.style.display = 'block';
+      }
+      
+      // Cerrar el panel de objetivos si está abierto
+      if (objectivesHud && objectivesHud.classList.contains('objectives-expanded')) {
+        objectivesHud.classList.remove('objectives-expanded');
+        objectivesHud.classList.add('objectives-collapsed');
+        if (objectivesToggle) objectivesToggle.style.display = 'block';
+        
+        // También actualizar el estado del gestor de objetivos si está disponible
+        if (window.ObjectivesManager) {
+          window.ObjectivesManager.isExpanded = false;
+        }
       }
       
       // Asegurarse de que el contenedor sea visible

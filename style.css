@@ -616,7 +616,8 @@ p {
 
 /* Contenedor individual para cada botón del HUD */
 #inventory-container,
-#minimap-container {
+#minimap-container,
+#objectives-container {
   position: relative;
   display: block;
   margin: 0;
@@ -625,7 +626,8 @@ p {
 
 /* Estilos para los botones de toggle */
 #inventory-toggle,
-#minimap-toggle {
+#minimap-toggle,
+#objectives-toggle {
   background: rgba(0, 0, 0, 0.6);
   border: 2px solid #4caf50;
   border-radius: 20px;
@@ -641,15 +643,21 @@ p {
   transition: all 0.2s ease;
 }
 
-/* Estilo específico para el botón del mapa */
+/* Estilos específicos para los botones */
 #minimap-toggle {
   border-color: #fdbb2d;
   color: #fdbb2d;
 }
 
+#objectives-toggle {
+  border-color: #9c27b0;
+  color: #9c27b0;
+}
+
 /* Efecto hover para los botones */
 #inventory-toggle:hover,
-#minimap-toggle:hover {
+#minimap-toggle:hover,
+#objectives-toggle:hover {
   transform: scale(1.05);
   background: rgba(255, 255, 255, 0.1);
 }
@@ -659,6 +667,7 @@ p {
   position: absolute;
   top: 100%;
   right: 0;
+  transform: translateX(calc(100% - 40px)); /* Desplaza el panel a la izquierda del botón */
   width: 200px;
   max-width: 80vw;
   max-height: 70vh;
@@ -692,6 +701,7 @@ p {
   position: absolute;
   top: 100%;
   right: 0;
+  transform: translateX(calc(100% - 40px)); /* Desplaza el panel a la izquierda del botón */
   width: 200px;
   max-width: 80vw;
   height: 150px;
@@ -736,14 +746,101 @@ p {
   z-index: 1001;
 }
 
+/* Estilos para el HUD de objetivos */
+#objectives-hud {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  transform: translateX(calc(100% - 40px)); /* Desplaza el panel a la izquierda del botón */
+  width: 250px;
+  max-width: 80vw;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(156, 39, 176, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+  padding: 15px;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  margin-top: 5px;
+}
+
+#objectives-hud.objectives-expanded {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.objectives-content {
+  padding: 10px 0;
+}
+
+.objectives-content h3 {
+  margin-top: 0;
+  color: #9c27b0;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.objectives-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.objectives-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #e1bee7;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.objectives-list li:last-child {
+  border-bottom: none;
+}
+
+/* Asegurar que el botón de cierre tenga el estilo correcto */
+#objectives-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #9c27b0;
+  color: #9c27b0;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  z-index: 1001;
+}
+
 #inventory-close:hover,
-#minimap-close:hover {
+#minimap-close:hover,
+#objectives-close:hover {
   background: rgba(253, 187, 45, 0.2);
   transform: scale(1.1);
 }
 
 /* Contenedor del mapa */
-#minimap-toggle, #inventory-toggle {
+#minimap-toggle, #inventory-toggle, #objectives-toggle {
   display: block;
   margin: 0;
   padding: 8px 16px;
@@ -812,6 +909,7 @@ p {
   position: absolute;
   top: 40px; /* Debajo del botón del mapa */
   right: 0;
+  transform: translateX(calc(100% - 40px)); /* Desplaza el panel a la izquierda del botón */
   width: 30vw;
   max-width: 340px;
   min-width: 250px;

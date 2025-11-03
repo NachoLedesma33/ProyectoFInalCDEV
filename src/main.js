@@ -18,6 +18,7 @@ import { Stone } from "./utils/Stone.js"; // Modelo de piedra
 import { House } from "./utils/House.js"; // Casa con puerta interactiva
 import { Market } from "./utils/Market.js"; // Mercado con ventana frontal
 import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
+import { initObjectives } from "./utils/objectives.js"; // Sistema de objetivos
 import { Alien2 } from "./utils/Alien2.js"; // Alien2
 import { ShipRepair } from "./utils/ShipRepair.js";
 import { SmokeEffect } from "./utils/smokeEffect.js"; // Efecto de humo
@@ -1056,6 +1057,9 @@ async function init() {
 
   // Inicializar el minimap
   initMinimap();
+
+  // Inicializar el sistema de objetivos
+  initObjectives();
 
   // Iniciar bucle de animación
   animate();
