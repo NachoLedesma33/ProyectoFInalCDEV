@@ -1,3 +1,5 @@
+import './utils/consoleFilter.js';
+
 // Importaciones de Three.js y módulos personalizados
 import PauseMenu from './utils/pauseMenu.js';
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
