@@ -764,11 +764,11 @@ async function init() {
         try {
           showFinalScene({ shipRepair, cameraManager });
         } catch (e) {
-          console.error("Error mostrando escena final", e);
+          return e;
         }
       };
     } catch (e) {
-      console.warn("No se pudo asignar onRepairComplete:", e);
+      return e;
     }
   }
 
@@ -832,7 +832,7 @@ async function init() {
               farmerController.setInventory(inventory);
             }
           } catch (e) {
-            console.warn("No se pudo inicializar Inventory:", e);
+           return e;
           }
 
           // Conectar el corral con el controlador del granjero
@@ -888,7 +888,7 @@ async function init() {
                 waveStartAt = performance.now() + 60000;
                 try { createWaveCountdownElement(); } catch (e) {}
                 // waveManager will be started from the main loop when waveStartAt elapses
-              } catch (e) { console.warn('No se pudo programar oleadas:', e); }
+              } catch (e) { return e; }
             };
 
             try {
@@ -901,46 +901,26 @@ async function init() {
               scheduleWavesAfterStart();
             }
           } catch (e) {
-            console.warn('No se pudo inicializar CombatSystem/WaveManager:', e);
+            return e;
           }
 
           // Conectar el farmerController con las piedras para detección de colisiones
           if (farmerController && stones && stones.length > 0) {
             farmerController.setStones(stones);
-          } else {
-            console.warn(
-              "⚠️ No se pudo conectar el farmerController con las piedras"
-            );
-            console.warn("farmerController:", farmerController);
-            console.warn("stones:", stones);
-          }
-
+          } 
           // Conectar el farmerController con la casa para detección de colisiones
           if (farmerController && house) {
             farmerController.setHouse(house);
             
-          } else {
-            console.warn("farmerController:", farmerController);
-            console.warn("house:", house);
           }
 
           // Conectar el farmerController con las vacas para detección de colisiones
           if (farmerController && cows && cows.length > 0) {
             farmerController.setCows(cows);
-          } else {
-            console.warn("farmerController:", farmerController);
-            console.warn("cows:", cows);
-          }
-
+          } 
           // Conectar el farmerController con el mercado para detección de colisiones
           if (farmerController && market) {
             farmerController.setMarket(market);
-          } else {
-            console.warn(
-              "⚠️ No se pudo conectar el farmerController con el mercado"
-            );
-            console.warn("farmerController:", farmerController);
-            console.warn("market:", market);
           }
 
           // Mostrar las animaciones disponibles en consola
@@ -954,7 +934,7 @@ async function init() {
       farmerConfig // Pasar la configuración completa del modelo
     );
   } catch (error) {
-    console.error("Error al cargar el modelo o animaciones:", error);
+    return e;
   }
 
   // Configurar eventos
@@ -1161,7 +1141,9 @@ function animate(currentTime = 0) {
           // oculta cuando llegue la hora
           try {
             if (waveManager && typeof waveManager.start === 'function' && !waveManager._running) {
-              try { waveManager.start(); console.log('WaveManager iniciado desde main loop'); } catch (e) { console.warn('No se pudo iniciar WaveManager', e); }
+              try {
+                waveManager.start();
+              } catch (e) { return e; }
             }
           } catch (_) {}
           if (waveCountdownEl && waveCountdownEl.parentElement) waveCountdownEl.parentElement.removeChild(waveCountdownEl);
@@ -1188,7 +1170,7 @@ function animate(currentTime = 0) {
       try {
         waveManager.update(delta);
       } catch (e) {
-        console.warn('WaveManager update error', e);
+        return e;
       }
     }
 

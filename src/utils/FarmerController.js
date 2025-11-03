@@ -938,13 +938,6 @@ export class FarmerController {
     }
   }
 
-  /**
-   * Obtiene el movimiento ajustado específicamente para colisiones con piedras
-   * Permite acercamiento más cercano y deslizamiento suave
-   * @param {THREE.Vector3} currentPosition - Posición actual
-   * @param {THREE.Vector3} movementVector - Vector de movimiento original
-   * @returns {THREE.Vector3} - Vector de movimiento ajustado para piedras
-   */
   getStoneAdjustedMovement(currentPosition, movementVector) {
     // Primero verificar si hay colisión con el movimiento completo
     const newPosition = currentPosition.clone().add(movementVector);
@@ -1005,12 +998,7 @@ export class FarmerController {
     return false;
   }
 
-  /**
-   * Obtiene el movimiento ajustado para evitar colisiones más cercana y ajusta el movimiento
-   * @param {THREE.Vector3} currentPosition - Posición actual
-   * @param {THREE.Vector3} movementVector - Vector de movimiento
-   * @returns {THREE.Vector3} - Vector de movimiento ajustado
-   */
+
   getAdjustedMovement(currentPosition, movementVector) {
     // Si está en animación de colisión con vaca, detener movimiento completamente
     if (this.isCollidingWithCow) {
@@ -1088,12 +1076,6 @@ export class FarmerController {
     return movementVector;
   }
 
-  /**
-   * Obtiene un movimiento de deslizamiento suave cuando hay colisión
-   * @param {THREE.Vector3} currentPosition - Posición actual
-   * @param {THREE.Vector3} movementVector - Vector de movimiento original
-   * @returns {THREE.Vector3} - Vector de movimiento ajustado para deslizamiento
-   */
   getSlidingMovement(currentPosition, movementVector) {
     // Intentar movimiento solo en el eje X
     const xMovement = new THREE.Vector3(movementVector.x, 0, 0);
@@ -1773,7 +1755,6 @@ export class FarmerController {
           "Posición del hueso (mundo):",
           rightHandBone.getWorldPosition(new THREE.Vector3())
         );
-        console.log("================================");
       };
 
       // Mostrar información de depuración
@@ -2464,7 +2445,6 @@ export class FarmerController {
 
       // Si hay colisión, detener el movimiento y mostrar advertencia
       if (this.checkCorralCollision(finalPosition)) {
-        console.warn("Movimiento bloqueado por colisión con el corral");
         // Detener animación de movimiento
         this.modelLoader.play("idle", 0.15);
       }
