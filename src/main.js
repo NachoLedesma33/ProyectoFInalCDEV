@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try { playButton.parentNode.insertBefore(soundButton, playButton.nextSibling); } catch(_) {}
     }
   } catch (e) {
-    console.warn('No se pudo reordenar/crear soundButton:', e);
+    return e;
   }
 
   // Inicializar AudioManager lo antes posible (sin cámara) para que la música del menú pueda reproducirse
@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   } catch (e) {
-    console.warn("No se pudo inicializar audio temprano:", e);
+    return e;
   }
 
   // Por ahora, los otros botones no tienen funcionalidad. Guardamos las
@@ -115,8 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (controlsButton && typeof controlsButton.addEventListener === 'function') {
     controlsButton.addEventListener("click", () => {
-      try { safePlaySfx('uiClick', { volume: 0.9 }); } catch(_){}
-      console.log("Controls button clicked");
+      try { safePlaySfx('uiClick', { volume: 0.9 }); } catch(_){};
     });
   }
 
@@ -132,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // hide immediately in case constructor left it visible
         try { if (pauseMenu && typeof pauseMenu.hide === 'function') pauseMenu.hide(); } catch (_) {}
       }
-    } catch (e) { console.warn('No se pudo crear PauseMenu:', e); }
+    } catch (e) { return e; }
     // expose for debugging from console
     try { window.pauseMenu = pauseMenu; } catch (_) {}
   try { if (pauseMenu && typeof pauseMenu.hide === 'function') pauseMenu.hide(); } catch(_) {}
@@ -163,11 +162,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const visible = soundHud.style.display !== 'none' && soundHud.style.display !== '';
       soundHud.style.display = visible ? 'none' : 'block';
     } catch (e) {
-      console.warn('Error toggling sound HUD:', e);
+      return e;
     }
     });
   } else {
-    console.warn('sound-button not found and could not be created; sound HUD will not be toggleable via button');
+    return 'sound-button not found and could not be created; sound HUD will not be toggleable via button';
   }
 
   // Toggle pause menu with Escape while gameplay is active
@@ -195,7 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
               if (isShown) pauseMenu.hide(); else pauseMenu.show();
               return;
             }
-          } catch (err) { console.warn('[pause] error toggling pauseMenu API', err); }
+          } catch (err) {return err;}
 
           const overlay = document.getElementById('pause-overlay');
           if (!overlay) return;
@@ -208,11 +207,11 @@ document.addEventListener("DOMContentLoaded", () => {
             window.__gamePaused = true;
           }
         } catch (e) {
-          try { console.error('[pause] ESC handler error', e); } catch (_) {}
+          return e;
         }
       }
     });
-  } catch (_) {}
+  } catch (e) { return e; }
 
   // Iniciar música cuando arranca el gameplay (tras controles)
   try {
@@ -402,7 +401,7 @@ function initMinimap() {
     try {
       minimapManager.init("minimap-canvas");
     } catch (e) {
-      console.warn("No se pudo inicializar minimapManager:", e);
+      return e;
     }
   }
 }
@@ -644,7 +643,7 @@ async function init() {
       } catch (e) {}
     }
   } catch (e) {
-    console.warn("No se pudo inicializar AudioManager:", e);
+    return e;
   }
 
   // Inicializar reloj para animaciones
@@ -668,7 +667,7 @@ async function init() {
           skybox = new Skybox(scene, path);
           break; // Salir del bucle si la carga es exitosa
         } catch (err) {
-          console.warn(`No se pudo cargar el skybox desde ${path}:`, err);
+          return e;
           // Continuar con la siguiente ruta en caso de error
         }
       }
@@ -953,7 +952,7 @@ async function init() {
           console.log('Ninguna herramienta seleccionada');
         }
       } catch (e) {
-        console.warn("Error manejando selección de inventario", e);
+        return e;
       }
     };
   }
@@ -1161,7 +1160,7 @@ function animate(currentTime = 0) {
       try {
         combatSystem.update(delta);
       } catch (e) {
-        console.warn('CombatSystem update error', e);
+        return e;
       }
     }
 
