@@ -43,7 +43,7 @@ export class SpaceShuttle {
       }
       
     } catch (error) {
-      console.error("Error al cargar el Space Shuttle Orbiter:", error);
+      return error;
     }
   }
 

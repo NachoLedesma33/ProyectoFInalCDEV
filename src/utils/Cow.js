@@ -44,7 +44,6 @@ export class Cow {
 
   async init() {
     try {
-      console.log("Cargando modelo de vaca...");
 
       // Cargar el modelo FBX de la vaca
       const loader = new FBXLoader();
@@ -61,7 +60,7 @@ export class Cow {
       this.progressBar = new ProgressBar(this, this.scene, 75000); // 75 segundos para cargar
 
     } catch (error) {
-      console.error("Error al cargar el modelo de vaca:", error);
+      return error;
     }
   }
 
@@ -77,7 +76,6 @@ export class Cow {
           const percent = (progress.loaded / progress.total) * 100;
         },
         (error) => {
-          console.error("Error al cargar el modelo de vaca:", error);
           reject(error);
         }
       );

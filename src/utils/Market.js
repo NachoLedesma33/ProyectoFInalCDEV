@@ -143,7 +143,6 @@ export class Market {
       },
       undefined,
       (error) => {
-        console.error("Error cargando textura:", error);
         const basicMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
         this.createWalls(basicMaterial, basicMaterial);
         this.createRoof(basicMaterial);
@@ -500,7 +499,7 @@ export class Market {
             window.alien2.playAnimation('idle');
           }
         } catch (e) {
-          console.warn('Error forzando idle en alien2:', e);
+          return e;
         }
       }
     } catch (e) {
@@ -548,8 +547,7 @@ export class Market {
             try { window.alien2._onDialogueClose = openMarketOnClose; } catch (e) {}
             // now close the alien HUD so its onClose fires (and opens market)
             if (typeof window.alien2.closeDialogue === 'function') window.alien2.closeDialogue();
-          } catch (err) {
-            console.warn('Error while trying to open market from alien chooser:', err);
+          } catch (err) {;
             // fallback: directly open market UI
             this.showMarketUI({ returnToChooser: true });
           }
@@ -578,10 +576,9 @@ export class Market {
                 window.alien2.handleNoMilkResponse();
               }
             } catch (err) {
-              console.warn('Error starting sell flow on alien dialog:', err);
+              return err;
             }
-          } catch (err) {
-            console.warn('Error opening alien sell flow:', err);
+          } catch (err) {;
             // Fallback: open market UI
             this.showMarketUI({ returnToChooser: true });
           }
@@ -611,18 +608,17 @@ export class Market {
                 window.farmerController.exitMarket(this);
               }
             } catch (err) {
-              console.warn('Error exiting market on chooser close:', err);
+              return err
             }
           };
           // Ensure we pass the proper handler
           window.alien2.openDialogue(onChooserClose, { skipInitial: true });
         } catch (err) {
-          console.warn('Error showing alien dialog chooser:', err);
+          return err;
         }
 
         return;
-      } catch (e) {
-        console.warn('Error using alien dialog as chooser:', e);
+      } catch (e) {;
         // fallback to simple chooser UI
         return this.showInteractionChoiceFallback();
       }
@@ -717,8 +713,7 @@ export class Market {
           // fallback: open market if alien not present
           this.showMarketUI({ returnToChooser: true });
         }
-      } catch (err) {
-        console.warn('Error opening alien dialogue:', err);
+      } catch (err) {;
         this.showMarketUI({ returnToChooser: true });
       }
     };
@@ -735,7 +730,7 @@ export class Market {
           window.farmerController.exitMarket(this);
         }
       } catch (err) {
-        console.warn('Error exiting market on chooser close (fallback):', err);
+        return err;
       }
     };
   }
@@ -1345,7 +1340,6 @@ export class Market {
           // 3. Obtener el índice del slot para esta herramienta
           const slotIndex = toolSlots[item.name];
           if (slotIndex === undefined) {
-            console.warn(`No se encontró un slot definido para: ${item.name}`);
             window.inventory?.notify?.(`Error: No se pudo encontrar el slot para ${item.name}`, 'error');
             return;
           }

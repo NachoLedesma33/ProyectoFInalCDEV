@@ -361,12 +361,6 @@ function createCows() {
           lookAtPoint.z
         );
         cow.model.lookAt(targetVector);
-        console.log(
-          `Vaca ${index + 1} orientada hacia la línea central:`,
-          lookAtPoint
-        );
-      } else {
-        console.log(`Vaca ${index + 1} modelo aún no cargado, reintentando...`);
       }
     };
 
@@ -377,12 +371,6 @@ function createCows() {
     setTimeout(orientCow, 3000);
 
     cows.push(cow);
-    console.log(
-      `Vaca ${index + 1} creada en posición:`,
-      position,
-      "mirando hacia:",
-      lookAtPoint
-    );
   });
 
   // Hacer las vacas accesibles para depuración
@@ -508,13 +496,6 @@ function createStones() {
       stoneData.modelType
     );
     stones.push(stone);
-    console.log(
-      `Piedra ${index + 1} (ST_Stone${
-        stoneData.modelType
-      }.fbx) creada en posición: (${stoneData.x}, ${stoneData.y}, ${
-        stoneData.z
-      }) con escala ${stoneData.scale}`
-    );
   });
 
   // Hacer las piedras accesibles para depuración
@@ -680,10 +661,7 @@ async function init() {
       // Configuración adicional del renderizado
       renderer.setClearColor(0x000000, 1); // Color de fondo negro
       renderer.outputEncoding = THREE.sRGBEncoding; // Codificación de color sRGB
-
-      console.log("Skybox inicializado correctamente");
     } catch (error) {
-      console.error("Error al inicializar el skybox:", error);
       // Configurar un color de fondo celeste como respaldo
       scene.background = new THREE.Color(0x87ceeb);
     }
@@ -925,9 +903,6 @@ async function init() {
           // Mostrar las animaciones disponibles en consola
           const availableAnims = Object.keys(instance.actions);
 
-          if (availableAnims.length === 0) {
-            console.warn("⚠️ No se encontraron animaciones para este modelo");
-          }
         }
       },
       farmerConfig // Pasar la configuración completa del modelo

@@ -29,8 +29,7 @@ export class ModelLoader {
       try {
         this.normalizeSkinWeightsInModel(this.model);
       } catch (e) {
-        // non-critical
-        console.warn('ModelLoader: error normalizing skin weights', e);
+        return e;
       }
 
       this.setupModel();
@@ -49,8 +48,7 @@ export class ModelLoader {
 
       if (onLoad) onLoad(this);
       return this;
-    } catch (error) {
-      console.error("Error loading model:", error);
+    } catch (error) {;
       throw error;
     }
   }
@@ -185,8 +183,7 @@ export class ModelLoader {
                 if (modelBoneNames.has(n)) common++;
               });
 
-              if (modelBoneNames.size > 0 && common === 0) {
-                console.warn(`ModelLoader: skipping animation '${name}' loaded from '${path}' because no common bone names were found between animation and model.`);
+              if (modelBoneNames.size > 0 && common === 0) {;
                 resolve();
                 return;
               }
@@ -200,14 +197,12 @@ export class ModelLoader {
               const action = this.mixer.clipAction(newClip, this.model);
               action.setLoop(THREE.LoopRepeat, Infinity);
               action.clampWhenFinished = true;
-              this.actions[name] = action;
-              console.log(`ModelLoader: registered animation action '${name}' from '${path}'`);
+              this.actions[name] = action;;
             }
             resolve();
           },
           undefined,
-          (error) => {
-            console.warn(`ModelLoader: failed to load animation '${name}' from '${path}':`, error);
+          (error) => {;
             resolve();
           }
         );

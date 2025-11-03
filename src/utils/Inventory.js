@@ -65,7 +65,6 @@
       this._flash('Ranura vacía');
       return;
     }
-    
     // Notificar que se seleccionó una herramienta
     if (typeof this.onEquipChange === 'function') {
       this.onEquipChange(index0, tool);

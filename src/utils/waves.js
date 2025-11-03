@@ -148,7 +148,6 @@ export class WaveManager {
     const enemy = new Alien1(this.scene, this.modelLoader, pos, lookAt);
     const loaded = await enemy.load();
     if (!loaded) {
-      console.warn('WaveManager: fallo al cargar Alien1, saltando spawn');
       // Reponer el slot para reintentar en el próximo tick
       this.enemiesToSpawn++;
       return;
@@ -237,7 +236,6 @@ export class WaveManager {
       if (!window.printAllAlienAnims) {
         window.printAllAlienAnims = function () {
           if (!window.aliens || window.aliens.length === 0) {
-            console.warn('No hay aliens vivos aún');
             return;
           }
           window.aliens.forEach((a, i) => {
@@ -245,8 +243,6 @@ export class WaveManager {
             console.group(`Alien[${i}]`);
             if (diag) {
               console.table(Object.keys(diag).map(k => ({ name: k, ...diag[k] })));
-            } else {
-              console.warn('Sin diagnósticos disponibles para este alien');
             }
             console.groupEnd();
           });
@@ -426,7 +422,7 @@ export class WaveManager {
       try {
         if (entry.instance && typeof entry.instance.update === 'function') entry.instance.update(delta);
       } catch (err) {
-        console.warn('Error updating enemy', id, err);
+        return err;
       }
     }
 

@@ -20,8 +20,7 @@ export class Minimap {
 
   init(canvasId = "minimap-canvas") {
     this.canvas = document.getElementById(canvasId);
-    if (!this.canvas) {
-      console.error("No se encontró el canvas del minimap (id: " + canvasId + ")");
+    if (!this.canvas) {;
       return;
     }
     this.ctx = this.canvas.getContext("2d");
@@ -135,9 +134,7 @@ export class Minimap {
           minimapToggle && !minimapToggle.contains(e.target)) {
         collapseMinimap();
       }
-    });
-
-    console.log("✅ Minimap inicializado (clase)");
+    });;
   }
 
   setReferences(newRefs = {}) {

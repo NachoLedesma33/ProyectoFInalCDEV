@@ -119,7 +119,7 @@ export class FarmerController {
           try {
             this.attack();
           } catch (e) {
-            console.warn('Error al aplicar ataque del jugador:', e);
+            return e;
           }
 
           // Play the punch animation (or fallback) and enter melee sequence
@@ -148,7 +148,6 @@ export class FarmerController {
               this._isInMeleeSequence = true;
               this._clearCombatExitTimer();
               this._combatIdleUntil = Date.now() + 1000;
-              console.warn(`FarmerController: punch action '${actionName}' not found. Available actions:`, Object.keys(this.modelLoader?.actions || {}));
               this.modelLoader.play("combat_idle", 0.08);
               this._combatExitTimer = setTimeout(() => {
                 // only exit if the combat idle window has passed
@@ -161,11 +160,11 @@ export class FarmerController {
                 try { this.updateAnimationState(); } catch (e) {}
               }, 1000);
             } catch (e) {
-              console.warn('Error al reproducir combat_idle fallback:', e);
+              return e;
             }
           }
         } catch (e) {
-          console.warn("Error reproduciendo punch:", e);
+          return e;
         }
 
         // Alternate for next click
@@ -259,7 +258,7 @@ export class FarmerController {
                   } catch (e) {}
                 }
               } catch (e) {
-                console.warn('FarmerController: error auto-mapping punch actions', e);
+                return e;
               }
               // Si no se cargó punch_right (404 por nombre con typo), intentar una ruta alternativa común
               if (!actions.punch_right) {
@@ -278,16 +277,16 @@ export class FarmerController {
                 }
               }
             } catch (e) {
-              console.warn("No se pudieron configurar acciones de melee:", e);
+              return e;
             }
           })
           .catch((e) => {
-            console.warn("Error cargando animaciones de melee:", e);
+            return e;
           });
       }
     } catch (e) {
       // no bloquear si algo falla
-      console.warn("Error inicializando animaciones de melee:", e);
+      return e;
     }
 
   // Input enabled flag: when false, keyboard movement input is ignored
@@ -375,10 +374,10 @@ export class FarmerController {
               hb.attachTo(this.healthComponent, { position: 'bottom-center', y: 28 });
               window.playerHealthBar = hb;
             } catch (e) {
-              console.warn('No se pudo crear HealthBar fallback:', e);
+              return e;
             }
           }
-        } catch (e) { console.warn('Error creando HUD de vida:', e); }
+        } catch (e) { return e; }
       };
 
       // Gate por señal global de inicio de gameplay
@@ -399,14 +398,10 @@ export class FarmerController {
       try { window.farmerController = this; } catch (e) {}
 
     } catch (e) {
-      console.warn("No se pudo integrar CombatSystem en FarmerController:", e);
+      return e;
     }
   }
 
-  /**
-   * Reproduce un golpe (left/right). Internamente maneja el flag _isInMeleeSequence
-   * @param {string} side 'left'|'right'
-   */
   _playPunch(side) {
     if (!this.modelLoader) return;
 
@@ -448,10 +443,6 @@ export class FarmerController {
     } catch (e) {}
   }
 
-  /**
-   * Listener del mixer para detectar cuando termina una animación.
-   * Encadena punch -> combat_idle -> siguiente punch si el jugador mantiene click.
-   */
   _onMixerFinished(event) {
     try {
       // Si está muerto, no encadenar más animaciones ni sobrescribir 'death'
@@ -499,7 +490,7 @@ export class FarmerController {
         try { this.updateAnimationState(); } catch (e) {}
       }
     } catch (e) {
-      console.warn("Error en mixer finished handler:", e);
+      return e;
     }
   }
 
@@ -517,13 +508,8 @@ export class FarmerController {
     }
   }
 
-  /**
-   * Inyecta una instancia de Inventory para añadir leche al ordeñar
-   * @param {Object} inventory - Instancia de Inventory
-   */
   setInventory(inventory) {
     this.inventory = inventory;
-    console.log("Inventory conectado al FarmerController");
   }
 
   /**
@@ -600,13 +586,8 @@ export class FarmerController {
     this.spaceShuttle = spaceShuttle;
   }
 
-  /**
-   * Establece la referencia a las piedras para detección de colisiones
-   * @param {Array} stones - Array de instancias de piedras
-   */
   setStones(stones) {
     if (!stones || stones.length === 0) {
-      console.warn("⚠️ No se proporcionaron piedras válidas");
       return;
     }
 
@@ -622,21 +603,14 @@ export class FarmerController {
     });
 
     if (validStones.length === 0) {
-      console.warn("⚠️ Ninguna piedra tiene método checkCollision");
       this.stones = null;
       return;
     }
 
     this.stones = validStones;
   }
-
-  /**
-   * Establece la referencia a la casa para detección de colisiones
-   * @param {House} house - Instancia de la casa
-   */
   setHouse(house) {
     if (!house) {
-      console.warn("⚠️ No se proporcionó una casa válida");
       return;
     }
 
@@ -645,20 +619,13 @@ export class FarmerController {
     // Verificar que la casa tenga el método de colisión
     const hasCheckCollision = typeof house.checkCollision === "function";
     if (!hasCheckCollision) {
-      console.warn("⚠️ La casa no tiene método checkCollision:", house);
       this.house = null;
       return;
     }
 
   }
-
-  /**
-   * Establece la referencia a las vacas para detección de colisiones
-   * @param {Array} cows - Array de instancias de vacas
-   */
   setCows(cows) {
     if (!cows || cows.length === 0) {
-      console.warn("⚠️ No se proporcionaron vacas válidas");
       return;
     }
 
@@ -667,14 +634,10 @@ export class FarmerController {
     // Verificar que las vacas tengan el método de colisión
     const validCows = cows.filter((cow) => {
       const hasCheckCollision = typeof cow.checkCollision === "function";
-      if (!hasCheckCollision) {
-        console.warn("⚠️ Vaca sin método checkCollision:", cow);
-      }
       return hasCheckCollision;
     });
 
     if (validCows.length === 0) {
-      console.warn("⚠️ Ninguna vaca tiene método checkCollision");
       this.cows = null;
       return;
     }
@@ -682,11 +645,7 @@ export class FarmerController {
     this.cows = validCows;
   }
 
-  /**
-   * Verifica si el personaje colisiona con el corral
-   * @param {THREE.Vector3} newPosition - Nueva posición a verificar
-   * @returns {boolean} - True si hay colisión
-   */
+
   checkCorralCollision(newPosition) {
     if (!this.corral || !this.model) return false;
 
@@ -701,11 +660,6 @@ export class FarmerController {
     return collision !== null;
   }
 
-  /**
-   * Verifica si el personaje colisiona con el Space Shuttle
-   * @param {THREE.Vector3} newPosition - Nueva posición a verificar
-   * @returns {boolean} - True si hay colisión
-   */
   checkSpaceShuttleCollision(newPosition) {
     if (!this.spaceShuttle || !this.model) return false;
 
@@ -713,11 +667,6 @@ export class FarmerController {
     return this.spaceShuttle.checkCollision(newPosition, this.characterSize);
   }
 
-  /**
-   * Verifica si el personaje colisiona con las piedras
-   * @param {THREE.Vector3} position - Posición a verificar
-   * @returns {boolean} - True si hay colisión con alguna piedra
-   */
   checkStonesCollision(position) {
     if (!this.stones || !this.model) return false;
 
@@ -754,10 +703,6 @@ export class FarmerController {
     return false; // No hay colisión con ninguna vaca
   }
 
-  /**
-   * Maneja la animación de colisión con vacas
-   * @param {Cow} cow - La vaca con la que se colisionó
-   */
   handleCowCollisionAnimation(cow) {
     if (!this.isCollidingWithCow) {
       this.isCollidingWithCow = true;
@@ -782,11 +727,6 @@ export class FarmerController {
       this.updateAnimationState();
     }
   }
-
-  /**
-   * Actualiza el estado de la animación de colisión con vacas
-   * @param {number} currentTime - Tiempo actual en milisegundos
-   */
   updateCowCollisionAnimation(currentTime) {
     if (this.isCollidingWithCow) {
       const elapsedTime = currentTime - this.cowCollisionStartTime;
@@ -795,8 +735,7 @@ export class FarmerController {
         // Si ha pasado el tiempo de la animación de transición, cambiar al estado final agachado
         if (elapsedTime >= this.kneelingDownDuration) {
           this.cowCollisionState = "kneeling";
-          this.cowCollisionStartTime = Date.now(); // Reiniciar el tiempo para el estado kneeling
-          console.log("🐄 Transición a estado final agachado");
+          this.cowCollisionStartTime = Date.now();
 
             // Start milking loop SFX (positional if available)
             try {
@@ -818,7 +757,6 @@ export class FarmerController {
       } else if (this.cowCollisionState === "kneeling") {
         // Si ha pasado el tiempo de la animación final, terminar la secuencia y reiniciar la barra de progreso
         if (elapsedTime >= this.kneelingDuration) {
-          console.log("🐄 Secuencia de animación de colisión finalizada");
 
           // Reiniciar la barra de progreso de la vaca con la que se colisionó
           if (this.currentCollidedCow) {
@@ -892,8 +830,7 @@ export class FarmerController {
                     };
                   }
                 }
-              } catch (e) {
-                console.warn("No se pudo calcular screenPos para popup:", e);
+              } catch (e) {;
                 screenPos = null;
               }
 
@@ -912,8 +849,7 @@ export class FarmerController {
               this.inventory &&
               typeof this.inventory.addMilk === "function"
             ) {
-              addAndNotify(this.inventory);
-              console.log(`🐄 Ordeñaste y obtuviste ${milkAmount} L de leche`);
+              addAndNotify(this.inventory);;
             } else if (
               window &&
               window.inventory &&
@@ -921,12 +857,9 @@ export class FarmerController {
             ) {
               // Fallback a window.inventory
               addAndNotify(window.inventory);
-              console.log(
-                `🐄 Ordeñaste y obtuviste ${milkAmount} L de leche (fallback window.inventory)`
-              );
             }
           } catch (err) {
-            console.warn("No se pudo añadir leche al inventario:", err);
+            return e;
           }
 
           this.currentCollidedCow = null; // Limpiar la referencia a la vaca
@@ -1132,16 +1065,8 @@ export class FarmerController {
     return true;
   }
 
-  /**
-   * Verifica si hay colisión con el área del mercado
-   * @param {THREE.Vector3} position - Posición a verificar
-   * @returns {boolean} - True si hay colisión
-   */
   checkMarketCollision(position) {
     if (!this.market || !this.market.marketGroup) {
-      console.warn(
-        "Mercado no está correctamente inicializado para detección de colisiones"
-      );
       return false;
     }
 
@@ -1210,8 +1135,7 @@ export class FarmerController {
           }
         }
       } catch (e) {
-        // fallback to treating as collision on error
-        console.warn("Error checking doorway area:", e);
+        return e;
       }
       return true;
     }
@@ -1219,14 +1143,7 @@ export class FarmerController {
     return false;
   }
 
-  /**
-   * Establece la referencia al mercado para detección de colisiones
-   * @param {Object} market - Instancia del mercado
-   */
-  /**
-   * Establece la referencia al mercado para detección de colisiones
-   * @param {Object} market - Instancia del mercado
-   */
+
   setMarket(market) {
     this.market = market;
     if (market && market.marketGroup) {
@@ -1239,10 +1156,6 @@ export class FarmerController {
     }
   }
 
-  /**
-   * Determina si el personaje está de frente a la cámara
-   * @returns {boolean} - True si el personaje está de frente a la cámara
-   */
   isFacingCamera() {
     if (!this.camera || !this.model) return false;
 
@@ -1346,11 +1259,6 @@ export class FarmerController {
 
   isInputEnabled() { return !!this.inputEnabled; }
 
-  /**
-   * Busca recursivamente el hueso de la mano en el modelo
-   * @param {THREE.Object3D} object - Objeto o hueso donde buscar
-   * @returns {THREE.Bone|null} - Hueso de la mano (izquierda o derecha) o null si no se encuentra
-   */
   findRightHandBone(object) {
     if (!object) return null;
 
@@ -1421,9 +1329,6 @@ export class FarmerController {
     return null;
   }
 
-  /**
-   * Intenta equipar el arma precargada en window.loadedAxe
-   */
   async equipWeapon() {
     try {
       if (this.isEquipped) {
@@ -1437,9 +1342,6 @@ export class FarmerController {
       this._handBone = this.findRightHandBone(this.model);
 
       if (!this._handBone) {
-        console.warn(
-          "No se encontró el hueso de la mano izquierda, usando posición por defecto"
-        );
         // Posición por defecto si no se encuentra el hueso
         this._weaponPivot = new THREE.Group();
         this.model.add(this._weaponPivot);
@@ -1526,7 +1428,6 @@ export class FarmerController {
             this._weaponPivot.parent.remove(this._weaponPivot);
           }
           this._handBone.add(this._weaponPivot);
-          console.log("Pivote del arma añadido al hueso:", this._handBone.name);
         }
 
         // Ajustar la escala del arma (aumentada para mejor visibilidad)
@@ -1646,26 +1547,15 @@ export class FarmerController {
           }
         });
 
-        // Depuración
-        console.log("=== INFORMACIÓN DEL ARMA ===");
         console.log("Posición del arma (local):", this.equippedWeapon.position);
         console.log(
           "Posición del arma (mundo):",
           this.equippedWeapon.getWorldPosition(new THREE.Vector3())
         );
-        console.log("Rotación del arma:", this.equippedWeapon.rotation);
-        console.log("Escala del arma:", this.equippedWeapon.scale);
-        console.log("==========================");
 
         this.isEquipped = true;
-        console.log("Arma equipada correctamente");
         return;
       }
-
-      // Si no hay arma cargada, crea una caja roja temporal
-      console.log(
-        "No se encontró un arma precargada, creando una de prueba..."
-      );
 
       // Crear un grupo para el hacha
       const axe = new THREE.Group();
@@ -1695,14 +1585,10 @@ export class FarmerController {
       this.model.add(axe);
       this.equippedWeapon = axe;
 
-      // Mostrar posición de depuración
-      console.log("Hacha de prueba creada en posición:", axe.position);
-
       // Encontrar el hueso de la mano
       this._handBone = this.findRightHandBone(this.model);
 
       if (this._handBone) {
-        console.log("Hueso de la mano encontrado:", this._handBone.name);
 
         // Obtener la posición y rotación del hueso
         this._handBone.getWorldPosition(this._tmpVec);
@@ -1724,9 +1610,6 @@ export class FarmerController {
         // Actualizar la matriz del mundo del arma
         this.equippedWeapon.updateMatrixWorld(true);
       } else {
-        console.warn(
-          "No se encontró el hueso de la mano, usando posición por defecto"
-        );
         // Posición por defecto si no se encuentra el hueso
         this.equippedWeapon.position.copy(this.model.position);
         this.equippedWeapon.position.y += 2.0; // Ajustar altura (más alto)
@@ -1735,26 +1618,11 @@ export class FarmerController {
       }
 
       this.isEquipped = true;
-      console.log("Hacha de prueba creada");
-
-      console.log("Hacha de prueba creada en la mano derecha");
 
       // Función para mostrar información de depuración
       const logDebugInfo = () => {
         const worldPos = new THREE.Vector3();
         axe.getWorldPosition(worldPos);
-
-        console.log("=== INFORMACIÓN DE DEPURACIÓN ===");
-        console.log("Posición del hacha (local):", axe.position);
-        console.log("Posición del hacha (mundo):", worldPos);
-        console.log("Escala del hacha:", axe.scale);
-        console.log("Padre del hacha:", axe.parent?.name || "Escena raíz");
-        console.log("Hueso de la mano:", rightHandBone.name);
-        console.log("Posición del hueso (local):", rightHandBone.position);
-        console.log(
-          "Posición del hueso (mundo):",
-          rightHandBone.getWorldPosition(new THREE.Vector3())
-        );
       };
 
       // Mostrar información de depuración
@@ -1766,60 +1634,11 @@ export class FarmerController {
       // Forzar actualización
       axe.updateMatrixWorld(true);
     } catch (error) {
-      console.error("Error al equipar el hacha:", error);
+      return console.error();
+      ;
     }
   }
 
-  /*
-   * Equipar una herramienta por nombre (p. ej. 'Hacha')
-   * @param {string} toolName
-   *
-  async equipTool(toolName) {
-    console.log(`[FUNCIONALIDAD DESHABILITADA] Se intentó equipar: ${toolName}`);
-    // La funcionalidad de equipar herramientas está deshabilitada
-    return;
-    
-    // Código original comentado:
-    // console.log(`Intentando equipar herramienta: ${toolName}`);
-    // if (
-    //   toolName &&
-    //   (toolName.toLowerCase() === "hacha" || toolName.toLowerCase() === "axe")
-    // ) {
-    //   console.log("Equipando hacha...");
-    //   await this.equipWeapon();
-    // } else {
-    //   console.log(`Tipo de herramienta no soportado: ${toolName}`);
-    // }
-  }
-
-  /**
-   * Desequipar herramienta actualmente equipada
-   *
-  unequipTool() {
-    console.log("[FUNCIONALIDAD DESHABILITADA] Se intentó desequipar herramienta");
-    // La funcionalidad de desequipar herramientas está deshabilitada
-    return;
-    
-    // Código original comentado:
-    // if (this.equippedWeapon) {
-    //   // Remover el hacha de la escena
-    //   if (this.equippedWeapon.parent) {
-    //     this.equippedWeapon.parent.remove(this.equippedWeapon);
-    //   }
-    //   this.equippedWeapon = null;
-    //   this.isEquipped = false;
-    //   console.log("Herramienta desequipada correctamente");
-    // }
-
-    // // Volver a la animación de reposo
-    // if (this.modelLoader) {
-    //   this.modelLoader.play("idle", 0.15);
-    // }
-  }
-
-  /**
-   * Ejecutar un ataque corto usando la animación meleeAttack
-   */
   attack() {
     // cooldown simple
     const now = Date.now();
@@ -1849,8 +1668,7 @@ export class FarmerController {
 
       return hb;
     } catch (err) {
-      console.warn("Error ejecutando attack():", err);
-      return null;
+      return err;
     }
   }
 
@@ -1859,7 +1677,6 @@ export class FarmerController {
    */
   updateAnimationState() {
     if (!this.modelLoader || !this.modelLoader.model) {
-      console.warn("No se puede actualizar animación: modelo no cargado");
       return;
     }
 
@@ -1902,7 +1719,6 @@ export class FarmerController {
           this.isCollidingWithCow = false;
           this.cowCollisionState = "none";
           this.cowCollisionStartTime = 0;
-          console.log("🐄 Animación de colisión interrumpida por el jugador");
 
           // Stop milking audio if player interrupts milking
           try {
@@ -2039,30 +1855,20 @@ export class FarmerController {
     }
     // Movimiento hacia adelante
     else if (this.keys.w || this.keys.ArrowUp) {
-      // Debug: Log available animations
-      console.log(
-        "Available animations:",
-        Object.keys(this.modelLoader.actions || {})
-      );
-
+     
       // Definir velocidades de animación
       const walkSpeed = 0.15;
       const runSpeed = 0.25;
 
       if (usingMelee) {
         if (isRunning && hasMeleeRun) {
-          console.log("Playing meleeRun");
           this.modelLoader.play("meleeRun", runSpeed);
         } else if (hasMeleeIdle) {
-          console.log("Playing meleeIdle");
           this.modelLoader.play("meleeIdle", walkSpeed);
         } else {
-          console.log("Playing run (melee fallback)");
           this.modelLoader.play("run", isRunning ? runSpeed : walkSpeed);
         }
       } else {
-        // Siempre usa la animación 'run' ya que 'walk' y 'run' usan el mismo archivo
-        console.log(`Playing run (${isRunning ? "running" : "walking"})`);
         this.modelLoader.play("run", isRunning ? runSpeed : walkSpeed);
       }
     }
@@ -2114,7 +1920,6 @@ export class FarmerController {
    */
   exitMarket(market) {
     if (!market || !market.marketGroup) {
-      console.warn("exitMarket: market inválido");
       return;
     }
 
@@ -2132,16 +1937,11 @@ export class FarmerController {
 
       // Start the 180 rotation; update() will detect when rotation completes
       this.start180Rotation();
-      console.log('Auto-exit iniciado hacia', this._autoExitTarget);
     } catch (e) {
-      console.warn('Error iniciando auto-exit:', e);
+      return e;
     }
   }
 
-  /**
-   * Actualiza la rotación del modelo
-   * @param {number} delta - Tiempo transcurrido desde el último fotograma
-   */
   updateRotation(delta) {
     if (!this.isRotating || this.targetRotation === null) return;
 
@@ -2226,7 +2026,7 @@ export class FarmerController {
               this._autoExitRunPlaying = true;
             }
           } catch (e) {
-            console.warn('Error reproduciendo animación run al salir del mercado:', e);
+            return e;
           }
         } else {
           // still rotating: skip normal movement
@@ -2270,7 +2070,7 @@ export class FarmerController {
             }
           }
         } catch (e) {
-          console.warn('Error comprobando detección del mercado durante auto-exit:', e);
+          return e;
         }
 
         if (detectionCleared) {
@@ -2284,7 +2084,7 @@ export class FarmerController {
               this.modelLoader.play('idle', 0.15);
             }
           } catch (e) {
-            console.warn('Error al detener animación run:', e);
+            return e;
           }
           this._autoExitRunPlaying = false;
         } else {
@@ -2301,7 +2101,7 @@ export class FarmerController {
                 this.modelLoader.play('idle', 0.15);
               }
             } catch (e) {
-              console.warn('Error al detener animación run:', e);
+              return e;
             }
             this._autoExitRunPlaying = false;
           } else {
@@ -2473,10 +2273,7 @@ export class FarmerController {
         if (!this._handBone) {
           this._handBone = this.findRightHandBone(this.model);
           if (this._handBone) {
-            console.log(  
-              "Hueso de la mano derecha encontrado en update:",
-              this._handBone.name
-            );
+            pass
           }
         }
 
@@ -2503,14 +2300,11 @@ export class FarmerController {
           this.equippedWeapon.rotation.copy(this.model.rotation);
         }
       } catch (e) {
-        console.error("Error al actualizar la posición del arma:", e);
+        return e;
       }
     }
   }
 
-  /**
-   * Limpia los event listeners y el HUD
-   */
   dispose() {
     // Limpiar event listeners
     document.removeEventListener("keydown", this.handleKeyDown);

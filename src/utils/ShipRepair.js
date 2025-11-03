@@ -429,7 +429,6 @@ export class ShipRepair {
   } catch (_) { this._panelAudio = null; }
     hudCreated = true;
     } catch (err) {
-      console.error('Failed to open Ship HUD', err);
       // cleanup any partial DOM
       if (this.hud && this.hud.parentNode) try { this.hud.parentNode.removeChild(this.hud); } catch(e){}
       this.hud = null;
@@ -624,7 +623,7 @@ export class ShipRepair {
         }
       }
     } catch (e) {
-      console.warn('No se pudo actualizar la lista de inventario:', e);
+      return e;
     }
   }
 
@@ -660,7 +659,7 @@ export class ShipRepair {
             window.inventory.notify?.('Reparación completa: recibiste 200 monedas');
           }
         }
-      } catch (e) { console.error('Error handling repair complete', e); }
+      } catch (e) { return e}
       this.saveState();
     }
   }

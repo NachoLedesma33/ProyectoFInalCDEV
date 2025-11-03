@@ -135,12 +135,10 @@ export class Alien2 {
         // Si hay animaciones en el modelo base, usar la primera como idle
         const baseIdleClip = this.model.animations[0];
         this.animations.baseIdle = baseIdleClip;
-        console.log("Usando animación del modelo base como respaldo");
 
         // Intentar reproducir la animación del modelo base si la externa falla
         setTimeout(() => {
           if (!this.currentAction || !this.currentAction.isRunning()) {
-            console.log("Intentando usar animación del modelo base...");
             this.playAnimation("baseIdle");
           }
         }, 500);
@@ -160,9 +158,8 @@ export class Alien2 {
       // Agregar el modelo a la escena
       this.scene.add(this.model);
       return true;
-    } catch (error) {
-      console.error("Error al cargar el Alien2:", error);
-      return false;
+    } catch (error) {  
+      return error;
     }
   }
 
@@ -197,11 +194,10 @@ export class Alien2 {
               child.geometry.dispose(); // Liberar memoria de la geometría anterior
               child.geometry = simplifiedGeometry;
             } catch (error) {
-              console.warn("No se pudo simplificar la geometría:", error);
+              return error;
             }
           }
         }
-
         // Optimizar materiales
         if (child.material) {
           if (Array.isArray(child.material)) {
@@ -240,19 +236,12 @@ export class Alien2 {
           (fbx) => {
             if (fbx.animations.length > 0) {
               const animation = fbx.animations[0];
-              console.log(`✅ Animación '${name}' cargada:`, {
-                name: animation.name,
-                duration: animation.duration,
-                tracks: animation.tracks.length,
-              });
               resolve(animation);
             } else {
-              console.warn(`⚠️ No se encontraron animaciones en ${path}`);
               reject(new Error(`No se encontraron animaciones en ${path}`));
             }
           },
           (error) => {
-            console.error(`❌ Error cargando la animación '${name}':`, error);
             reject(error);
           }
         );
@@ -261,7 +250,7 @@ export class Alien2 {
       this.animations[name] = anim;
       return true;
     } catch (error) {
-      return false;
+      return error;
     }
   }
 
@@ -311,20 +300,6 @@ export class Alien2 {
       if (this.mixer) {
         this.mixer.update(0.016); // Actualizar con un delta pequeño
       }
-
-      // Verificar que la animación se está reproduciendo
-      setTimeout(() => {
-        if (this.currentAction && this.currentAction.isRunning()) {
-          console.log(`✅ Animación '${name}' confirmada como activa`);
-        } else {
-          console.warn(`⚠️ Animación '${name}' no se está reproduciendo`);
-          // Intentar forzar la animación
-          if (this.currentAction) {
-            this.currentAction.reset().play();
-            console.log("Intentando forzar la animación...");
-          }
-        }
-      }, 200);
 
       return true;
     } catch (error) {
@@ -543,24 +518,10 @@ export class Alien2 {
     this.model.traverse((child) => {
       if (child.isBone || child.type === "Bone") {
         skeletonFound = true;
-        console.log("Hueso encontrado:", child.name, child.type);
-      }
-      if (child.isSkinnedMesh) {
-        if (child.skeleton) {
-          console.log(
-            "Esqueleto de la malla:",
-            child.skeleton.bones.length,
-            "huesos"
-          );
-        }
       }
     });
 
-    if (!skeletonFound) {
-      console.warn("⚠️ No se encontró esqueleto en el modelo");
-    } else {
-      console.log("✅ Esqueleto encontrado en el modelo");
-    }
+    return skeletonFound;
   }
 
   // Forzar cambio a animación idle (método interno)
@@ -571,24 +532,12 @@ export class Alien2 {
     this.movementSystem.isMoving = false;
     this.movementSystem.isTurning = false;
 
-    console.log("Sistema de movimiento desactivado:", {
-      isActive: this.movementSystem.isActive,
-      isMoving: this.movementSystem.isMoving,
-      isTurning: this.movementSystem.isTurning,
-    });
-
     // Detener cualquier animación actual
     if (this.currentAction) {
       this.currentAction.stop();
       this.currentAction = null;
     }
     const success = this.playAnimation("idle");
-
-    if (success) {
-      console.log("✅ Animación idle aplicada correctamente");
-    } else {
-      console.error("❌ Error al aplicar animación idle");
-    }
 
     return success;
   }
@@ -951,28 +900,6 @@ export class Alien2 {
       if (!opts || !opts.skipInitial) {
         this.showInitialDialogue();
       }
-
-      console.log("✅ Diálogo abierto con Alien2");
-
-      // Verificar que el HUD esté visible
-      setTimeout(() => {
-        const hud = document.getElementById("alien2-dialogue-hud");
-        if (hud) {
-          console.log("HUD encontrado en DOM:", hud.style.display);
-          console.log(
-            "HUD visible:",
-            hud.offsetWidth > 0 && hud.offsetHeight > 0
-          );
-          console.log("HUD z-index:", hud.style.zIndex);
-        } else {
-          console.error("HUD no encontrado en DOM");
-        }
-      }, 100);
-    } else {
-      console.warn("No se puede abrir diálogo:", {
-        hudExists: !!this.interactionSystem.dialogueHud,
-        alreadyOpen: this.interactionSystem.isDialogueOpen,
-      });
     }
   }
 
@@ -1228,8 +1155,7 @@ export class Alien2 {
 
   // Vender leche al alien
   sellMilkToAlien(liters, price) {
-    if (!window.inventory) {
-      console.error("Inventario no disponible");
+    if (!window.inventory) {;
       return;
     }
 
@@ -1238,9 +1164,6 @@ export class Alien2 {
 
     // Verificar que haya suficiente leche
     if (currentMilk < liters) {
-      console.warn(
-        `No hay suficiente leche: ${currentMilk}L disponibles, se necesitan ${liters}L`
-      );
       return;
     }
 
@@ -1264,9 +1187,6 @@ export class Alien2 {
         );
       }
     } else {
-      console.error(
-        "No se pudo actualizar la leche: propiedad milkLiters no encontrada en el inventario"
-      );
       return;
     }
 
@@ -1283,11 +1203,6 @@ export class Alien2 {
     // Crear animación de monedas
     this.createCoinAnimation(price);
 
-    console.log(
-      `Vendidos ${liters}L por ${price} monedas. Leche restante: ${(
-        currentMilk - liters
-      ).toFixed(1)}L`
-    );
   }
 
   // Crear animación de monedas
@@ -1374,77 +1289,37 @@ export class Alien2 {
     }
   }
 
-  // Método de depuración para verificar el estado de las animaciones
-  logAnimationState() {
-    console.log("Modelo cargado:", !!this.model);
-    console.log("Mixer inicializado:", !!this.mixer);
-    console.log("Animaciones cargadas:", Object.keys(this.animations));
-
-    if (this.currentAction) {
-      console.log(
-        "Reproduciendo animación:",
-        this.currentAction.getClip().name
-      );
-      console.log("Animación activa:", this.currentAction.isRunning());
-      console.log(
-        "Peso de la animación:",
-        this.currentAction.getEffectiveWeight()
-      );
-    } else {
-      console.log("No hay ninguna animación reproduciéndose actualmente");
-    }
-
-    // Verificar si el modelo tiene animaciones incluidas
-    if (this.model && this.model.animations) {
-      console.log(
-        "Animaciones incluidas en el modelo:",
-        this.model.animations.length
-      );
-      this.model.animations.forEach((anim, index) => {
-        console.log(`  ${index}: ${anim.name} (${anim.duration}s)`);
-      });
-    }
-  }
+  
 }
 
 // Hacer las funciones de depuración disponibles globalmente
 window.debugAlien2 = function () {
   if (window.alien2) {
     window.alien2.logAnimationState();
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
   }
 };
 
 window.forceAlien2Animation = function () {
   if (window.alien2) {
     window.alien2.forceAnimation();
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
   }
 };
 
 window.checkAlien2Skeleton = function () {
   if (window.alien2) {
     window.alien2.checkSkeleton();
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
   }
 };
 
 window.startAlien2Movement = function () {
   if (window.alien2) {
     window.alien2.startMovementSequence();
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
   }
 };
 
 window.forceAlien2Movement = function () {
   if (window.alien2) {
     window.alien2.activateMovementSystem();
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
   }
 };
 
@@ -1462,160 +1337,125 @@ window.debugAlien2Movement = function () {
       const anim = window.alien2.animations[animName];
       console.log(`  ${animName}:`, anim.name, `(${anim.duration}s)`);
     });
+  };
 
-    // Verificar animación actual
-    if (window.alien2.currentAction) {
+  window.testAlien2Animations = function () {
+    if (window.alien2) {
+
+      // Probar cada animación por separado
+      const animations = ["idle", "walk", "turnRight"];
+
+      animations.forEach((animName, index) => {
+        setTimeout(() => {
+          const success = window.alien2.playAnimation(animName);
+        }, index * 2000); // 2 segundos entre cada prueba
+      });
+    }
+  };
+
+  window.debugAlien2Interaction = function () {
+    if (window.alien2) {
       console.log(
-        "Animación actual:",
-        window.alien2.currentAction.getClip().name
+        "En posición final:",
+        window.alien2.interactionSystem.isAtFinalPosition
       );
-    }
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
-  }
-};
-
-window.testAlien2Animations = function () {
-  if (window.alien2) {
-
-    // Probar cada animación por separado
-    const animations = ["idle", "walk", "turnRight"];
-
-    animations.forEach((animName, index) => {
-      setTimeout(() => {
-        const success = window.alien2.playAnimation(animName);
-      }, index * 2000); // 2 segundos entre cada prueba
-    });
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
-  }
-};
-
-window.debugAlien2Interaction = function () {
-  if (window.alien2) {
-    console.log(
-      "En posición final:",
-      window.alien2.interactionSystem.isAtFinalPosition
-    );
-    console.log(
-      "Jugador cerca:",
-      window.alien2.interactionSystem.isPlayerNearby
-    );
-    console.log(
-      "Tiempo de permanencia:",
-      window.alien2.interactionSystem.playerStayTime.toFixed(2),
-      "s"
-    );
-    console.log(
-      "Tiempo requerido:",
-      window.alien2.interactionSystem.requiredStayTime,
-      "s"
-    );
-    console.log(
-      "Diálogo abierto:",
-      window.alien2.interactionSystem.isDialogueOpen
-    );
-    console.log(
-      "Radio de colisión:",
-      window.alien2.interactionSystem.collisionRadius
-    );
-
-    if (window.farmerController && window.farmerController.model) {
-      const distance = window.alien2.model.position.distanceTo(
-        window.farmerController.model.position
+      console.log(
+        "Jugador cerca:",
+        window.alien2.interactionSystem.isPlayerNearby
       );
-      console.log("Distancia al jugador:", distance.toFixed(2));
+      console.log(
+        "Tiempo de permanencia:",
+        window.alien2.interactionSystem.playerStayTime.toFixed(2),
+        "s"
+      );
+      console.log(
+        "Tiempo requerido:",
+        window.alien2.interactionSystem.requiredStayTime,
+        "s"
+      );
+      console.log(
+        "Diálogo abierto:",
+        window.alien2.interactionSystem.isDialogueOpen
+      );
+      console.log(
+        "Radio de colisión:",
+        window.alien2.interactionSystem.collisionRadius
+      );
+
+      if (window.farmerController && window.farmerController.model) {
+        const distance = window.alien2.model.position.distanceTo(
+          window.farmerController.model.position
+        );
+        console.log("Distancia al jugador:", distance.toFixed(2));
+      }
     }
+  };
 
-    console.log("================================================");
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
-  }
-};
-
-window.forceAlien2Interaction = function () {
-  if (window.alien2) {
-    console.log("Forzando activación del sistema de interacción...");
-    window.alien2.activateInteractionSystem();
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
-  }
-};
-
-window.testAlien2Dialogue = function () {
-  if (window.alien2) {
-    console.log("Probando diálogo del Alien2...");
-    window.alien2.openDialogue();
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
-  }
-};
-
-window.debugAlien2HUD = function () {
-  console.log("=== DEBUGGING HUD DEL ALIEN2 ===");
-
-  // Verificar si el HUD existe en el DOM
-  const hud = document.getElementById("alien2-dialogue-hud");
-  if (hud) {
-    console.log("✅ HUD encontrado en DOM");
-    console.log("Display:", hud.style.display);
-    console.log("Visible:", hud.offsetWidth > 0 && hud.offsetHeight > 0);
-    console.log("Z-index:", hud.style.zIndex);
-    console.log("Position:", hud.style.position);
-  } else {
-    console.log("❌ HUD no encontrado en DOM");
-  }
-
-  // Verificar estado del sistema de interacción
-  if (window.alien2) {
-    console.log(
-      "Sistema de interacción activo:",
-      window.alien2.interactionSystem.isAtFinalPosition
-    );
-    console.log("HUD creado:", !!window.alien2.interactionSystem.dialogueHud);
-    console.log(
-      "Diálogo abierto:",
-      window.alien2.interactionSystem.isDialogueOpen
-    );
-  }
-
-  console.log("=================================");
-};
-
-window.forceAlien2HUD = function () {
-  if (window.alien2) {
-    console.log("Forzando creación y apertura del HUD...");
-
-    // Crear HUD si no existe
-    if (!window.alien2.interactionSystem.dialogueHud) {
-      window.alien2.createDialogueHud();
-    }
-
-    // Abrir HUD
-    window.alien2.openDialogue();
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
-  }
-};
-
-window.forceAlien2Idle = function () {
-  if (window.alien2) {
-    console.log("Forzando cambio a animación idle...");
-
-    // Desactivar sistema de movimiento
-    window.alien2.movementSystem.isActive = false;
-    window.alien2.movementSystem.isMoving = false;
-    window.alien2.movementSystem.isTurning = false;
-
-    // Forzar cambio a idle
-    const success = window.alien2.playAnimation("idle");
-    console.log("Resultado:", success ? "✅ Éxito" : "❌ Falló");
-
-    // Activar sistema de interacción si no está activo
-    if (!window.alien2.interactionSystem.isAtFinalPosition) {
+  window.forceAlien2Interaction = function () {
+    if (window.alien2) {
       window.alien2.activateInteractionSystem();
     }
-  } else {
-    console.warn("Alien2 no encontrado en window.alien2");
+  };
+
+  window.testAlien2Dialogue = function () {
+    if (window.alien2) {
+      window.alien2.openDialogue();
+  
+    };
+
+    window.debugAlien2HUD = function () {
+      // Verificar si el HUD existe en el DOM
+      const hud = document.getElementById("alien2-dialogue-hud");
+      if (hud) {
+        console.log("✅ HUD encontrado en DOM");
+        console.log("Display:", hud.style.display);
+        console.log("Visible:", hud.offsetWidth > 0 && hud.offsetHeight > 0);
+        console.log("Z-index:", hud.style.zIndex);
+        console.log("Position:", hud.style.position);
+      }
+
+      // Verificar estado del sistema de interacción
+      if (window.alien2) {
+        console.log(
+          "Sistema de interacción activo:",
+          window.alien2.interactionSystem.isAtFinalPosition
+        );
+        console.log("HUD creado:", !!window.alien2.interactionSystem.dialogueHud);
+        console.log(
+          "Diálogo abierto:",
+          window.alien2.interactionSystem.isDialogueOpen
+        );
+      }
+    };
+
+    window.forceAlien2HUD = function () {
+      if (window.alien2) {
+
+        // Crear HUD si no existe
+        if (!window.alien2.interactionSystem.dialogueHud) {
+          window.alien2.createDialogueHud();
+        }
+        // Abrir HUD
+        window.alien2.openDialogue();
+      }
+    };
+
+    window.forceAlien2Idle = function () {
+      if (window.alien2) {
+
+        // Desactivar sistema de movimiento
+        window.alien2.movementSystem.isActive = false;
+        window.alien2.movementSystem.isMoving = false;
+        window.alien2.movementSystem.isTurning = false;
+
+        // Forzar cambio a idle
+        const success = window.alien2.playAnimation("idle");
+
+        // Activar sistema de interacción si no está activo
+        if (!window.alien2.interactionSystem.isAtFinalPosition) {
+          window.alien2.activateInteractionSystem();
+        }
+      }
+    };
   }
-};
+}
