@@ -542,8 +542,6 @@ export class Corral {
     // Eliminar la colisión de la puerta
     this.updateSingleGateCollisionBox(gateData);
 
-    console.log(`Puerta ${gateData.side} del corral abierta`);
-
     // play open SFX positional on the gate mesh
     try {
       if (gateData && gateData.mesh) {
@@ -695,11 +693,6 @@ export class Corral {
     });
   }
 
-  /**
-   * Verifica si un objeto colisiona con el corral
-   * @param {THREE.Box3} objectBox - Caja de colisión del objeto a verificar
-   * @returns {Object} Información de la colisión o null si no hay colisión
-   */
   checkCollision(objectBox) {
     for (let collisionData of this.collisionBoxes) {
       if (objectBox.intersectsBox(collisionData.box)) {
@@ -709,12 +702,6 @@ export class Corral {
     return null;
   }
 
-  /**
-   * Obtiene el punto de colisión más cercano y la normal de la superficie
-   * @param {THREE.Vector3} position - Posición del objeto
-   * @param {THREE.Vector3} direction - Dirección del movimiento
-   * @returns {Object} Información de la colisión más cercana
-   */
   getClosestCollisionPoint(position, direction) {
     let closestCollision = null;
     let minDistance = Infinity;
@@ -742,9 +729,7 @@ export class Corral {
     return closestCollision;
   }
 
-  /**
-   * Calcula el punto de colisión con una caja específica
-   */
+
   getCollisionPoint(box, position, direction) {
     const ray = new THREE.Ray(position, direction);
     const intersectionPoint = new THREE.Vector3();
@@ -785,11 +770,7 @@ export class Corral {
     });
   }
 
-  /**
-   * Actualiza el estado del corral (animaciones, etc.)
-   * @param {number} delta - Tiempo transcurrido
-   * @param {THREE.Vector3} farmerPosition - Posición del farmer para interacción
-   */
+
   update(delta, farmerPosition = null) {
     // Actualizar animaciones de las puertas
     this.updateGates(delta);
@@ -800,9 +781,6 @@ export class Corral {
     }
   }
 
-  /**
-   * Elimina el corral de la escena
-   */
   dispose() {
     this.cancelAutoClose();
 

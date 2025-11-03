@@ -41,7 +41,6 @@
     if (!name) return -1;
     const freeIndex = this.tools.findIndex((t) => t === null);
     if (freeIndex === -1) {
-      console.warn('No hay ranuras libres en el inventario');
       return -1;
     }
     this.tools[freeIndex] = name;
@@ -194,12 +193,9 @@
   _updateUI() {
     if (!this._ui) return;
     this._ui.milk.textContent = this.milkLiters.toFixed(2);
-    // Actualizar monedas
     if (this._ui.coins) this._ui.coins.textContent = String(this.coins);
 
-    // Actualizar slots de herramientas
     if (this._ui.tools) {
-      // Limpiar
       this._ui.tools.innerHTML = '';
       for (let i = 0; i < this.slotCount; i++) {
         const slot = document.createElement('div');
@@ -244,21 +240,10 @@
     }, ms);
   }
 
-  /**
-   * Método público para mostrar una notificación rápida en el HUD del inventario
-   * @param {string} msg - Mensaje a mostrar
-   * @param {number} ms - Tiempo en ms que dura la notificación
-   */
   notify(msg, ms = 2200) {
     this._flash(msg, ms);
   }
 
-  /**
-   * Mostrar un pequeño pop-up (toast) independiente del HUD del inventario.
-   * Se usa para notificaciones importantes (p.ej. leche obtenida al ordeñar)
-   * @param {string} msg
-   * @param {number} ms
-   */
   popup(msg, ms = 2800, opts = {}) {
     try {
       const { screenPos } = opts; // { x, y } in pixels relative to viewport
@@ -333,8 +318,7 @@
         }, 260);
       }, ms);
     } catch (e) {
-      // Fallback silencioso
-      console.warn("Error mostrando popup de inventario:", e);
+      return e;
     }
   }
 

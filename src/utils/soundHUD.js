@@ -1,9 +1,4 @@
-// Simple Sound Settings HUD
 import { safePlaySfx } from './audioHelpers.js';
-// - Creates a floating panel with Master/Music/SFX sliders and a Mute toggle
-// - Wires controls to window.audio if available, otherwise waits until ready
-// - Persists settings in localStorage under 'gameSoundSettings'
-
 const STORAGE_KEY = "gameSoundSettings";
 
 function createEl(tag, props = {}, children = []) {

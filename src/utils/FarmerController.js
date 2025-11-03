@@ -247,11 +247,9 @@ export class FarmerController {
 
                   if (leftCandidate && !actionsObj.punch_left) {
                     actionsObj.punch_left = actionsObj[leftCandidate];
-                    console.log(`FarmerController: auto-mapped punch_left -> '${leftCandidate}'`);
                   }
                   if (rightCandidate && !actionsObj.punch_right) {
                     actionsObj.punch_right = actionsObj[rightCandidate];
-                    console.log(`FarmerController: auto-mapped punch_right -> '${rightCandidate}'`);
                   }
 
                   // Ensure they are configured as one-shot
@@ -269,13 +267,11 @@ export class FarmerController {
                   const altPath = modelConfig.getPath(
                     "characters/farmer/Granjero2_Punching_Right.fbx"
                   );
-                  console.log("Intentando cargar fallback para punch_right:", altPath);
                   await this.modelLoader.loadAnimations({ punch_right: altPath });
                   const refreshed = this.modelLoader.actions || {};
                   if (refreshed.punch_right) {
                     refreshed.punch_right.setLoop(THREE.LoopOnce, 0);
                     refreshed.punch_right.clampWhenFinished = true;
-                    console.log("Fallback punch_right cargado con éxito");
                   }
                 } catch (e) {
                   // ignorar
@@ -402,7 +398,6 @@ export class FarmerController {
       // Exponer referencia global para depuración rápida
       try { window.farmerController = this; } catch (e) {}
 
-      console.log("Farmer registrado en CombatSystem como:", this.entityId);
     } catch (e) {
       console.warn("No se pudo integrar CombatSystem en FarmerController:", e);
     }
@@ -633,9 +628,6 @@ export class FarmerController {
     }
 
     this.stones = validStones;
-    console.log(
-      `✅ Conectadas ${validStones.length} piedras al farmerController`
-    );
   }
 
   /**
@@ -658,9 +650,6 @@ export class FarmerController {
       return;
     }
 
-    console.log(
-      "✅ Casa conectada al farmerController para detección de colisiones"
-    );
   }
 
   /**
@@ -691,7 +680,6 @@ export class FarmerController {
     }
 
     this.cows = validCows;
-    console.log(`✅ Conectadas ${validCows.length} vacas al farmerController`);
   }
 
   /**
@@ -735,18 +723,10 @@ export class FarmerController {
 
     // Usar el tamaño específico para colisiones con piedras (más pequeño)
     const stoneCharacterSize = this.stoneCollisionSize;
-
+    
     // Verificar colisión con cada piedra
     for (const stone of this.stones) {
       if (stone.checkCollision(position, stoneCharacterSize)) {
-        console.log(
-          "🚫 Colisión con piedra detectada usando tamaño específico:",
-          {
-            position: position,
-            stoneCharacterSize: stoneCharacterSize,
-            stonePosition: stone.model ? stone.model.position : "No disponible",
-          }
-        );
         return true; // Hay colisión con al menos una piedra
       }
     }
@@ -760,22 +740,14 @@ export class FarmerController {
    */
   checkCowsCollision(position) {
     if (!this.cows || !this.model) return false;
-
+    
     // Verificar colisión con cada vaca
     for (const cow of this.cows) {
       if (cow.checkCollision(position, this.characterSize)) {
-        console.log("🐄 Colisión con vaca detectada:", {
-          farmerPosition: position,
-          cowPosition: cow.model ? cow.model.position : "No disponible",
-          hasExclamationMark: cow.hasExclamationMarkVisible(),
-        });
-
-        // Solo activar animación de colisión si la vaca tiene el signo de exclamación visible
+        // Activar animación de colisión con vaca si es necesario
         if (cow.hasExclamationMarkVisible()) {
-          // Activar animación de colisión con vaca y pasar la vaca como referencia
           this.handleCowCollisionAnimation(cow);
         }
-
         return true; // Hay colisión con al menos una vaca
       }
     }
@@ -792,9 +764,6 @@ export class FarmerController {
       this.cowCollisionState = "kneelingDown";
       this.cowCollisionStartTime = Date.now();
       this.currentCollidedCow = cow; // Almacenar la vaca con la que se colisionó
-      console.log(
-        "🐄 Iniciando secuencia de animación de colisión con vaca que tiene signo de exclamación"
-      );
 
       // Stop run audio immediately when starting cow interaction so it doesn't bleed into milking
       try {
@@ -853,7 +822,6 @@ export class FarmerController {
 
           // Reiniciar la barra de progreso de la vaca con la que se colisionó
           if (this.currentCollidedCow) {
-            console.log("🐄 Reiniciando barra de progreso de la vaca");
             this.currentCollidedCow.resetProgressBar();
           }
 
@@ -1031,7 +999,6 @@ export class FarmerController {
     // Verificar colisión con la casa
     const collision = this.house.checkCollision(characterBox);
     if (collision) {
-      console.log("Colisión detectada con la casa en posición:", newPosition);
       return true;
     }
 
@@ -1055,9 +1022,6 @@ export class FarmerController {
 
     // Verificar colisión con el mercado (antes que otras colisiones)
     if (this.market && this.checkMarketCollision(newPosition)) {
-      console.log(
-        "🚫 Colisión con mercado detectada, intentando deslizamiento..."
-      );
       // Intentar deslizamiento suave contra el mercado
       const slidingMovement = this.getSlidingMovement(
         currentPosition,
@@ -1117,7 +1081,6 @@ export class FarmerController {
     // Verificar colisión con las vacas
     if (this.cows && this.checkCowsCollision(newPosition)) {
       // Hay colisión con las vacas, detener movimiento completamente
-      console.log("🐄 Movimiento detenido por colisión con vaca");
       return new THREE.Vector3(0, 0, 0); // Detener movimiento
     }
 
@@ -1268,15 +1231,6 @@ export class FarmerController {
         // fallback to treating as collision on error
         console.warn("Error checking doorway area:", e);
       }
-
-      // Para depuración: mostrar la posición y si hay colisión (cuando no es la puerta)
-      console.log(
-        "🚫 Colisión con mercado en posición:",
-        `X: ${position.x.toFixed(1)}, Z: ${position.z.toFixed(1)}`,
-        "Polígono:",
-        marketPolygon.map((p) => `(${p.x}, ${p.y})`).join(" -> ")
-      );
-
       return true;
     }
 
@@ -1438,7 +1392,6 @@ export class FarmerController {
         name === "mixamorigLeftHand";
 
       if (isLeftHand) {
-        console.log(`Hueso de la mano izquierda encontrado: ${object.name}`);
 
         // Agregar una esfera de depuración en la posición del hueso
         const debugSphere = new THREE.Mesh(
@@ -1463,10 +1416,6 @@ export class FarmerController {
         name === "mixamorigRightHand";
 
       if (isRightHand) {
-        console.log(
-          `Hueso de la mano derecha encontrado: ${object.name} (usando como respaldo)`
-        );
-
         // Agregar una esfera de depuración en la posición del hueso
         const debugSphere = new THREE.Mesh(
           new THREE.SphereGeometry(0.05, 8, 8),
@@ -1496,7 +1445,6 @@ export class FarmerController {
   async equipWeapon() {
     try {
       if (this.isEquipped) {
-        console.log("El arma ya está equipada");
         return;
       }
 
@@ -1514,7 +1462,6 @@ export class FarmerController {
         this._weaponPivot = new THREE.Group();
         this.model.add(this._weaponPivot);
       } else {
-        console.log(`Usando hueso para el arma: ${this._handBone.name}`);
         // Crear un pivote para el arma
         this._weaponPivot = new THREE.Group();
 
@@ -1525,7 +1472,6 @@ export class FarmerController {
             this._weaponPivot.parent.remove(this._weaponPivot);
           }
           this._handBone.add(this._weaponPivot);
-          console.log("Pivote del arma añadido al hueso:", this._handBone.name);
 
           // Asegurar que el pivote herede la rotación del personaje
           this._weaponPivot.matrixAutoUpdate = true;
@@ -1546,11 +1492,8 @@ export class FarmerController {
         this.equippedWeapon.scale.set(0.5, 0.5, 0.5);
 
         // Asegurar que el arma sea visible
-        console.log("Configurando visibilidad del arma...");
         this.equippedWeapon.traverse((child) => {
           if (child.isMesh) {
-            console.log(`Procesando mesh: ${child.name || "sin nombre"}`);
-
             // Hacer el mesh visible
             child.visible = true;
             child.frustumCulled = false; // Desactivar frustum culling
@@ -1585,8 +1528,6 @@ export class FarmerController {
             // Eliminado el recuadro verde de depuración
           }
         });
-
-        console.log("Arma configurada:", this.equippedWeapon);
 
         // Añadir el arma al pivote
         this._weaponPivot.add(this.equippedWeapon);
@@ -1668,13 +1609,11 @@ export class FarmerController {
 
         // Forzar renderizado
         if (this._renderer && this._scene && this._camera) {
-          console.log("Forzando renderizado...");
           this._renderer.render(this._scene, this._camera);
 
           // Añadir un temporizador para forzar actualizaciones
           if (!this._debugInterval) {
             this._debugInterval = setInterval(() => {
-              console.log("Actualizando arma...");
               this.equippedWeapon.updateMatrix();
               this.equippedWeapon.updateMatrixWorld(true);
               this._renderer.render(this._scene, this._camera);
@@ -1712,17 +1651,6 @@ export class FarmerController {
 
         // Forzar actualización de la matriz del mundo
         this.equippedWeapon.updateMatrixWorld(true);
-
-        // Depuración
-        console.log("=== INFORMACIÓN DEL ARMA ===");
-        console.log("Posición del arma (local):", this.equippedWeapon.position);
-        console.log(
-          "Posición del arma (mundo):",
-          this.equippedWeapon.getWorldPosition(new THREE.Vector3())
-        );
-        console.log("Escala del arma:", this.equippedWeapon.scale);
-        console.log("Rotación del arma:", this.equippedWeapon.rotation);
-        console.log("==========================");
 
         // Forzar actualización de la escena
         this.equippedWeapon.updateMatrixWorld(true);
@@ -2565,7 +2493,7 @@ export class FarmerController {
         if (!this._handBone) {
           this._handBone = this.findRightHandBone(this.model);
           if (this._handBone) {
-            console.log(
+            console.log(  
               "Hueso de la mano derecha encontrado en update:",
               this._handBone.name
             );

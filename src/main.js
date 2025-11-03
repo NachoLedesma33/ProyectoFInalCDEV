@@ -327,7 +327,6 @@ const keys = {
  * Crear 6 vacas dentro del corral
  */
 function createCows() {
-  console.log("Creando 6 vacas dentro del corral...");
 
   // Posiciones específicas para las 6 vacas dentro del corral
   const cowPositions = [
@@ -389,9 +388,6 @@ function createCows() {
 
   // Hacer las vacas accesibles para depuración
   window.cows = cows;
-  console.log("Vacas disponibles como 'window.cows' para depuración");
-
-  console.log("✅ 6 vacas creadas exitosamente dentro del corral");
 }
 
 /**
@@ -452,7 +448,6 @@ function updateMinimap() {
  * Crear 30 piedras con posiciones y modelos fijos
  */
 function createStones() {
-  console.log("Creando 30 piedras con posiciones y modelos fijos...");
 
   // Array con posiciones y modelos fijos para las 30 piedras
   const stonePositions = [
@@ -525,18 +520,13 @@ function createStones() {
 
   // Hacer las piedras accesibles para depuración
   window.stones = stones;
-  console.log("Piedras disponibles como 'window.stones' para depuración");
 
-  console.log(
-    "✅ 30 piedras creadas exitosamente con posiciones y modelos fijos"
-  );
 }
 
 /**
  * Crear la casa con textura de piedra y puerta interactiva
  */
 function createHouse() {
-  console.log("Creando casa con puerta interactiva...");
 
   // Crear la casa en las coordenadas especificadas
   house = new House(
@@ -549,18 +539,12 @@ function createHouse() {
 
   // Hacer la casa accesible desde la consola para depuración
   window.house = house;
-  console.log("Casa disponible como 'window.house' para depuración");
-
-  console.log(
-    "✅ Casa creada exitosamente con textura de piedra y puerta interactiva"
-  );
 }
 
 /**
  * Crear el mercado con textura de piedra y ventana frontal
  */
 function createMarket() {
-  console.log("Creando mercado con ventana frontal...");
 
   // Crear efecto de humo en las coordenadas especificadas
   smokeEffect = new SmokeEffect(scene, { x: 52.4, y: 0.0, z: -30.2 });
@@ -574,11 +558,6 @@ function createMarket() {
 
   // Hacer el mercado accesible desde la consola para depuración
   window.market = market;
-  console.log("Mercado disponible como 'window.market' para depuración");
-  console.log(
-    "✅ Mercado creado exitosamente con textura de piedra y ventana frontal"
-  );
-
   return market;
 }
 
@@ -586,10 +565,8 @@ function createMarket() {
  * Crear la interacción de reparación de la nave (círculo y HUD)
  */
 function createShipRepair() {
-  console.log("Creando interacción de reparación de la nave en coords 39.9,0.0,-21.1");
   shipRepair = new ShipRepair(scene, { x: 39.9, y: 0.0, z: -21.1 }, 1.5);
   window.shipRepair = shipRepair;
-  console.log("ShipRepair disponible como 'window.shipRepair' para depuración");
 }
 /**
  * Crear y configurar el alien2 en la escena
@@ -603,8 +580,7 @@ async function createAlien2() {
   );
 
   await alien2.load();
-  window.alien2 = alien2;
-  console.log("Alien2 disponible como 'window.alien2' para depuración");
+  window.alien2 = alien2;;
   return alien2;
 }
 /**
@@ -677,8 +653,6 @@ async function init() {
   // Cargar skybox (fondo 360°)
   (async () => {
     try {
-      console.log("Cargando textura del skybox...");
-
       // Rutas alternativas para cargar el skybox
       const skyboxPaths = [
         "src/assets/FondoDiaEstrellado3.png", // Ruta relativa desde la raíz del proyecto
@@ -691,9 +665,7 @@ async function init() {
       // Intentar cargar el skybox desde diferentes rutas
       for (const path of skyboxPaths) {
         try {
-          console.log("Intentando cargar skybox desde:", path);
           skybox = new Skybox(scene, path);
-          console.log("Skybox cargado exitosamente desde:", path);
           break; // Salir del bucle si la carga es exitosa
         } catch (err) {
           console.warn(`No se pudo cargar el skybox desde ${path}:`, err);
@@ -703,7 +675,6 @@ async function init() {
 
       // Si no se pudo cargar ningún skybox
       if (!skybox) {
-        console.warn("No se pudo cargar ninguna textura de skybox válida");
         throw new Error("No se pudo cargar ninguna textura de skybox");
       }
 
@@ -721,27 +692,24 @@ async function init() {
 
   // Inicializar el sistema de iluminación
   lighting = new Lighting(scene);
-  console.log("Sistema de iluminación inicializado");
 
   // Expose DeathScreen helper globally (redundant but explicit)
   try { window.showDeathScreen = showDeathScreen; } catch (e) {}
 
   // Crear y configurar el terreno
   terrain = new Terrain(scene, renderer);
-  console.log("Terreno inicializado");
 
   // Inicializar el cargador de modelos 3D
   modelLoader = new ModelLoader(scene);
-  console.log("Cargador de modelos inicializado");
+
 
   // Crear un CombatSystem global temprano para que FarmerController y WaveManager
   // se registren en la misma instancia (evita tener múltiples instancias aisladas)
   if (!window.combatSystem) {
     try {
       window.combatSystem = new CombatSystem();
-      console.log('CombatSystem global creado en window.combatSystem');
     } catch (e) {
-      console.warn('No se pudo crear CombatSystem global temprano:', e);
+      return e;
     }
   }
   // asignar a la variable local también (se reasignará más tarde si es necesario)
@@ -753,7 +721,6 @@ async function init() {
     { x: 15, y: 0, z: 15 },
     { width: 20, height: 2, depth: 20 }
   );
-  console.log("Corral creado");
 
   // Crear el Space Shuttle Orbiter
   spaceShuttle = new SpaceShuttle(
@@ -761,7 +728,6 @@ async function init() {
     { x: 50, y: 0, z: -30 }, // Posición: a un lado, sobre la superficie del terreno
     0.1 // Escala mucho más reducida para que no sea tan grande
   );
-  console.log("Space Shuttle Orbiter creado");
 
   // Crear 4 vacas dentro del corral
   createCows();
@@ -774,13 +740,9 @@ async function init() {
   // Crear el alien2
   const alien2 = await createAlien2();
   window.alien2 = alien2;
-  console.log("Alien2 creado exitosamente");
 
   // Iniciar la secuencia de movimiento automático (5 minutos de delay)
   alien2.startMovementSequence();
-  console.log(
-    "Sistema de movimiento del Alien2 programado para iniciar en 5 minutos"
-  );
 
   // Crear el mercado con ventana frontal
   const market = createMarket();
@@ -792,7 +754,6 @@ async function init() {
 
   // Hacer el mercado accesible desde la consola para depuración
   window.market = market;
-  console.log("Mercado disponible como 'window.market' para depuración");
 
   // Crear interacción de reparación de la nave (círculo y HUD)
   createShipRepair();
@@ -814,18 +775,15 @@ async function init() {
   // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
   controls = cameraManager.getControls();
-  console.log("Controles de cámara configurados");
 
   // Configuración de sombras
   if (renderer.shadowMap) {
     renderer.shadowMap.autoUpdate = true; // Actualización automática de sombras
     renderer.shadowMap.needsUpdate = true; // Forzar actualización inicial
-    console.log("Sistema de sombras configurado");
   }
 
   // Obtener la configuración del personaje granjero2
   const farmerConfig = modelConfig.characters.farmer2;
-  console.log("Configuración del personaje Granjero2 cargada:", farmerConfig);
 
   // Preparar las rutas de las animaciones
   // Creamos un objeto que mapea nombres de animación a sus rutas completas
@@ -833,32 +791,24 @@ async function init() {
   for (const [animName, animPath] of Object.entries(farmerConfig.animations)) {
     // Usar el método getPath para obtener la ruta completa del archivo
     animationPaths[animName] = modelConfig.getPath(animPath);
-    console.log(
-      `Animación '${animName}' configurada en:`,
-      animationPaths[animName]
-    );
   }
 
   // Cargar el modelo 3D con sus animaciones
   try {
-    console.log("Iniciando carga del modelo 3D...");
 
     // Cargar el modelo principal con sus animaciones
     await modelLoader.load(
       modelConfig.getPath(farmerConfig.model), // Ruta al archivo del modelo
       animationPaths, // Diccionario de animaciones
       (instance) => {
-        console.log("✅ Modelo 3D y animaciones cargados exitosamente");
 
         // Configurar la cámara isométrica para seguir al modelo
         if (instance.model) {
           // Configurar el objetivo de la cámara para seguir al modelo en modo isométrico
           cameraManager.setTarget(instance.model);
-          console.log("Cámara isométrica configurada para seguir al personaje");
 
           // Obtener la cámara actualizada
           camera = cameraManager.getCamera();
-          console.log("Posición de cámara ajustada:", camera.position);
 
           // Inicializar el controlador del granjero
           farmerController = new FarmerController(
@@ -881,9 +831,6 @@ async function init() {
             if (typeof farmerController.setInventory === "function") {
               farmerController.setInventory(inventory);
             }
-            console.log(
-              "Inventory inicializado y disponible en window.inventory"
-            );
           } catch (e) {
             console.warn("No se pudo inicializar Inventory:", e);
           }
@@ -891,23 +838,17 @@ async function init() {
           // Conectar el corral con el controlador del granjero
           if (corral) {
             farmerController.setCorral(corral);
-            console.log("Corral conectado al controlador del granjero");
           }
 
           // Conectar el Space Shuttle con el controlador del granjero
           if (spaceShuttle) {
             farmerController.setSpaceShuttle(spaceShuttle);
-            console.log("Space Shuttle conectado al controlador del granjero");
           }
-
-          console.log("Controlador del granjero inicializado");
 
           // Hacer el modelo accesible desde la consola para depuración
           window.farmer = instance;
           window.farmerController = farmerController; // Para depuración
           window.corral = corral; // Para depuración del corral
-          console.log("Modelo disponible como 'window.farmer' para depuración");
-          console.log("Corral disponible como 'window.corral' para depuración");
 
           // Inicializar CombatSystem y WaveManager usando SIEMPRE la instancia global existente
           // Esto evita que el farmer y los enemigos queden registrados en instancias distintas
@@ -966,9 +907,6 @@ async function init() {
           // Conectar el farmerController con las piedras para detección de colisiones
           if (farmerController && stones && stones.length > 0) {
             farmerController.setStones(stones);
-            console.log(
-              "✅ FarmerController conectado con las piedras para detección de colisiones"
-            );
           } else {
             console.warn(
               "⚠️ No se pudo conectar el farmerController con las piedras"
@@ -980,13 +918,8 @@ async function init() {
           // Conectar el farmerController con la casa para detección de colisiones
           if (farmerController && house) {
             farmerController.setHouse(house);
-            console.log(
-              "✅ FarmerController conectado con la casa para detección de colisiones"
-            );
+            
           } else {
-            console.warn(
-              "⚠️ No se pudo conectar el farmerController con la casa"
-            );
             console.warn("farmerController:", farmerController);
             console.warn("house:", house);
           }
@@ -994,13 +927,7 @@ async function init() {
           // Conectar el farmerController con las vacas para detección de colisiones
           if (farmerController && cows && cows.length > 0) {
             farmerController.setCows(cows);
-            console.log(
-              "✅ FarmerController conectado con las vacas para detección de colisiones"
-            );
           } else {
-            console.warn(
-              "⚠️ No se pudo conectar el farmerController con las vacas"
-            );
             console.warn("farmerController:", farmerController);
             console.warn("cows:", cows);
           }
@@ -1008,9 +935,6 @@ async function init() {
           // Conectar el farmerController con el mercado para detección de colisiones
           if (farmerController && market) {
             farmerController.setMarket(market);
-            console.log(
-              "✅ FarmerController conectado con el mercado para detección de colisiones"
-            );
           } else {
             console.warn(
               "⚠️ No se pudo conectar el farmerController con el mercado"
@@ -1021,7 +945,6 @@ async function init() {
 
           // Mostrar las animaciones disponibles en consola
           const availableAnims = Object.keys(instance.actions);
-          console.log("🎬 Animaciones disponibles:", availableAnims);
 
           if (availableAnims.length === 0) {
             console.warn("⚠️ No se encontraron animaciones para este modelo");
@@ -1071,7 +994,6 @@ async function init() {
 function setupEventListeners() {
   // Escuchar cambios en el tamaño de la ventana
   window.addEventListener("resize", onWindowResize);
-  console.log("Listener de redimensionamiento configurado");
 
   // Tecla 'i' para mostrar/ocultar el inventario
   window.addEventListener("keydown", (ev) => {
@@ -1164,10 +1086,6 @@ function onWindowResize() {
 
   // Ajustar el tamaño del renderizador
   renderer.setSize(window.innerWidth, window.innerHeight);
-
-  console.log(
-    `Ventana redimensionada: ${window.innerWidth}x${window.innerHeight}`
-  );
 }
 
 /**
@@ -1348,22 +1266,16 @@ function animate(currentTime = 0) {
     // 10. Renderizado final
     renderer.render(scene, camera);
   } catch (error) {
-    console.error("Error en el bucle de animación:", error);
+    return error;
   }
 }
-
-// ==============================================
-// HERRAMIENTAS DE DEPURACIÓN
-// ==============================================
 
 // Función global para forzar la apertura del HUD del mercado
 window.forceOpenMarketHUD = function () {
   if (window.market) {
-    console.log("Forzando apertura del HUD del mercado desde consola");
     window.market.showMarketUI();
     return "HUD del mercado abierto forzosamente";
   } else {
-    console.error("No se encontró la instancia del mercado");
     return "Error: No se encontró la instancia del mercado";
   }
 };

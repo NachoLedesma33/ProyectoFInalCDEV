@@ -25,15 +25,15 @@ export class Lighting {
     this.dirLight.position.set(5, 20, 10);
     this.dirLight.castShadow = true;
 
-    // Configuración avanzada de sombras
+    // Configuración avanzada de sombras - Aumentado el rango de las sombras
     this.dirLight.shadow.mapSize.width = 4096;
     this.dirLight.shadow.mapSize.height = 4096;
     this.dirLight.shadow.camera.near = 0.5;
-    this.dirLight.shadow.camera.far = 100;
-    this.dirLight.shadow.camera.left = -30;
-    this.dirLight.shadow.camera.right = 30;
-    this.dirLight.shadow.camera.top = 30;
-    this.dirLight.shadow.camera.bottom = -30;
+    this.dirLight.shadow.camera.far = 500; // Aumentado de 100 a 500 para cubrir más distancia
+    this.dirLight.shadow.camera.left = -150; // Aumentado para cubrir un área más amplia
+    this.dirLight.shadow.camera.right = 150;
+    this.dirLight.shadow.camera.top = 150;
+    this.dirLight.shadow.camera.bottom = -150;
 
     // Mejorar la calidad de las sombras
     this.dirLight.shadow.bias = -0.0001; // Reducir el bias para evitar artefactos

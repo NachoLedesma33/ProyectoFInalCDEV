@@ -74,17 +74,10 @@ export class House {
 
         // Crear la puerta principal con la misma textura de piedra
         this.createDoor(stoneMaterial);
-
-        console.log(
-          "Casa creada con sistema de colisiones y puerta interactiva"
-        );
       },
       undefined,
       (error) => {
-        console.warn(
-          "No se pudo cargar la textura de grava de coral, usando materiales alternativos:",
-          error
-        );
+        return error;
         // Usar materiales alternativos si la textura no carga
         this.createHouseWithAlternativeMaterials();
       }
@@ -116,8 +109,6 @@ export class House {
     this.createWalls(stoneMaterial, brownMaterial);
     this.createRoof(roofMaterial);
     this.createDoor(stoneMaterial);
-
-    console.log("Casa creada con materiales alternativos");
   }
 
   /**
@@ -404,13 +395,6 @@ export class House {
       });
     }
   }
-
-  /**
-   * Verifica si el farmer está cerca de una puerta específica
-   * @param {THREE.Vector3} farmerPosition - Posición del farmer
-   * @param {Object} gateData - Datos de la puerta
-   * @returns {boolean} - True si el farmer está cerca de la puerta
-   */
   isFarmerNearGate(farmerPosition, gateData) {
     const distance = farmerPosition.distanceTo(gateData.mesh.position);
     return distance <= this.detectionDistance;
@@ -592,12 +576,6 @@ export class House {
     return null;
   }
 
-  /**
-   * Obtiene el punto de colisión más cercano y la normal de la superficie
-   * @param {THREE.Vector3} position - Posición del objeto
-   * @param {THREE.Vector3} direction - Dirección del movimiento
-   * @returns {Object} Información de la colisión más cercana
-   */
   getClosestCollisionPoint(position, direction) {
     let closestCollision = null;
     let minDistance = Infinity;
@@ -638,9 +616,6 @@ export class House {
     return null;
   }
 
-  /**
-   * Obtiene la normal de la superficie según el lado
-   */
   getSurfaceNormal(side) {
     switch (side) {
       case "wall":
@@ -659,11 +634,6 @@ export class House {
     });
   }
 
-  /**
-   * Actualiza el estado de la casa (animaciones, etc.)
-   * @param {number} delta - Tiempo transcurrido
-   * @param {THREE.Vector3} farmerPosition - Posición del farmer para interacción
-   */
   update(delta, farmerPosition = null) {
     // Actualizar animaciones de las puertas
     this.updateGates(delta);
@@ -674,9 +644,6 @@ export class House {
     }
   }
 
-  /**
-   * Elimina la casa de la escena
-   */
   dispose() {
     // Cancelar todos los timers de autocierre
     this.autoCloseTimers.forEach((timer) => {

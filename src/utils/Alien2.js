@@ -72,11 +72,9 @@ export class Alien2 {
   async load() {
     try {
       const alien2Config = modelConfig.characters.alien2;
-      console.log("Cargando configuración de Alien2:", alien2Config);
 
       // Cargar el modelo base (sin animaciones)
       const modelPath = modelConfig.getPath(alien2Config.model);
-      console.log("Cargando modelo base desde:", modelPath);
 
       // Cargar modelo base como promesa
       this.model = await new Promise((resolve, reject) => {
@@ -84,12 +82,10 @@ export class Alien2 {
         loader.load(
           modelPath,
           (fbx) => {
-            console.log("Modelo base cargado exitosamente");
             resolve(fbx);
           },
           undefined,
           (error) => {
-            console.error("Error cargando el modelo base:", error);
             reject(error);
           }
         );
@@ -109,43 +105,17 @@ export class Alien2 {
         alien2Config.animations.turnRight
       );
 
-      console.log("Cargando animaciones desde:", {
-        idlePath,
-        walkPath,
-        turnRightPath,
-      });
-
       // Cargar animación idle
       const idleLoaded = await this.loadAnimation("idle", idlePath);
-      if (idleLoaded) {
-        console.log("Animación idle cargada exitosamente");
-      } else {
-        console.warn("No se pudo cargar la animación idle");
-      }
 
       // Cargar animación de caminar
       const walkLoaded = await this.loadAnimation("walk", walkPath);
-      if (walkLoaded) {
-        console.log("✅ Animación walk cargada exitosamente");
-        console.log("Detalles de animación walk:", this.animations.walk);
-      } else {
-        console.warn("❌ No se pudo cargar la animación walk");
-      }
 
       // Cargar animación de giro
       const turnRightLoaded = await this.loadAnimation(
         "turnRight",
         turnRightPath
       );
-      if (turnRightLoaded) {
-        console.log("✅ Animación turnRight cargada exitosamente");
-        console.log(
-          "Detalles de animación turnRight:",
-          this.animations.turnRight
-        );
-      } else {
-        console.warn("❌ No se pudo cargar la animación turnRight");
-      }
 
       // Reproducir animación idle inicialmente
       setTimeout(() => {
@@ -189,8 +159,6 @@ export class Alien2 {
 
       // Agregar el modelo a la escena
       this.scene.add(this.model);
-
-      console.log("Alien2 cargado y configurado correctamente");
       return true;
     } catch (error) {
       console.error("Error al cargar el Alien2:", error);
@@ -244,8 +212,6 @@ export class Alien2 {
         }
       }
     });
-
-    console.log("Optimizaciones de rendimiento aplicadas al modelo Alien2");
   }
 
   optimizeMaterial(material) {
@@ -266,16 +232,12 @@ export class Alien2 {
 
   async loadAnimation(name, path) {
     try {
-      console.log(`🔄 Cargando animación '${name}' desde: ${path}`);
 
       const anim = await new Promise((resolve, reject) => {
         const loader = new FBXLoader();
         loader.load(
           path,
           (fbx) => {
-            console.log(`📁 Archivo FBX cargado para '${name}':`, fbx);
-            console.log(`🎬 Animaciones encontradas: ${fbx.animations.length}`);
-
             if (fbx.animations.length > 0) {
               const animation = fbx.animations[0];
               console.log(`✅ Animación '${name}' cargada:`, {
@@ -289,12 +251,6 @@ export class Alien2 {
               reject(new Error(`No se encontraron animaciones en ${path}`));
             }
           },
-          (progress) => {
-            console.log(
-              `📊 Progreso de carga '${name}':`,
-              ((progress.loaded / progress.total) * 100).toFixed(2) + "%"
-            );
-          },
           (error) => {
             console.error(`❌ Error cargando la animación '${name}':`, error);
             reject(error);
@@ -303,19 +259,14 @@ export class Alien2 {
       });
 
       this.animations[name] = anim;
-      console.log(`✅ Animación '${name}' guardada en this.animations`);
       return true;
     } catch (error) {
-      console.error(`❌ Error al cargar la animación '${name}':`, error);
       return false;
     }
   }
 
   playAnimation(name) {
     if (!this.animations[name] || !this.mixer) {
-      console.warn(
-        `Animación '${name}' no disponible o mezclador no inicializado`
-      );
       return false;
     }
 
@@ -326,18 +277,13 @@ export class Alien2 {
       this.currentAction.isRunning();
 
     if (isSameAnimation) {
-      console.log(`Animación '${name}' ya está reproduciéndose`);
       return true;
     }
 
     try {
-      console.log(`🔄 Cambiando de animación a '${name}'...`);
 
       // Detener animación actual con fade out suave
       if (this.currentAction) {
-        console.log(
-          `Deteniendo animación actual: ${this.currentAction.getClip().name}`
-        );
         this.currentAction.fadeOut(0.1);
         this.currentAction.stop();
       }
@@ -347,7 +293,6 @@ export class Alien2 {
       const action = this.mixer.clipAction(clip);
 
       if (!action) {
-        console.error("No se pudo crear la acción para el clip:", clip);
         return false;
       }
 
@@ -361,7 +306,6 @@ export class Alien2 {
         .play();
 
       this.currentAction = action;
-      console.log(`✅ Animación '${name}' iniciada correctamente`);
 
       // Forzar la actualización del mixer para aplicar la animación inmediatamente
       if (this.mixer) {
@@ -431,15 +375,10 @@ export class Alien2 {
     // Antes esta función programaba un setTimeout de 5 minutos que llamaba a
     // activateMovementSystem(). Lo dejamos como no-op para que el Alien2
     // permanezca en el mercado.
-    console.log(
-      "Auto-movimiento deshabilitado: el Alien2 no iniciará la secuencia de movimiento automática."
-    );
-
     // Si existiera un timer previo, limpiarlo para evitar ejecuciones pendientes.
     if (this.movementSystem.timer) {
       clearTimeout(this.movementSystem.timer);
       this.movementSystem.timer = null;
-      console.log("Temporizador previo de movimiento limpiado.");
     }
     return;
   }
@@ -456,12 +395,6 @@ export class Alien2 {
       firstPath.start.y,
       firstPath.start.z
     );
-
-    console.log(
-      "Sistema de movimiento activado. Alien2 movido a posición inicial:",
-      firstPath.start
-    );
-
     // Iniciar el primer movimiento
     this.startNextPath();
   }
@@ -471,10 +404,6 @@ export class Alien2 {
     if (
       this.movementSystem.currentPathIndex >= this.movementSystem.paths.length
     ) {
-      console.log(
-        "Secuencia de movimiento completada. Alien2 en posición final."
-      );
-
       // Activar sistema de interacción (esto incluye el cambio a idle)
       this.activateInteractionSystem();
       return;
@@ -482,10 +411,6 @@ export class Alien2 {
 
     const currentPath =
       this.movementSystem.paths[this.movementSystem.currentPathIndex];
-    console.log(
-      `Iniciando ruta ${this.movementSystem.currentPathIndex + 1}:`,
-      currentPath
-    );
 
     if (currentPath.isTurn) {
       this.startTurn(currentPath);
@@ -513,16 +438,7 @@ export class Alien2 {
     );
     this.model.lookAt(lookAtPoint);
 
-    // Cambiar a la animación de caminar
-    console.log("Cambiando a animación de caminar...");
     this.playAnimation(path.animation);
-
-    console.log(
-      "Iniciando movimiento hacia:",
-      path.end,
-      "con animación:",
-      path.animation
-    );
   }
 
   // Iniciar giro
@@ -535,17 +451,7 @@ export class Alien2 {
 
     this.movementSystem.targetRotation = targetRotation;
     this.movementSystem.startRotation = currentRotation;
-
-    // Cambiar a la animación de giro
-    console.log("Cambiando a animación de giro...");
     this.playAnimation(path.animation);
-
-    console.log(
-      "Iniciando giro de",
-      (path.rotation * 180) / Math.PI,
-      "grados con animación:",
-      path.animation
-    );
   }
 
   // Actualizar el movimiento
@@ -575,8 +481,6 @@ export class Alien2 {
       this.model.position.copy(targetPos);
       this.movementSystem.isMoving = false;
       this.movementSystem.currentPathIndex++;
-
-      console.log("Llegado al objetivo. Iniciando siguiente ruta...");
       setTimeout(() => {
         this.startNextPath();
       }, 500); // Pausa de 0.5 segundos entre rutas
@@ -609,7 +513,6 @@ export class Alien2 {
       this.movementSystem.isTurning = false;
       this.movementSystem.currentPathIndex++;
 
-      console.log("Giro completado. Iniciando siguiente ruta...");
       setTimeout(() => {
         this.startNextPath();
       }, 500); // Pausa de 0.5 segundos entre rutas
@@ -624,22 +527,17 @@ export class Alien2 {
   // Método para forzar la aplicación de la animación
   forceAnimation() {
     if (this.currentAction && this.mixer) {
-      console.log("Forzando aplicación de animación...");
       this.currentAction.reset();
       this.currentAction.play();
       this.mixer.update(0.1);
-      console.log("Animación forzada aplicada");
     }
   }
 
   // Método para verificar el esqueleto del modelo
   checkSkeleton() {
     if (!this.model) {
-      console.log("Modelo no cargado");
       return;
     }
-
-    console.log("=== VERIFICACIÓN DEL ESQUELETO ===");
     let skeletonFound = false;
 
     this.model.traverse((child) => {
@@ -648,7 +546,6 @@ export class Alien2 {
         console.log("Hueso encontrado:", child.name, child.type);
       }
       if (child.isSkinnedMesh) {
-        console.log("Malla con esqueleto encontrada:", child.name);
         if (child.skeleton) {
           console.log(
             "Esqueleto de la malla:",
@@ -664,16 +561,10 @@ export class Alien2 {
     } else {
       console.log("✅ Esqueleto encontrado en el modelo");
     }
-    console.log("================================");
   }
-
-  // ==============================================
-  // SISTEMA DE INTERACCIÓN
-  // ==============================================
 
   // Forzar cambio a animación idle (método interno)
   forceIdleAnimation() {
-    console.log("🔧 Ejecutando forceIdleAnimation()...");
 
     // Desactivar completamente el sistema de movimiento
     this.movementSystem.isActive = false;
@@ -688,16 +579,9 @@ export class Alien2 {
 
     // Detener cualquier animación actual
     if (this.currentAction) {
-      console.log(
-        "Deteniendo animación actual:",
-        this.currentAction.getClip().name
-      );
       this.currentAction.stop();
       this.currentAction = null;
     }
-
-    // Forzar cambio a idle
-    console.log("Cambiando a animación idle...");
     const success = this.playAnimation("idle");
 
     if (success) {
@@ -712,12 +596,6 @@ export class Alien2 {
   // Activar sistema de interacción cuando llega a la posición final
   activateInteractionSystem() {
     this.interactionSystem.isAtFinalPosition = true;
-    console.log("Sistema de interacción activado para Alien2");
-
-    // FORZAR cambio a animación idle cuando se activa el sistema de interacción
-    console.log(
-      "🔄 Forzando cambio a animación idle al activar sistema de interacción..."
-    );
     this.forceIdleAnimation();
 
     // Crear símbolo de exclamación
@@ -753,8 +631,6 @@ export class Alien2 {
 
     // Animación de parpadeo
     this.animateExclamationMark();
-
-    console.log("Símbolo de exclamación creado sobre Alien2");
   }
 
   // Animar el símbolo de exclamación
@@ -791,13 +667,6 @@ export class Alien2 {
     // Animación de parpadeo
     this.animateBlinkingCircle();
 
-    console.log(
-      "Círculo verde parpadeante creado en posición:",
-      this.interactionSystem.blinkingCircle.position
-    );
-
-    // FORZAR cambio a idle cuando se crea el círculo verde
-    console.log("🔄 Forzando cambio a idle al crear círculo verde...");
     setTimeout(() => {
       this.forceIdleAnimation();
     }, 100); // Pequeño delay para asegurar que todo esté listo
@@ -1018,7 +887,6 @@ export class Alien2 {
     this.interactionSystem.dialogueHud = hudContainer;
     this.interactionSystem.buttonArea = buttonArea;
     this.interactionSystem.dialogueArea = dialogueArea;
-    console.log("HUD de diálogo mejorado creado");
   }
 
   // Actualizar sistema de interacción
@@ -1061,13 +929,7 @@ export class Alien2 {
       distance <= this.interactionSystem.collisionRadius;
 
     // Solo mostrar mensaje cuando cambia el estado de proximidad
-    if (this.interactionSystem.isPlayerNearby !== wasPlayerNearby) {
-      if (this.interactionSystem.isPlayerNearby) {
-        console.log("Jugador entró en el área de interacción");
-      } else {
-        console.log("Jugador salió del área de interacción");
-      }
-    }
+    if (this.interactionSystem.isPlayerNearby !== wasPlayerNearby) { }
   }
 
   // Abrir diálogo. Acepta un callback opcional que se ejecuta al cerrarse el diálogo.
@@ -1079,7 +941,6 @@ export class Alien2 {
       this.interactionSystem.dialogueHud &&
       !this.interactionSystem.isDialogueOpen
     ) {
-      console.log("Abriendo diálogo con Alien2...");
       this.interactionSystem.dialogueHud.style.display = "block";
       this.interactionSystem.isDialogueOpen = true;
 
@@ -1515,7 +1376,6 @@ export class Alien2 {
 
   // Método de depuración para verificar el estado de las animaciones
   logAnimationState() {
-    console.log("=== ESTADO DE ANIMACIONES ALIEN2 ===");
     console.log("Modelo cargado:", !!this.model);
     console.log("Mixer inicializado:", !!this.mixer);
     console.log("Animaciones cargadas:", Object.keys(this.animations));
@@ -1544,7 +1404,6 @@ export class Alien2 {
         console.log(`  ${index}: ${anim.name} (${anim.duration}s)`);
       });
     }
-    console.log("=====================================");
   }
 }
 
@@ -1583,7 +1442,6 @@ window.startAlien2Movement = function () {
 
 window.forceAlien2Movement = function () {
   if (window.alien2) {
-    console.log("Forzando inicio inmediato del movimiento del Alien2...");
     window.alien2.activateMovementSystem();
   } else {
     console.warn("Alien2 no encontrado en window.alien2");
@@ -1592,7 +1450,6 @@ window.forceAlien2Movement = function () {
 
 window.debugAlien2Movement = function () {
   if (window.alien2) {
-    console.log("=== ESTADO DEL SISTEMA DE MOVIMIENTO ALIEN2 ===");
     console.log("Sistema activo:", window.alien2.movementSystem.isActive);
     console.log("Ruta actual:", window.alien2.movementSystem.currentPathIndex);
     console.log("Está moviéndose:", window.alien2.movementSystem.isMoving);
@@ -1612,10 +1469,7 @@ window.debugAlien2Movement = function () {
         "Animación actual:",
         window.alien2.currentAction.getClip().name
       );
-      console.log("¿Está corriendo?:", window.alien2.currentAction.isRunning());
     }
-
-    console.log("================================================");
   } else {
     console.warn("Alien2 no encontrado en window.alien2");
   }
@@ -1623,20 +1477,15 @@ window.debugAlien2Movement = function () {
 
 window.testAlien2Animations = function () {
   if (window.alien2) {
-    console.log("=== PROBANDO ANIMACIONES DEL ALIEN2 ===");
 
     // Probar cada animación por separado
     const animations = ["idle", "walk", "turnRight"];
 
     animations.forEach((animName, index) => {
       setTimeout(() => {
-        console.log(`🎬 Probando animación: ${animName}`);
         const success = window.alien2.playAnimation(animName);
-        console.log(`Resultado: ${success ? "✅ Éxito" : "❌ Falló"}`);
       }, index * 2000); // 2 segundos entre cada prueba
     });
-
-    console.log("Las animaciones se probarán en secuencia...");
   } else {
     console.warn("Alien2 no encontrado en window.alien2");
   }
@@ -1644,7 +1493,6 @@ window.testAlien2Animations = function () {
 
 window.debugAlien2Interaction = function () {
   if (window.alien2) {
-    console.log("=== ESTADO DEL SISTEMA DE INTERACCIÓN ALIEN2 ===");
     console.log(
       "En posición final:",
       window.alien2.interactionSystem.isAtFinalPosition

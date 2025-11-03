@@ -1,4 +1,3 @@
-// src/utils/Market.js
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
 import { playSfxWhenReady, safePlaySfx } from './audioHelpers.js';
 
@@ -1323,7 +1322,6 @@ export class Market {
       
       buyButton.onclick = () => {
         if (!window.inventory) {
-          console.error('No se encontró el inventario');
           return;
         }
 
@@ -1389,7 +1387,6 @@ export class Market {
             
             // 11. Notificar éxito
             window.inventory?.notify?.(`¡${item.name} comprado por $${item.price}!`, 'success');
-            console.log(`Herramienta "${item.name}" agregada al inventario en el slot ${slotIndex + 1}`);
             // Reproducir sonido de caja registradora al completar la compra (asegurar play aunque audio no esté listo)
             try { playSfxWhenReady('cashRegister', { volume: 0.9 }); } catch (_) {}
           } else {
@@ -1397,9 +1394,7 @@ export class Market {
             window.inventory.tools[slotIndex] = previousTool;
             throw new Error('No se pudo agregar la herramienta al inventario');
           }
-          
         } catch (error) {
-          console.error('Error al procesar la compra:', error);
           // Revertir cambios en caso de error
           item.owned = false;
           updateButtonState();
@@ -1496,7 +1491,7 @@ export class Market {
         window.farmerController.exitMarket(this);
       }
     } catch (e) {
-      console.warn('Error al pedir al farmer que salga del mercado:', e);
+      return e;
     }
   }
 }
