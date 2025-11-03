@@ -295,6 +295,19 @@ export class ShipRepair {
     }
     centerCol.appendChild(bottomRow);
 
+    // Add help text below the bottom row
+    const helpText = document.createElement('div');
+    helpText.textContent = 'Arrastra la herramienta a los espacios vacíos';
+    helpText.style.cssText = `
+      color: #8f8f8f;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 10px;
+      font-style: italic;
+      width: 100%;
+    `;
+    centerCol.appendChild(helpText);
+
   this.hud.appendChild(centerCol);
   // Ensure progress shows persisted state
   this.updateProgress();
