@@ -9,9 +9,11 @@ export class HealthBar {
     this.showNumbers = opts.showNumbers !== undefined ? opts.showNumbers : true;
     this.position = opts.position || 'top-left'; // 'top-left' | 'bottom-center' | custom
     this.opts = opts || {};
+    this.label = opts.label || '';
     this.container = null;
     this.fill = null;
     this.text = null;
+    this.labelEl = null;
     this.healthComponent = null;
     this._raf = null;
     this._lastValue = null;
@@ -53,6 +55,17 @@ export class HealthBar {
     wrapper.style.alignItems = 'center';
     wrapper.style.gap = '8px';
 
+    // Etiqueta izquierda (opcional)
+    const label = document.createElement('div');
+    label.style.minWidth = '72px';
+    label.style.color = '#fff';
+    label.style.fontWeight = '700';
+    label.style.fontFamily = 'Arial, sans-serif';
+    label.style.fontSize = '14px';
+    label.style.textAlign = 'left';
+    label.style.textTransform = 'uppercase';
+    label.textContent = (this.label || '').toString();
+
     // barra de fondo
     const barBg = document.createElement('div');
     barBg.style.flex = '1';
@@ -84,6 +97,7 @@ export class HealthBar {
     text.style.fontSize = '14px';
     text.style.textAlign = 'center';
 
+    wrapper.appendChild(label);
     wrapper.appendChild(barBg);
   if (this.showNumbers) wrapper.appendChild(text);
 
@@ -92,6 +106,7 @@ export class HealthBar {
     this.container = wrapper;
     this.fill = fill;
     this.text = text;
+    this.labelEl = label;
   }
 
   attachTo(healthComponent, opts = {}) {
@@ -100,6 +115,11 @@ export class HealthBar {
     if (opts.position === 'top-left') {
       this.container.style.left = opts.x !== undefined ? `${opts.x}px` : '20px';
       this.container.style.top = opts.y !== undefined ? `${opts.y}px` : '20px';
+    }
+
+    // actualizar etiqueta si se pasa en attach
+    if (opts.label !== undefined && this.labelEl) {
+      this.labelEl.textContent = (opts.label || '').toString();
     }
 
     // start RAF loop

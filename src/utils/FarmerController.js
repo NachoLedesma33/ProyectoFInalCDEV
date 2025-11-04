@@ -366,12 +366,12 @@ export class FarmerController {
         try {
           if (window.playerHealthBar) return; // evitar duplicados
           if (window.createPlayerHealthBar) {
-            window.createPlayerHealthBar(this.healthComponent, { position: 'top-left', x: 20, y: 20, width: 320 });
+            window.createPlayerHealthBar(this.healthComponent, { position: 'top-left', x: 20, y: 20, width: 320, label: 'KAEL' });
           } else {
             // Fallback: crear directamente la HealthBar si el helper no está registrado
             try {
-              const hb = new HealthBar({ position: 'top-left', x: 20, y: 20, width: 320 });
-              hb.attachTo(this.healthComponent, { position: 'top-left', x: 20, y: 20 });
+              const hb = new HealthBar({ position: 'top-left', x: 20, y: 20, width: 320, label: 'KAEL' });
+              hb.attachTo(this.healthComponent, { position: 'top-left', x: 20, y: 20, label: 'KAEL' });
               window.playerHealthBar = hb;
             } catch (e) {
               return e;

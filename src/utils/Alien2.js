@@ -642,8 +642,8 @@ export class Alien2 {
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
-    width: 800px;
-    height: 500px;
+    width: 650px;
+    height: 430px;
     background: rgba(44, 62, 80, 0.98);
     border: 4px solid #3498db;
     border-radius: 25px;
@@ -661,8 +661,8 @@ export class Alien2 {
     header.style.cssText = `
       background: linear-gradient(45deg, #27ae60, #2ecc71);
       color: white;
-      padding: 20px 30px;
-      font-size: 24px;
+      padding: 14px 22px;
+      font-size: 20px;
       font-weight: bold;
       text-align: center;
       border-bottom: 3px solid #3498db;
@@ -674,19 +674,19 @@ export class Alien2 {
     const mainContainer = document.createElement("div");
     mainContainer.style.cssText = `
       display: flex;
-      height: calc(100% - 70px);
+      height: calc(100% - 58px);
     `;
     hudContainer.appendChild(mainContainer);
 
     // Crear contenedor izquierdo (imagen del alien)
     const leftPanel = document.createElement("div");
     leftPanel.style.cssText = `
-      width: 300px;
+      width: 240px;
       background: linear-gradient(135deg, #1a2f3a, #2c3e50);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 30px;
+      padding: 20px;
       border-right: 3px solid #3498db;
     `;
 
@@ -721,8 +721,8 @@ export class Alien2 {
       background: rgba(0, 0, 0, 0.6);
       border: 2px solid #3498db;
       border-radius: 15px;
-      padding: 25px;
-      font-size: 20px;
+      padding: 18px;
+      font-size: 18px;
       line-height: 1.6;
       color: #ecf0f1;
       overflow-y: auto;
@@ -740,8 +740,8 @@ export class Alien2 {
     buttonArea.style.cssText = `
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      max-height: 180px;
+      gap: 10px;
+      max-height: 150px;
       overflow-y: auto;
       padding: 5px;
     `;
@@ -758,8 +758,8 @@ export class Alien2 {
       color: white;
       border: none;
       border-radius: 10px;
-      padding: 12px 20px;
-      font-size: 16px;
+      padding: 10px 16px;
+      font-size: 14px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -907,8 +907,8 @@ export class Alien2 {
 
     // Mostrar mensaje del Alien
     this.interactionSystem.dialogueArea.innerHTML =
-      '<div style="text-align: center; margin-bottom: 15px; color: #2ecc71; font-size: 22px;">👽 ALIEN COMERCIANTE 👽</div>' +
-      '<div style="text-align: center; font-size: 20px; line-height: 1.5;">Hola humano, ¿tienes leche de tus vacas para vender?</div>';
+      '<div style="text-align: center; margin-bottom: 12px; color: #2ecc71; font-size: 20px;">👽 ALIEN COMERCIANTE 👽</div>' +
+      '<div style="text-align: center; font-size: 18px; line-height: 1.5;">Hola humano, ¿tienes leche de tus vacas para vender?</div>';
 
     // Limpiar botones anteriores
     this.interactionSystem.buttonArea.innerHTML = "";
@@ -923,8 +923,8 @@ export class Alien2 {
       color: white;
       border: none;
       border-radius: 12px;
-      padding: 15px 25px;
-      font-size: 18px;
+      padding: 12px 18px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -982,8 +982,8 @@ export class Alien2 {
       color: white;
       border: none;
       border-radius: 12px;
-      padding: 15px 25px;
-      font-size: 18px;
+      padding: 12px 18px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -1030,8 +1030,8 @@ export class Alien2 {
         color: white;
         border: none;
         border-radius: 12px;
-        padding: 15px 25px;
-        font-size: 18px;
+        padding: 12px 18px;
+        font-size: 16px;
         font-weight: bold;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -1092,8 +1092,8 @@ export class Alien2 {
       color: white;
       border: none;
       border-radius: 12px;
-      padding: 15px 25px;
-      font-size: 18px;
+      padding: 12px 18px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.3s ease;

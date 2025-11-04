@@ -28,7 +28,8 @@ import { showFinalScene } from "./utils/finalScene.js";
 import { makeMinimap } from "./utils/minimap.js";
 import { createStoryManager, storySlides } from "./utils/startMenu.js";
 import createSoundHUD from "./utils/soundHUD.js";
-import CombatSystem from "./utils/CombatSystem.js";
+import CombatSystem, { integrateEntityWithCombat } from "./utils/CombatSystem.js";
+import HealthBar from "./utils/Healthbar.js";
 import showDeathScreen from "./utils/DeathScreen.js";
 import WaveManager from "./utils/waves.js";
 import { AudioManager } from "./utils/AudioManager.js";
@@ -757,6 +758,41 @@ async function init() {
     { x: 15, y: 0, z: 15 },
     { width: 20, height: 2, depth: 20 }
   );
+
+  // Registrar el corral en el CombatSystem y crear su barra de vida HUD (debajo de la del jugador)
+  try {
+    // Asegurar instancia global del sistema de combate
+    combatSystem = window.combatSystem || new CombatSystem();
+    window.combatSystem = combatSystem;
+
+    // Crear un ancla simple en el centro del corral para registrar vida/daño
+    const corralAnchor = new THREE.Object3D();
+    corralAnchor.position.set(corral.position.x, corral.position.y + 1, corral.position.z);
+    scene.add(corralAnchor);
+    window.corralAnchor = corralAnchor;
+
+    // Integrar con vida propia (p.ej. 300 de vida), equipo aliado para evitar Fuego Amigo si aplica
+    const corralHealth = integrateEntityWithCombat(combatSystem, 'corral', corralAnchor, 300, { team: 'ally' });
+    window.corralHealth = corralHealth;
+
+    // Crear HUD del corral cuando comience el gameplay, una sola vez
+    const spawnCorralHealthbar = () => {
+      try {
+        if (window.corralHealthBar) return;
+        const hb = new HealthBar({ id: 'corral-healthbar', position: 'top-left', x: 20, y: 56, width: 320, height: 24, label: 'corral' });
+        hb.attachTo(corralHealth, { position: 'top-left', x: 20, y: 56, label: 'corral' });
+        window.corralHealthBar = hb;
+      } catch (_) {}
+    };
+
+    try {
+      if (window.__gameplayStarted) {
+        spawnCorralHealthbar();
+      } else {
+        window.addEventListener('gameplaystart', spawnCorralHealthbar, { once: true });
+      }
+    } catch (_) { spawnCorralHealthbar(); }
+  } catch (e) { /* no fatal */ }
 
   // Crear el Space Shuttle Orbiter
   spaceShuttle = new SpaceShuttle(
