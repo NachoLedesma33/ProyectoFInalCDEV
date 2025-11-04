@@ -774,6 +774,14 @@ async function init() {
     // Integrar con vida propia (p.ej. 300 de vida), equipo aliado para evitar Fuego Amigo si aplica
     const corralHealth = integrateEntityWithCombat(combatSystem, 'corral', corralAnchor, 300, { team: 'ally' });
     window.corralHealth = corralHealth;
+    
+    // Connect the corral's health component to the corral instance
+    if (corral) {
+      corral.healthComponent = corralHealth;
+      corral.maxHealth = 300; // Match the health set in integrateEntityWithCombat
+      corral.health = 300;
+      console.log('Corral health component connected');
+    }
 
     // Crear HUD del corral cuando comience el gameplay, una sola vez
     const spawnCorralHealthbar = () => {

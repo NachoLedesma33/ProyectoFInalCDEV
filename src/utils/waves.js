@@ -14,6 +14,12 @@ export class WaveManager {
     this.scene = scene;
     this.modelLoader = modelLoader;
     this.combat = combatSystem;
+    
+    // Speed control
+    this.speedMultiplier = 1;
+    this.speedBoostActive = false;
+    this.normalSpeed = 1;
+    this.boostedSpeed = 10; // 10x speed when spacebar is pressed
 
     // optional helpers to locate player and cows in the world
     this.getPlayer = options.getPlayer || null;
@@ -82,6 +88,23 @@ export class WaveManager {
     try {
       window.addEventListener('gamepause', () => this.pause());
       window.addEventListener('gameresume', () => this.resume());
+      
+      // Add spacebar speed control
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !e.repeat) {
+          this.speedMultiplier = this.boostedSpeed;
+          this.speedBoostActive = true;
+          this._updateSpeedUI(true);
+        }
+      });
+      
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+          this.speedMultiplier = this.normalSpeed;
+          this.speedBoostActive = false;
+          this._updateSpeedUI(false);
+        }
+      });
     } catch (_) {}
   }
 
@@ -401,14 +424,50 @@ export class WaveManager {
   }
 
   // update should be called from main loop. delta in seconds
+  _updateSpeedUI(isFast) {
+    try {
+      let speedIndicator = document.getElementById('speed-indicator');
+      if (!speedIndicator) {
+        speedIndicator = document.createElement('div');
+        speedIndicator.id = 'speed-indicator';
+        speedIndicator.style.position = 'fixed';
+        speedIndicator.style.bottom = '20px';
+        speedIndicator.style.right = '20px';
+        speedIndicator.style.padding = '8px 16px';
+        speedIndicator.style.background = 'rgba(0,0,0,0.7)';
+        speedIndicator.style.color = '#fff';
+        speedIndicator.style.borderRadius = '4px';
+        speedIndicator.style.fontFamily = 'Arial, sans-serif';
+        speedIndicator.style.fontSize = '14px';
+        speedIndicator.style.zIndex = '1000';
+        speedIndicator.style.display = 'none';
+        document.body.appendChild(speedIndicator);
+      }
+      
+      if (isFast) {
+        speedIndicator.textContent = 'Velocidad: RÁPIDA (x' + this.boostedSpeed + ')';
+        speedIndicator.style.display = 'block';
+        speedIndicator.style.color = '#ffcc00';
+      } else {
+        speedIndicator.style.display = 'none';
+      }
+    } catch (e) {
+      console.error('Error updating speed UI:', e);
+    }
+  }
+
   update(delta) {
     if (!this._running) return;
     if (this._paused) return; // while paused, halt update-driven progress (spawns, enemy updates)
+    
+    // Apply speed multiplier to delta time
+    const adjustedDelta = delta * this.speedMultiplier;
     const now = performance.now();
 
-    // spawn logic: respect spawnInterval (ms)
+    // spawn logic: respect spawnInterval (ms) with speed multiplier
     if (this.enemiesToSpawn > 0) {
-      if (!this._lastSpawnAt || now - this._lastSpawnAt >= this.spawnInterval) {
+      const effectiveSpawnInterval = this.spawnInterval / this.speedMultiplier;
+      if (!this._lastSpawnAt || now - this._lastSpawnAt >= effectiveSpawnInterval) {
         this._lastSpawnAt = now;
         this._spawnOne();
       }
@@ -481,7 +540,8 @@ export class WaveManager {
   _scheduleRestThenNext() {
     this._resting = true;
     this._waitingNextWave = true;
-    const endAt = Date.now() + this.restDurationMs;
+    const effectiveRestDuration = this.restDurationMs / this.speedMultiplier;
+    const endAt = Date.now() + effectiveRestDuration;
     this._restEndAt = endAt;
     // Create simple countdown UI
     this._ensureRestCountdownEl();
@@ -545,7 +605,8 @@ export class WaveManager {
   // ---- Normal next-wave countdown (non-rest) ----
   _scheduleNextWaveThenStart(delayMs) {
     this._waitingNextWave = true;
-    const endAt = Date.now() + delayMs;
+    const effectiveDelay = delayMs / this.speedMultiplier;
+    const endAt = Date.now() + effectiveDelay;
     this._nextEndAt = endAt;
     this._ensureNextWaveCountdownEl();
     const tick = () => {

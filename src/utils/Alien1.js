@@ -15,11 +15,23 @@ export class Alien1 {
 		this.mixer = null;
 		this.currentAction = null;
 		this.animations = {}; // { idle: AnimationClip, walk: AnimationClip, ... }
-			// AI / combat related
-			this.moveSpeed = 0.10; // velocidad un poco más baja y constante en todas las oleadas
-			this.detectionRange = 25; // how far it can see cows/player (WaveManager may override)
-			this.playerAggroRadius = 12; // preferir jugador si está dentro de este radio (WaveManager puede sobrescribir)
-			this.attackRange = 1.4;
+		// Track the last wall hit to prevent continuous damage
+		this._lastWallHit = null; // { wall: string, time: number }
+		// AI / combat related
+		this.moveSpeed = 0.10; // velocidad un poco más baja y constante en todas las oleadas
+		this.detectionRange = 25; // how far it can see cows/player (WaveManager may override)
+		this.playerAggroRadius = 12; // preferir jugador si está dentro de este radio (WaveManager puede sobrescribir)
+		this.attackRange = 1.4;
+		this.attackDamage = 5; // daño base inicial reducido (WaveManager puede sobrescribir)
+		this.attackCooldown = 1.0; // seconds
+		this._lastAttackAt = -Infinity;
+		this._postAttackUntil = 0; // timestamp (ms) to hold combat_idle after attacking
+		this._currentPunchClip = null; // reference to clip currently used for punch
+		this._impactTimeoutId = null; // timeout id for scheduled hit application
+		this._mixerFinishedBound = this._onMixerFinished.bind(this);
+		this.target = null; // { type: 'cow'|'player', ref: object }
+		this.state = 'idle';
+		this.isDead = false; // se establece en onDeath
 			this.attackDamage = 5; // daño base inicial reducido (WaveManager puede sobrescribir)
 			this.attackCooldown = 1.0; // seconds
 			this._lastAttackAt = -Infinity;
@@ -886,6 +898,61 @@ export class Alien1 {
 			const center = new THREE.Vector3(pos.x, (pos.y || 0) + halfH, pos.z);
 			const charBox = new THREE.Box3().setFromCenterAndSize(center, size);
 
+			// Check for corral collisions if we have a reference to the corral
+			if (this.getCorral && typeof this.getCorral === 'function') {
+				const corral = this.getCorral();
+				if (corral && corral.checkCollision) {
+					// Create a box for the alien's collider
+					const alienBox = new THREE.Box3().setFromCenterAndSize(
+						new THREE.Vector3(pos.x, center.y, pos.z),
+						new THREE.Vector3(halfW * 2, halfH * 2, halfW * 2)
+					);
+					
+					// Check for collision with corral walls
+					const collisionData = corral.checkCollision(alienBox);
+					if (collisionData) {
+						const currentWall = collisionData.side;
+						const currentTime = Date.now();
+						
+						// Aplicar daño constantemente mientras haya contacto
+						const DAMAGE_PER_SECOND = 0.1; // Daño total por segundo (muy bajo)
+						const UPDATE_INTERVAL = 0.00001; // Actualizar cada 0.00001 segundos (10 microsegundos)
+						
+						// Calcular el daño proporcional al tiempo transcurrido
+						const timeSinceLastUpdate = this._lastWallHit ? (currentTime - this._lastWallHit.time) : 1000;
+						const damageThisFrame = (DAMAGE_PER_SECOND * timeSinceLastUpdate) / 1000;
+						
+						// Aplicar el daño
+						const damageApplied = corral.damageWall(currentWall, damageThisFrame);
+						
+						// Actualizar el último tiempo de daño
+						this._lastWallHit = {
+							wall: currentWall,
+							time: currentTime
+						};
+						
+						// Mostrar progreso cada cierto tiempo para no saturar la consola
+						if (Math.floor(corral.health) % 5 === 0 && Math.random() < 0.01) {
+							console.log(`Pared ${currentWall} - Salud restante: ${corral.health.toFixed(2)}/${corral.maxHealth}`);
+						}
+						
+						// If the corral's health is zero, we can pass through the wall
+						if (corral.health <= 0) {
+							console.log(`Corral wall ${currentWall} destroyed!`);
+							this._obstaclesBuilt = false;
+							return false;
+						}
+						
+						return true; // Collision with wall (not destroyed yet)
+					} else {
+						// No collision with corral, reset last wall hit
+						this._lastWallHit = null;
+					}
+				} else {
+					console.warn('Corral or checkCollision method not available');
+				}
+			}
+
 			// circles (stones)
 			for (const c of (this._obstacles.circles || [])) {
 				const dx = pos.x - c.cx; const dz = pos.z - c.cz;
@@ -895,7 +962,9 @@ export class Alien1 {
 			for (const b of (this._obstacles.boxes || [])) {
 				if (b && charBox.intersectsBox(b)) return true;
 			}
-		} catch(_) {}
+		} catch(error) {
+			console.error('Error in _collidesAt:', error);
+		}
 		return false;
 	}
 

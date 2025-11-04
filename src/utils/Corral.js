@@ -11,13 +11,21 @@ export class Corral {
     size = { width: 20, height: 2, depth: 20 }
   ) {
     this.scene = scene;
-    this.position = position;
-    this.size = size;
+    this.position = new THREE.Vector3().copy(position);
+    this.size = size || { width: 20, height: 2, depth: 20 };
     this.walls = [];
+    this.gates = [];
     this.collisionBoxes = [];
-    this.gates = []; // Array para múltiples puertas
-    this.gateSpeed = 3; // Velocidad de apertura/cierre de las puertas
-    this.detectionDistance = 1.5; // Distancia de detección del farmer
+    this.autoCloseTimers = new Map();
+    this.autoCloseDelay = 2000; // 2 segundos para el cierre automático
+    this.gateSpeed = 2.0; // Velocidad de apertura/cierre de puertas
+    this.detectionDistance = 5; // Distancia para detectar al granjero
+    
+    // Health system - Increased wall health for more gradual damage
+    this.maxHealth = 300; // Increased from 100 to 300 for more granular control
+    this.health = this.maxHealth;
+    this.wallHealth = 100; // Increased from 50 to 100 for more gradual damage
+    this.wallSections = new Map(); // Track health of individual wall sections
     this.autoCloseDelay = 4000; // 4 segundos para autocierre
     this.autoCloseTimers = new Map(); // Timers para cada puerta
 
@@ -689,10 +697,102 @@ export class Corral {
   checkCollision(objectBox) {
     for (let collisionData of this.collisionBoxes) {
       if (objectBox.intersectsBox(collisionData.box)) {
+        // Initialize health for this wall section if it doesn't exist
+        if (!this.wallSections.has(collisionData.side)) {
+          this.wallSections.set(collisionData.side, this.wallHealth);
+        }
         return collisionData;
       }
     }
     return null;
+  }
+
+  /**
+   * Apply damage to a specific wall section
+   * @param {string} wallSection - The section identifier (e.g., 'left', 'right', 'front', 'back')
+   * @param {number} damage - Amount of damage to apply
+   * @returns {boolean} - Returns true if the wall was destroyed
+   */
+  damageWall(wallSection, damage = 10) { // Default damage is now 10 as per requirement
+    if (!this.wallSections.has(wallSection)) {
+      this.wallSections.set(wallSection, this.wallHealth);
+    }
+    
+    // Only track wall section health for reference, but don't destroy based on it
+    const currentHealth = this.wallSections.get(wallSection);
+    const newHealth = Math.max(0, currentHealth - damage);
+    this.wallSections.set(wallSection, newHealth);
+    
+    // Reduce main corral health by the full damage amount
+    this.health = Math.max(0, this.health - damage);
+    
+    // Update the health component if it exists
+    if (this.healthComponent) {
+      this.healthComponent.current = Math.max(0, this.health);
+      // Trigger health update in the UI
+      if (this.healthComponent.onDamage) {
+        this.healthComponent.onDamage(damage, { type: 'wall' });
+      }
+    }
+    
+    console.log(`Wall ${wallSection} section health: ${newHealth}/${this.wallHealth}, Corral total health: ${this.health}/${this.maxHealth}`);
+    
+    // Only destroy walls when the entire corral's health reaches zero
+    if (this.health <= 0) {
+      console.log('Corral health reached zero, destroying wall section:', wallSection);
+      this.destroyWall(wallSection);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Remove a wall section when its health reaches zero
+   * @param {string} wallSection - The section identifier to remove
+   */
+  destroyWall(wallSection) {
+    console.log(`Destroying wall section: ${wallSection}`);
+    
+    // Find and remove all walls with this section identifier
+    const wallsToRemove = this.collisionBoxes.filter(collisionData => 
+      collisionData.side === wallSection || 
+      collisionData.side.startsWith(wallSection + '-')
+    );
+    
+    wallsToRemove.forEach(collisionData => {
+      // Remove from scene
+      if (collisionData.wall) {
+        this.scene.remove(collisionData.wall);
+        
+        // Dispose of geometry and materials if they exist
+        if (collisionData.wall.geometry) {
+          collisionData.wall.geometry.dispose();
+        }
+        if (collisionData.wall.material) {
+          if (Array.isArray(collisionData.wall.material)) {
+            collisionData.wall.material.forEach(mat => mat.dispose());
+          } else {
+            collisionData.wall.material.dispose();
+          }
+        }
+      }
+    });
+    
+    // Remove from collision boxes
+    this.collisionBoxes = this.collisionBoxes.filter(collisionData => 
+      collisionData.side !== wallSection && 
+      !collisionData.side.startsWith(wallSection + '-')
+    );
+    
+    // Remove from walls array
+    this.walls = this.walls.filter(wall => {
+      const isInRemoved = wallsToRemove.some(removed => removed.wall === wall);
+      return !isInRemoved;
+    });
+    
+    // Remove from wall sections tracking
+    this.wallSections.delete(wallSection);
   }
 
   getClosestCollisionPoint(position, direction) {
