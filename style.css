@@ -605,13 +605,15 @@ p {
 /* Contenedor principal para los botones de HUD */
 #hud-buttons-container {
   position: fixed;
-  top: 20px;
+  bottom: 20px;
   right: 20px;
   z-index: 1000;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 10px;
   align-items: flex-end;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 /* Contenedor individual para cada botón del HUD */
@@ -623,6 +625,11 @@ p {
   margin: 0;
   padding: 0;
 }
+
+/* Orden de los botones en fila: inventario, objetivos, minimapa */
+#inventory-container { order: 1; }
+#objectives-container { order: 2; }
+#minimap-container { order: 3; }
 
 /* Estilos para los botones de toggle */
 #inventory-toggle,
@@ -720,7 +727,14 @@ p {
 #minimap-hud.minimap-expanded {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: none;
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + 48px);
+  left: auto;
+  top: auto;
+  margin: 0;
+  z-index: 1100;
 }
 
 /* Botón de cierre */
@@ -749,9 +763,8 @@ p {
 /* Estilos para el HUD de objetivos */
 #objectives-hud {
   position: absolute;
-  top: 100%;
+  bottom: calc(100% + 10px);
   right: 0;
-  transform: translateX(calc(100% - 40px)); /* Desplaza el panel a la izquierda del botón */
   width: 250px;
   max-width: 80vw;
   max-height: 70vh;
@@ -776,7 +789,14 @@ p {
 #objectives-hud.objectives-expanded {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: none;
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + 48px);
+  left: auto;
+  top: auto;
+  margin: 0;
+  z-index: 1100;
 }
 
 .objectives-content {
@@ -907,9 +927,8 @@ p {
 
 #minimap-hud {
   position: absolute;
-  top: 40px; /* Debajo del botón del mapa */
+  bottom: calc(100% + 10px); /* Encima del botón del mapa */
   right: 0;
-  transform: translateX(calc(100% - 40px)); /* Desplaza el panel a la izquierda del botón */
   width: 30vw;
   max-width: 340px;
   min-width: 250px;
@@ -1050,24 +1069,25 @@ p {
   border-color: #fdbb2d;
 }
 
-#inventory-container.inventory-visible #inventory-toggle,
-#minimap-container.minimap-visible #minimap-toggle {
-  display: block;
-}
-
-#inventory-container.inventory-hidden #inventory-toggle,
-#minimap-container.minimap-hidden #minimap-toggle {
-  display: none;
-}
+/* Eliminar cualquier ocultamiento de toggles por clases auxiliares (reglas anuladas intencionalmente) */
 
 #inventory-toggle:hover {
   background: rgba(76, 175, 80, 0.2);
   transform: scale(1.05);
 }
 
+/* Forzar que los botones de HUD siempre sean visibles y clickeables */
+#inventory-toggle,
+#minimap-toggle,
+#objectives-toggle {
+  display: inline-block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
 #inventory-hud {
   position: absolute;
-  top: 40px; /* Debajo del botón de inventario */
+  bottom: calc(100% + 10px); /* Encima del botón de inventario */
   right: 0;
   width: 220px;
   max-width: 80vw;
@@ -1098,11 +1118,18 @@ p {
 #inventory-hud.inventory-expanded {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: none;
   max-height: 70vh;
   padding: 15px;
   padding-top: 40px;
   border-width: 1px;
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + 48px);
+  left: auto;
+  top: auto;
+  margin: 0;
+  z-index: 1100;
 }
 
 #inventory-close {
@@ -1115,7 +1142,7 @@ p {
   background: rgba(0, 0, 0, 0.6);
   color: #4caf50;
   border: 1px solid #4caf50;
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: center;
   font-size: 16px;
@@ -1125,7 +1152,7 @@ p {
   padding: 0;
   margin: 0;
   line-height: 1;
-  z-index: 1002;
+  z-index: 2001;
 }
 
 #inventory-close:hover {
@@ -1177,9 +1204,7 @@ p {
   transform: scale(1.1);
 }
 
-#inventory-hud.inventory-expanded #inventory-close {
-  display: flex;
-}
+#inventory-hud.inventory-expanded #inventory-close { display: flex !important; }
 
 #inventory-toggle.hidden {
   display: none;

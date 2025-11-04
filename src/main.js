@@ -232,6 +232,63 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (_) {}
     });
   } catch (_) {}
+
+  try {
+    const invToggle = document.getElementById('inventory-toggle');
+    const mapToggle = document.getElementById('minimap-toggle');
+    const objToggle = document.getElementById('objectives-toggle');
+
+    const invHud = document.getElementById('inventory-hud');
+    const mapHud = document.getElementById('minimap-hud');
+    const objHud = document.getElementById('objectives-hud');
+
+    const invClose = document.getElementById('inventory-close');
+    const mapClose = document.getElementById('minimap-close');
+    const objClose = document.getElementById('objectives-close');
+
+    if (invToggle && mapToggle && objToggle && invHud && mapHud && objHud) {
+      const hideOtherToggles = () => {};
+      const showAllToggles = () => {};
+      const closeAllHuds = () => {
+        invHud.classList.remove('inventory-expanded');
+        invHud.classList.add('inventory-collapsed');
+        mapHud.classList.remove('minimap-expanded');
+        mapHud.classList.add('minimap-collapsed');
+        objHud.classList.remove('objectives-expanded');
+        objHud.classList.add('objectives-collapsed');
+      };
+
+      const toggleHud = (hud, expandedClass, collapsedClass, srcBtn) => {
+        const isExpanded = hud.classList.contains(expandedClass);
+        if (isExpanded) {
+          hud.classList.remove(expandedClass);
+          hud.classList.add(collapsedClass);
+          if (hud === invHud && invClose) invClose.style.display = 'none';
+        } else {
+          closeAllHuds();
+          hud.classList.remove(collapsedClass);
+          hud.classList.add(expandedClass);
+          hideOtherToggles();
+          if (hud === invHud && invClose) invClose.style.display = 'flex';
+        }
+      };
+
+      invToggle.addEventListener('click', () => {
+        toggleHud(invHud, 'inventory-expanded', 'inventory-collapsed', invToggle);
+      });
+      mapToggle.addEventListener('click', () => {
+        toggleHud(mapHud, 'minimap-expanded', 'minimap-collapsed', mapToggle);
+        try { if (mapHud.classList.contains('minimap-expanded')) initMinimap(); } catch(_){ }
+      });
+      objToggle.addEventListener('click', () => {
+        toggleHud(objHud, 'objectives-expanded', 'objectives-collapsed', objToggle);
+      });
+
+      if (invClose) invClose.addEventListener('click', () => { invHud.classList.remove('inventory-expanded'); invHud.classList.add('inventory-collapsed'); invClose.style.display = 'none'; });
+      if (mapClose) mapClose.addEventListener('click', () => { mapHud.classList.remove('minimap-expanded'); mapHud.classList.add('minimap-collapsed'); });
+      if (objClose) objClose.addEventListener('click', () => { objHud.classList.remove('objectives-expanded'); objHud.classList.add('objectives-collapsed'); });
+    }
+  } catch (e) { /* non-fatal */ }
 });
 
 // Variables globales principales de Three.js

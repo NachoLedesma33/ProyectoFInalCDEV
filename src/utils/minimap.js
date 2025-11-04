@@ -45,11 +45,6 @@ export class Minimap {
       minimap.classList.remove("minimap-expanded");
       minimap.classList.add("minimap-collapsed");
       
-      // Mostrar el botón de toggle
-      if (minimapToggle) {
-        minimapToggle.style.display = 'block';
-      }
-      
       // Ocultar el botón de cierre
       if (minimapClose) {
         minimapClose.style.display = 'none';
@@ -63,22 +58,18 @@ export class Minimap {
       
       // Cerrar el inventario si está abierto
       const inventoryHud = document.getElementById('inventory-hud');
-      const inventoryToggle = document.getElementById('inventory-toggle');
       
       if (inventoryHud && inventoryHud.classList.contains('inventory-expanded')) {
         inventoryHud.classList.remove('inventory-expanded');
         inventoryHud.classList.add('inventory-collapsed');
-        if (inventoryToggle) inventoryToggle.style.display = 'block';
       }
       
       // Cerrar el panel de objetivos si está abierto
       const objectivesHud = document.getElementById('objectives-hud');
-      const objectivesToggle = document.getElementById('objectives-toggle');
       
       if (objectivesHud && objectivesHud.classList.contains('objectives-expanded')) {
         objectivesHud.classList.remove('objectives-expanded');
         objectivesHud.classList.add('objectives-collapsed');
-        if (objectivesToggle) objectivesToggle.style.display = 'block';
         
         // También actualizar el estado del gestor de objetivos si está disponible
         if (window.ObjectivesManager) {
@@ -93,11 +84,7 @@ export class Minimap {
       minimap.classList.remove("minimap-collapsed");
       minimap.classList.add("minimap-expanded");
       
-      // Ocultar el botón de toggle y mostrar el de cierre
-      if (minimapToggle) {
-        minimapToggle.style.display = 'none';
-      }
-      
+      // Mostrar el botón de cierre
       if (minimapClose) {
         minimapClose.style.display = 'flex';
       }

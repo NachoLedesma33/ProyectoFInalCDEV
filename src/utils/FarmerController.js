@@ -366,12 +366,12 @@ export class FarmerController {
         try {
           if (window.playerHealthBar) return; // evitar duplicados
           if (window.createPlayerHealthBar) {
-            window.createPlayerHealthBar(this.healthComponent, { position: 'bottom-center', y: 28, width: 320 });
+            window.createPlayerHealthBar(this.healthComponent, { position: 'top-left', x: 20, y: 20, width: 320 });
           } else {
             // Fallback: crear directamente la HealthBar si el helper no está registrado
             try {
-              const hb = new HealthBar({ position: 'bottom-center', y: 28, width: 320 });
-              hb.attachTo(this.healthComponent, { position: 'bottom-center', y: 28 });
+              const hb = new HealthBar({ position: 'top-left', x: 20, y: 20, width: 320 });
+              hb.attachTo(this.healthComponent, { position: 'top-left', x: 20, y: 20 });
               window.playerHealthBar = hb;
             } catch (e) {
               return e;
@@ -524,7 +524,8 @@ export class FarmerController {
     this.coordinateHUD.style.cssText = `
       position: fixed;
       top: 20px;
-      left: 20px;
+      right: 20px;
+      left: auto;
       min-width: 250px;
       padding: 15px;
       background: rgba(0, 0, 0, 0.8);
