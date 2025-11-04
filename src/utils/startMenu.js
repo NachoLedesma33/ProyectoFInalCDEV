@@ -137,40 +137,73 @@ export class StoryManager {
         if (soundHudEl) soundHudEl.style.display = "none";
       } catch (_) {}
       document.getElementById("main-menu").style.display = "none";
-      document.getElementById("story-carousel").style.display = "flex";
-      this.updateCarousel();
+      const difficultyMenu = document.getElementById("difficulty-menu");
+      if (difficultyMenu) difficultyMenu.style.display = "flex";
 
-      const prevButton = document.getElementById("prev-slide");
-      const nextButton = document.getElementById("next-slide");
-      const skipButton = document.getElementById("skip-story");
+      const proceedToStory = () => {
+        if (difficultyMenu) difficultyMenu.style.display = "none";
+        document.getElementById("story-carousel").style.display = "flex";
+        this.updateCarousel();
 
-      if (!prevButton.onclick) {
-        prevButton.addEventListener("mouseenter", () => this.playUIHover());
-        prevButton.addEventListener("click", () => {
-          this.playUIClick();
-          if (this.currentSlide > 0) {
-            this.currentSlide--;
-            this.updateCarousel();
-          }
-        });
+        const prevButton = document.getElementById("prev-slide");
+        const nextButton = document.getElementById("next-slide");
+        const skipButton = document.getElementById("skip-story");
 
-        nextButton.addEventListener("mouseenter", () => this.playUIHover());
-        nextButton.addEventListener("click", () => {
-          this.playUIClick();
-          if (this.currentSlide < this.storySlidesArg.length - 1) {
-            this.currentSlide++;
-            this.updateCarousel();
-          } else {
+        if (!prevButton.onclick) {
+          prevButton.addEventListener("mouseenter", () => this.playUIHover());
+          prevButton.addEventListener("click", () => {
+            this.playUIClick();
+            if (this.currentSlide > 0) {
+              this.currentSlide--;
+              this.updateCarousel();
+            }
+          });
+
+          nextButton.addEventListener("mouseenter", () => this.playUIHover());
+          nextButton.addEventListener("click", () => {
+            this.playUIClick();
+            if (this.currentSlide < this.storySlidesArg.length - 1) {
+              this.currentSlide++;
+              this.updateCarousel();
+            } else {
+              this.startGame();
+            }
+          });
+
+          skipButton.addEventListener("mouseenter", () => this.playUIHover());
+          skipButton.addEventListener("click", () => {
+            this.playUIClick();
             this.startGame();
-          }
-        });
+          });
+        }
+      };
 
-        skipButton.addEventListener("mouseenter", () => this.playUIHover());
-        skipButton.addEventListener("click", () => {
-          this.playUIClick();
-          this.startGame();
-        });
-      }
+      try {
+        const easyBtn = document.getElementById("difficulty-easy");
+        const mediumBtn = document.getElementById("difficulty-medium");
+        const hardBtn = document.getElementById("difficulty-hard");
+
+        const setDiff = (mode) => {
+          try { window.selectedDifficulty = mode; } catch (_) {}
+          proceedToStory();
+        };
+
+        if (easyBtn && !easyBtn._bound) {
+          easyBtn._bound = true;
+          easyBtn.addEventListener("mouseenter", () => this.playUIHover());
+          easyBtn.addEventListener("click", () => { this.playUIClick(); setDiff("easy"); });
+        }
+        if (mediumBtn && !mediumBtn._bound) {
+          mediumBtn._bound = true;
+          mediumBtn.addEventListener("mouseenter", () => this.playUIHover());
+          mediumBtn.addEventListener("click", () => { this.playUIClick(); setDiff("medium"); });
+        }
+        if (hardBtn && !hardBtn._bound) {
+          hardBtn._bound = true;
+          hardBtn.addEventListener("mouseenter", () => this.playUIHover());
+          hardBtn.addEventListener("click", () => { this.playUIClick(); setDiff("hard"); });
+        }
+      } catch (_) {}
 
       if (!this.gameInitPromise && typeof this.initStarter === "function") {
         this.gameInitPromise = this.initStarter();

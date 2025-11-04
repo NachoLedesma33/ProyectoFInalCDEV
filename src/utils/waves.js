@@ -38,6 +38,9 @@ export class WaveManager {
   this.alienDetectionRange = options.alienDetectionRange || 160; // override for aliens
   this.playerAggroRadius = options.playerAggroRadius || 14; // prefer player if within this radius
 
+    // Difficulty mode (affects enemy count per wave)
+    this.difficultyMode = options.difficultyMode || (typeof window !== 'undefined' ? (window.selectedDifficulty || 'easy') : 'easy');
+
     // Infinite waves configuration (cycles 1..5 enemies, with rest every 5 waves)
   this.baseHealth = options.baseHealth || 100;
   this.baseDamage = options.baseDamage || 5; // daño base inicial reducido
@@ -131,8 +134,8 @@ export class WaveManager {
     this.currentWaveIndex++;
     this.waveNumber = this.currentWaveIndex + 1; // 1-based
 
-    // Compute wave config dynamically (infinite)
-    const count = ((this.waveNumber - 1) % this.maxPerWave) + 1; // cycles 1..maxPerWave
+    // Compute wave config dynamically (infinite) with difficulty-aware count
+    const count = this._computeWaveCount(this.waveNumber);
     const tier = Math.floor((this.waveNumber - 1) / this.maxPerWave); // 0 for 1..5, 1 for 6..10, etc.
     const healthMultiplier = 1.0 + (tier * this.healthTierIncrement);
     const damageMultiplier = 1.0 + (tier * this.damageTierIncrement);
@@ -151,6 +154,20 @@ export class WaveManager {
   // play an alert SFX when a wave starts (aliens spawning)
   try { safePlaySfx('alienSound', { volume: 0.9 }); } catch (_) {}
     this._currentWaveCfg = waveCfg;
+  }
+
+  _computeWaveCount(waveNumber) {
+    const mode = (typeof window !== 'undefined' && window.selectedDifficulty) ? window.selectedDifficulty : (this.difficultyMode || 'easy');
+    if (mode === 'medium') {
+      // wave1: 2, then double each wave
+      return Math.max(1, Math.pow(2, waveNumber));
+    }
+    if (mode === 'hard') {
+      // wave1: 3, then double each wave
+      return Math.max(1, 3 * Math.pow(2, waveNumber - 1));
+    }
+    // easy (default): current behavior 1..maxPerWave cycling
+    return ((waveNumber - 1) % this.maxPerWave) + 1;
   }
 
   // spawn immediate (used by update loop)

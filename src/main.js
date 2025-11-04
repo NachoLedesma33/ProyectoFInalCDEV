@@ -945,6 +945,7 @@ async function init() {
               getMarket: () => window.market || market,
               getHouse: () => window.house || house,
               getSpaceShuttle: () => window.spaceShuttle || spaceShuttle,
+              difficultyMode: (typeof window !== 'undefined' && window.selectedDifficulty) ? window.selectedDifficulty : 'easy',
               // Generar spawns alrededor del corral (alrededores), evitando piedras
               spawnPoints: [ ], // fallback vacío: el WaveManager generará alrededor del corral
               // Spawns todavía más alejados del corral
