@@ -46,8 +46,11 @@ export class WaveManager {
   this.baseDamage = options.baseDamage || 5; // daño base inicial reducido
     this.spawnInterval = 600; // ms default per enemy spawn
     this.maxPerWave = options.maxPerWave || 5; // cap of enemies per wave pattern
-    this.restEvery = options.restEvery || 5; // rest every N waves
+    this.restEvery = options.restEvery || 5; // rest every N waves (before infinite stage)
     this.restDurationMs = options.restDurationMs || 5 * 60 * 1000; // 5 minutes
+    // After reaching the last pattern (maxPerWave), keep spawning waves with the same max count forever
+    // and skip the long rest. This matches the request of never ending waves with the last size.
+    this.stickAtMaxAfter = options.stickAtMaxAfter || this.maxPerWave; // wave number after which we stick at max count
   // Progressive difficulty per tier (each tier is a block of maxPerWave waves)
   this.healthTierIncrement = options.healthTierIncrement || 0.5; // +50% vida por tier
   this.damageTierIncrement = options.damageTierIncrement || 0.2; // +20% daño por tier
@@ -167,6 +170,8 @@ export class WaveManager {
       return Math.max(1, 3 * Math.pow(2, waveNumber - 1));
     }
     // easy (default): current behavior 1..maxPerWave cycling
+    // If we've passed the last pattern, stick to maxPerWave forever
+    if (waveNumber > (this.stickAtMaxAfter || this.maxPerWave)) return this.maxPerWave;
     return ((waveNumber - 1) % this.maxPerWave) + 1;
   }
 
@@ -431,11 +436,12 @@ export class WaveManager {
           try { window.audio.stopCombatMusic({ fadeOutMs: 1200 }); } catch(_) {}
         }
       } catch(_) {}
-      // every N waves -> rest period
-      if (this.restEvery > 0 && waveNumber % this.restEvery === 0) {
+      // every N waves -> rest period, EXCEPT after we entered the infinite last-wave stage
+      const inInfiniteStage = (this.stickAtMaxAfter && waveNumber > this.stickAtMaxAfter);
+      if (!inInfiniteStage && this.restEvery > 0 && waveNumber % this.restEvery === 0) {
         this._scheduleRestThenNext();
       } else {
-        // pausa estándar entre oleadas no múltiplos de 5 con contador visible
+        // pausa estándar entre oleadas con contador visible
         this._scheduleNextWaveThenStart(this.nextWaveDelayMs);
       }
     }

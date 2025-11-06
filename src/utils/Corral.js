@@ -1,9 +1,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
 import { safePlaySfx } from './audioHelpers.js';
 
-/**
- * Clase para crear un corral para vacas con sistema de colisiones y puerta interactiva
- */
+
 export class Corral {
   constructor(
     scene,
@@ -17,33 +15,26 @@ export class Corral {
     this.gates = [];
     this.collisionBoxes = [];
     this.autoCloseTimers = new Map();
-    this.autoCloseDelay = 2000; // 2 segundos para el cierre automático
-    this.gateSpeed = 4.0; // Velocidad de apertura/cierre de puertas (más rápida para fluidez)
-    this.detectionDistance = 5; // Distancia para detectar al granjero
-    
-    // Health system - Increased wall health for more gradual damage
-    this.maxHealth = 300; // Increased from 100 to 300 for more granular control
+    this.autoCloseDelay = 2000; 
+    this.gateSpeed = 4.0; 
+    this.detectionDistance = 5; 
+
+    this.maxHealth = 300; 
     this.health = this.maxHealth;
-    this.wallHealth = 100; // Increased from 50 to 100 for more gradual damage
-    this.wallSections = new Map(); // Track health of individual wall sections
-    this.autoCloseDelay = 4000; // 4 segundos para autocierre
-    this.autoCloseTimers = new Map(); // Timers para cada puerta
+    this.wallHealth = 100; 
+    this.wallSections = new Map(); 
+    this.autoCloseDelay = 4000;
+    this.autoCloseTimers = new Map(); 
 
     this.createCorral();
   }
 
-  // audio helper import is at top via patch below
-
-  /**
-   * Crea el corral con sus paredes, sistema de colisiones y puerta interactiva
-   */
   createCorral() {
     const { width, height, depth } = this.size;
     const wallThickness = 0.3;
     const postHeight = height + 0.5;
     const postRadius = 0.15;
 
-    // Material para las tablas de madera con aspecto menos brillante (PBR)
     const woodMaterial = new THREE.MeshStandardMaterial({
       color: 0x8b4513, // Color marrón madera
       metalness: 0.03,
@@ -574,10 +565,7 @@ export class Corral {
 
   }
 
-  /**
-   * Programa el autocierre de una puerta
-   * @param {Object} gateData - Datos de la puerta
-   */
+
   scheduleAutoClose(gateData) {
     // Cancelar timer existente para esta puerta
     if (this.autoCloseTimers.has(gateData.side)) {
@@ -600,10 +588,7 @@ export class Corral {
     this.scheduleAutoClose(gateData);
   }
 
-  /**
-   * Actualiza el estado de todas las puertas (animación de apertura/cierre)
-   * @param {number} delta - Tiempo transcurrido
-   */
+
   updateGates(delta) {
     this.gates.forEach((gateData) => {
       this.updateSingleGate(gateData, delta);
@@ -646,10 +631,7 @@ export class Corral {
     }
   }
 
-  /**
-   * Aplica rotación a una puerta alrededor de su punto de pivote
-   * @param {Object} gateData - Datos de la puerta
-   */
+
   applyGateRotation(gateData) {
     const gate = gateData.mesh;
     const pivot = gate.userData.pivotPoint;
@@ -669,10 +651,7 @@ export class Corral {
     gate.position.add(rotatedPosition);
   }
 
-  /**
-   * Maneja la interacción con el farmer
-   * @param {THREE.Vector3} farmerPosition - Posición del farmer
-   */
+
   handleFarmerInteraction(farmerPosition) {
     if (this.gates.length === 0) {
       return;
@@ -704,12 +683,7 @@ export class Corral {
     return null;
   }
 
-  /**
-   * Apply damage to a specific wall section
-   * @param {string} wallSection - The section identifier (e.g., 'left', 'right', 'front', 'back')
-   * @param {number} damage - Amount of damage to apply
-   * @returns {boolean} - Returns true if the wall was destroyed
-   */
+
   damageWall(wallSection, damage = 10) { // Default damage is now 10 as per requirement
     if (!this.wallSections.has(wallSection)) {
       this.wallSections.set(wallSection, this.wallHealth);
