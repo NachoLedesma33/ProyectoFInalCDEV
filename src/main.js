@@ -17,6 +17,7 @@ import { Corral } from "./utils/Corral.js"; // Corral con sistema de colisiones
 import { SpaceShuttle } from "./utils/SpaceShuttle.js"; // Space Shuttle Orbiter
 import { Cow } from "./utils/Cow.js"; // Modelo de vaca
 import { Stone } from "./utils/Stone.js"; // Modelo de piedra
+import { Crystal } from "./utils/Crystal.js"; // Modelo de cristal
 import { House } from "./utils/House.js"; // Casa con puerta interactiva
 import { Market } from "./utils/Market.js"; // Mercado con ventana frontal
 import BuildingManager from './utils/building.js';
@@ -59,6 +60,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 100);
       });
     }
+
+ 
+
+ 
     return window.__gameInitPromise;
   });
 
@@ -362,6 +367,9 @@ let cows = [];
 // Array de piedras en el terreno
 let stones = [];
 
+// Array de cristales en el terreno
+let crystals = [];
+
 // Instancia de la casa
 let house;
 
@@ -567,6 +575,63 @@ function createStones() {
   // Hacer las piedras accesibles para depuración
   window.stones = stones;
 
+}
+
+/**
+ * Crear cristales en posiciones fijas
+ */
+function createCrystals() {
+  const crystalPositions = [
+    { x: 27.0, y: 0.0, z: -29.3 },
+    { x: 27.1, y: 0.0, z: -32.2 },
+    { x: 30.5, y: 0.0, z: -21.1 },
+    { x: -12.6, y: 0.0, z: -13.6 },
+    { x: -35.0, y: 0.0, z: -26.6 },
+    { x: 22.0, y: 0.0, z: -85.0 },
+    { x: 24.0, y: 0.0, z: -83.7 },
+    { x: 13.6, y: 0.0, z: -88.1 },
+    { x: 25.8, y: 0.0, z: -31.8 },
+    { x: 22.7, y: 0.0, z: -32.9 },
+    { x: -32.7, y: 0.0, z: 4.1 },
+    { x: -28.4, y: 0.0, z: 3.2 },
+    { x: -81.8, y: 0.0, z: 24.7 },
+    { x: -16.3, y: 0.0, z: 61.3 },
+    { x: -20.7, y: 0.0, z: 61.7 },
+    { x: -16.3, y: 0.0, z: 61.3 },
+    { x: -38.7, y: 0.0, z: 27.6 },
+    { x: -81.7, y: 0.0, z: 20.6 },
+    { x: -97.7, y: 0.0, z: 42.1 },
+    { x: -95.4, y: 0.0, z: 40.0 },
+    { x: -94.3, y: 0.0, z: 38.9 },
+    { x: -102.3, y: 0.0, z: 43.5 },
+    { x: -100.6, y: 0.0, z: 43.5 },
+    { x: -140.9, y: 0.0, z: 45.8 },
+    { x: -156.5, y: 0.0, z: 61.7 },
+    { x: -70.7, y: 0.0, z: 68.8 },
+    { x: -67.8, y: 0.0, z: 68.3 },
+    { x: -30.2, y: 0.0, z: 4.6 },
+    { x: 28.2, y: 0.0, z: -24.5 },
+    { x: 19.2, y: 0.0, z: -86.1 },
+    { x: 27.6, y: 0.0, z: -27.4 },
+    { x: 64.6, y: 0.0, z: 57.0 },
+    { x: 61.8, y: 0.0, z: 58.1 },
+    { x: 27.6, y: 0.0, z: -27.4 },
+    { x: 61.1, y: 0.0, z: -55.8 },
+    { x: 64.0, y: 0.0, z: 53.5 },
+    { x: 27.4, y: 0.0, z: -22.1 },
+    { x: -32.9, y: 0.0, z: -28.2 },
+    { x: -37.4, y: 0.0, z: -28.1 },
+    { x: -104.7, y: 0.0, z: -34.1 },
+    { x: -138.0, y: 0.0, z: -21.9 },
+  ];
+
+  crystalPositions.forEach((pos) => {
+    const crystal = new Crystal(scene, pos);
+    crystals.push(crystal);
+  });
+
+  // Exponer para depuración
+  try { window.crystals = crystals; } catch (_) {}
 }
 
 /**
@@ -820,6 +885,9 @@ async function init() {
 
   // Crear 30 piedras aleatorias en el terreno
   createStones();
+
+  // Crear cristales en coordenadas dadas
+  createCrystals();
 
   // Crear la casa con puerta interactiva
   createHouse();
