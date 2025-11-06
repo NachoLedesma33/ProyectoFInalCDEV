@@ -885,6 +885,29 @@ export class Alien1 {
 					if (box) this._obstacles.boxes.push(box);
 				}
 			} catch(_) {}
+
+			// Buildings -> include building colliders/boxes so Alien1 avoids decorative structures
+			try {
+				let buildings = [];
+				if (typeof this.getBuildings === 'function') buildings = this.getBuildings() || [];
+				else if (typeof window !== 'undefined' && window.buildingMgr && typeof window.buildingMgr.getColliders === 'function') buildings = window.buildingMgr.getColliders() || [];
+				for (const b of buildings) {
+					if (!b) continue;
+					let box = null;
+					if (b.bbox && b.bbox.min && b.bbox.max) box = b.bbox;
+					else if (b.object && b.object.isObject3D) {
+						try { box = new THREE.Box3().setFromObject(b.object); } catch(_) { box = null; }
+					} else if (typeof b.getBoundingBox === 'function') {
+						try { box = b.getBoundingBox(); } catch(_) { box = null; }
+					}
+					if (box) {
+						const cloned = box.clone();
+						// small expansion to make avoidance more robust
+						cloned.expandByScalar(0.1);
+						this._obstacles.boxes.push(cloned);
+					}
+				}
+			} catch (e) { console.warn('[Alien1] failed including building obstacles', e); }
 		} catch(_) {}
 		this._obstaclesBuilt = true;
 	}
@@ -1225,9 +1248,7 @@ export class Alien1 {
 									try { ra.stop(); } catch(e) {}
 								}
 							}
-						} catch(_) {}
-						this._runAudio = null;
-						// reproducir animación de muerte (una sola vez y clamp)
+						} catch (_) {}
 						try { if (this.animations.death) this.playAnimation('death', { loop: THREE.LoopOnce, fadeIn: 0.06, timeScale: 1.0 }); } catch (_) {}
 						// play death scream SFX (positional)
 						try { safePlaySfx('alienScream', { object3D: this.model, volume: 1.0 }); } catch(_) {}
