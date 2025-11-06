@@ -1,5 +1,5 @@
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
-import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js";
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js";
+import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/loaders/FBXLoader.js";
 
 export class Stone {
   constructor(
@@ -57,8 +57,15 @@ export class Stone {
 
         const textureLoader = new THREE.TextureLoader();
         textureLoader.load(
-          "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/dry_riverbed_rock/dry_riverbed_rock_diff_4k.jpg",
+          "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rock_face/rock_face_diff_4k.jpg",
           (texture) => {
+            // Ajustes de compatibilidad Three r161
+            if (texture.colorSpace !== undefined) {
+              texture.colorSpace = THREE.SRGBColorSpace;
+            }
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(1, 1);
             this.model.traverse((child) => {
               if (child.isMesh) {
                 child.material.map = texture;
