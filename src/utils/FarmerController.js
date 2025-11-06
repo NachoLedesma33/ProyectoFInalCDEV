@@ -980,6 +980,22 @@ export class FarmerController {
       return new THREE.Vector3(0, 0, 0);
     }
 
+    // Verificar colisión con cristales
+    if (this.crystals) {
+      const newPosition = currentPosition.clone().add(movementVector);
+      if (this.checkCrystalsCollision(newPosition)) {
+        // Intentar deslizamiento suave contra los cristales
+        const slidingMovement = this.getSlidingMovement(
+          currentPosition,
+          movementVector
+        );
+        // Si el deslizamiento resulta en movimiento, usarlo, de lo contrario detenerse
+        return slidingMovement.length() > 0
+          ? slidingMovement
+          : new THREE.Vector3(0, 0, 0);
+      }
+    }
+
     // Probar la nueva posición
     const newPosition = currentPosition.clone().add(movementVector);
 
@@ -1239,6 +1255,54 @@ export class FarmerController {
     try {
       return
     } catch (e) {}
+  }
+
+  /**
+   * Establece los cristales con los que el personaje puede colisionar
+   * @param {Array} crystals - Array de objetos Crystal
+   */
+  setCrystals(crystals) {
+    if (!crystals || crystals.length === 0) {
+      this.crystals = null;
+      return;
+    }
+
+    // Filtrar cristales válidos que tengan el método checkCollision
+    const validCrystals = crystals.filter(crystal => {
+      const hasCheckCollision = typeof crystal.checkCollision === 'function';
+      if (!hasCheckCollision) {
+        console.warn("⚠️ Crystal sin método checkCollision:", crystal);
+      }
+      return hasCheckCollision;
+    });
+
+    if (validCrystals.length === 0) {
+      this.crystals = null;
+      return;
+    }
+
+    this.crystals = validCrystals;
+  }
+
+  /**
+   * Verifica si hay colisión con algún cristal en la posición dada
+   * @param {THREE.Vector3} position - Posición a verificar
+   * @returns {boolean} - True si hay colisión con algún cristal
+   */
+  checkCrystalsCollision(position) {
+    if (!this.crystals || !this.model) return false;
+    
+    // Usar un tamaño de colisión ligeramente más pequeño que el personaje
+    // para permitir un mejor deslizamiento alrededor de los cristales
+    const crystalCollisionSize = this.characterSize.clone().multiplyScalar(0.9);
+    
+    // Verificar colisión con cada cristal
+    for (const crystal of this.crystals) {
+      if (crystal.checkCollision(position, crystalCollisionSize)) {
+        return true; // Hay colisión con al menos un cristal
+      }
+    }
+    return false; // No hay colisión con ningún cristal
   }
 
   checkBuildingsCollision(position) {

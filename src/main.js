@@ -1324,6 +1324,11 @@ async function init() {
           if (farmerController && market) {
             farmerController.setMarket(market);
           }
+          
+          // Conectar el farmerController con los cristales para detección de colisiones
+          if (farmerController && crystals && crystals.length > 0) {
+            farmerController.setCrystals(crystals);
+          }
 
           // Mostrar las animaciones disponibles en consola
           const availableAnims = Object.keys(instance.actions);

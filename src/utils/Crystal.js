@@ -58,4 +58,35 @@ export class Crystal {
       }
     });
   }
+
+  /**
+   * Obtiene el bounding box del cristal
+   * @returns {THREE.Box3} - Bounding box del cristal
+   */
+  getBoundingBox() {
+    if (!this.model) return new THREE.Box3();
+    return new THREE.Box3().setFromObject(this.model);
+  }
+
+  /**
+   * Verifica si hay colisión con el cristal
+   * @param {THREE.Vector3} position - Posición a verificar
+   * @param {THREE.Vector3} characterSize - Tamaño del personaje
+   * @returns {boolean} - True si hay colisión
+   */
+  checkCollision(position, characterSize) {
+    if (!this.model) return false;
+
+    // Obtener el bounding box del cristal
+    const crystalBox = this.getBoundingBox();
+    
+    // Crear un bounding box para el personaje en la posición dada
+    const characterBox = new THREE.Box3().setFromCenterAndSize(
+      position,
+      characterSize || new THREE.Vector3(1, 2, 1)
+    );
+
+    // Verificar intersección
+    return crystalBox.intersectsBox(characterBox);
+  }
 }
