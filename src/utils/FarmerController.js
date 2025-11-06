@@ -104,7 +104,48 @@ export class FarmerController {
       // Store references so we can remove them in dispose
       // Single-click melee: play one punch per click (no hold-to-repeat)
       this._onMouseDown = (event) => {
+        // Ignore non-left buttons
         if (event.button !== 0) return; // left button
+
+        // Prevent attacks when clicking on UI/HUD elements. We allow clicks only
+        // when they occur on the renderer canvas (or its children). This avoids
+        // accidental attacks when interacting with menus, inventory, minimap, etc.
+        try {
+          const canvas = (window && window.renderer && window.renderer.domElement) || null;
+          if (canvas) {
+            // If the event target is not the canvas (or a child), treat it as UI
+            if (!canvas.contains(event.target)) return;
+          } else {
+            // Fallback: walk up the DOM tree and ignore clicks inside common HUD ids/classes
+            let el = event.target;
+            while (el) {
+              if (el.id) {
+                const blockedIds = [
+                  'inventory-hud', 'minimap-hud', 'objectives-hud', 'sound-hud',
+                  'pause-overlay', 'main-menu', 'difficulty-menu', 'story-carousel',
+                  'controls-hud', 'hud-buttons-container', 'farmer-coordinate-hud',
+                  'inventory-container', 'minimap-container', 'objectives-container', 'ship-popup'
+                ];
+                if (blockedIds.includes(el.id)) return;
+              }
+              if (el.classList) {
+                if (
+                  el.classList.contains('menu-button') ||
+                  el.classList.contains('inventory-expanded') ||
+                  el.classList.contains('inventory-collapsed') ||
+                  el.classList.contains('minimap-expanded') ||
+                  el.classList.contains('minimap-collapsed') ||
+                  el.classList.contains('hud-button-container')
+                ) return;
+              }
+              el = el.parentElement;
+            }
+          }
+        } catch (e) {
+          // If anything goes wrong while detecting UI, be conservative and ignore the click
+          return;
+        }
+
         if (!this.inputEnabled || this._isDead) return;
 
         // Cancel any pending exit-to-idle timer so we stay in combat state briefly
