@@ -33,7 +33,7 @@ export class Crystal {
     const size = new THREE.Vector3();
     box.getSize(size);
 
-    const targetHeight = 2.9; // pequeño/mediano, cercano al tamaño del farmer pero más chico
+    const targetHeight = 4.5; // pequeño/mediano, cercano al tamaño del farmer pero más chico
     const scaleFactor = size.y > 0 ? targetHeight / size.y : 1.0;
     this.model.scale.setScalar(scaleFactor);
 
