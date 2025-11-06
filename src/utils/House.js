@@ -17,7 +17,7 @@ export class House {
     this.walls = [];
     this.collisionBoxes = [];
     this.gates = []; // Array para puertas
-    this.gateSpeed = 2; // Velocidad de apertura/cierre de la puerta
+    this.gateSpeed = 4; // Velocidad de apertura/cierre de la puerta (más rápida para fluidez)
     this.detectionDistance = 4.0; // Distancia de detección del farmer (aumentada)
     this.autoCloseDelay = 5000; // 5 segundos para autocierre
     this.autoCloseTimers = new Map(); // Timers para cada puerta

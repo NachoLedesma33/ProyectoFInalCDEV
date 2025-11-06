@@ -18,7 +18,7 @@ export class Corral {
     this.collisionBoxes = [];
     this.autoCloseTimers = new Map();
     this.autoCloseDelay = 2000; // 2 segundos para el cierre automático
-    this.gateSpeed = 2.0; // Velocidad de apertura/cierre de puertas
+    this.gateSpeed = 4.0; // Velocidad de apertura/cierre de puertas (más rápida para fluidez)
     this.detectionDistance = 5; // Distancia para detectar al granjero
     
     // Health system - Increased wall health for more gradual damage
@@ -679,11 +679,6 @@ export class Corral {
     this.gates.forEach((gateData) => {
       const distance = farmerPosition.distanceTo(gateData.mesh.position);
       if (this.isFarmerNearGate(farmerPosition, gateData)) {
-        console.log(
-          `Farmer cerca de puerta ${
-            gateData.side
-          }. Distancia: ${distance.toFixed(2)}`
-        );
         if (!gateData.open) {
           this.openSingleGate(gateData);
         } else {

@@ -1252,20 +1252,19 @@ function animate(currentTime = 0) {
       }
     }
 
+    // Actualizar el corral y la casa cada frame para animaciones suaves
+    if (corral && farmerController?.model) {
+      corral.update(delta, farmerController.model.position);
+    }
+
+    if (house && farmerController?.model) {
+      house.update(delta, farmerController.model.position);
+    }
+
     // 4. Actualización de objetos del juego (prioridad media-baja)
     // Usar requestIdleCallback para tareas menos críticas
     if (typeof requestIdleCallback === "function") {
       requestIdleCallback(() => {
-        // Actualizar el corral
-        if (corral && farmerController?.model) {
-          corral.update(delta, farmerController.model.position);
-        }
-
-        // Actualizar la casa
-        if (house && farmerController?.model) {
-          house.update(delta, farmerController.model.position);
-        }
-
         // Actualizar el Space Shuttle
         if (spaceShuttle) {
           spaceShuttle.update(delta);
