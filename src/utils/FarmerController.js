@@ -1237,7 +1237,7 @@ export class FarmerController {
     }
     this.buildings = wrapped;
     try {
-      console.log(`[FarmerController] Registered ${this.buildings.length} building colliders`);
+      return
     } catch (e) {}
   }
 
@@ -1248,11 +1248,10 @@ export class FarmerController {
         if (typeof b.checkCollision === 'function') {
           const hit = b.checkCollision(position, this.characterSize);
           if (hit) {
-            try { console.log('[FarmerController] Building collision with', b.id || b.type, b); } catch (e) {}
             return true;
           }
         }
-      } catch (e) { console.warn('[FarmerController] Error checking building collision', e); }
+      } catch (e) { return e; }
     }
     return false;
   }
@@ -1485,9 +1484,7 @@ export class FarmerController {
 
             // Configurar materiales para que sean visibles
             if (Array.isArray(child.material)) {
-              console.log(`  - Materiales (${child.material.length}):`);
               child.material.forEach((mat, i) => {
-                console.log(`    [${i}]`, mat);
                 mat.visible = true;
                 mat.transparent = false;
                 mat.opacity = 1;
@@ -1495,7 +1492,6 @@ export class FarmerController {
                 mat.needsUpdate = true;
               });
             } else if (child.material) {
-              console.log("  - Material:", child.material);
               child.material.visible = true;
               child.material.transparent = false;
               child.material.opacity = 1;

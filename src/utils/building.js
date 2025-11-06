@@ -38,7 +38,7 @@ export class BuildingManager {
 			await this._applyTexturesByType(type, proto);
 		} catch (e) {
 			// Non-fatal: continue without textures
-			console.warn(`Applying textures for ${type} failed:`, e);
+			return e;
 		}
 
 		// Desvincularlo de la escena temporal para mantenerlo como prototipo.
@@ -213,7 +213,7 @@ export class BuildingManager {
 			}
 		} catch (e) {
 			// non-fatal
-			console.warn('Error snapping building to terrain', e);
+			return e;
 		}
 
 		clone.userData._buildingId = id;
@@ -295,11 +295,6 @@ export class BuildingManager {
 	}
 
 
-	/**
-	 * Construye cajas de colisión a partir de una colección de objetos (Object3D, Box3 o helpers con getBoundingBox)
-	 * @param {Array} avoidObjects
-	 * @returns {Array<THREE.Box3>}
-	 */
 	_computeAvoidBoxes(avoidObjects = []) {
 		const boxes = [];
 		for (const o of avoidObjects) {
@@ -338,12 +333,6 @@ export class BuildingManager {
 		return boxes;
 	}
 
-	/**
-	 * Comprueba si una posición está libre (no intersecta avoidBoxes ni otras instancias)
-	 * @param {THREE.Vector3} position
-	 * @param {Array<THREE.Box3>} avoidBoxes
-	 * @param {number} clearance - radio aproximado en unidades del mundo
-	 */
 	isPositionFree(position, avoidBoxes = [], clearance = 3) {
 		// Determine the correct Y for the candidate box: prefer provided position.y
 		// but if the terrain is available, sample it so the check occurs at ground level.
@@ -392,13 +381,7 @@ export class BuildingManager {
 		return true;
 	}
 
-	/**
-	 * Busca una posición libre dentro de los bounds (objeto con minX,maxX,minZ,maxZ)
-	 * @param {Object} bounds {minX,maxX,minZ,maxZ}
-	 * @param {Array} avoidObjects - colección de Object3D/Box3/instancias con getBoundingBox
-	 * @param {number} clearance - radio mínimo de separación
-	 * @param {number} maxAttempts
-	 */
+
 	findFreePosition(bounds, avoidObjects = [], clearance = 3, maxAttempts = 200) {
 		const avoidBoxes = this._computeAvoidBoxes(avoidObjects);
 		for (let i = 0; i < maxAttempts; i++) {
@@ -450,21 +433,7 @@ export class BuildingManager {
 		return null;
 	}
 
-	/**
-	 * Coloca múltiples estructuras aleatoriamente evitando objetos indicados
-	 * @param {Array<string>} types - tipos de prototipos registrados
-	 * @param {number} count - número total a colocar
-	 * @param {Object} bounds - {minX,maxX,minZ,maxZ}
-	 * @param {Array} avoidObjects - objetos a evitar (stones, house, market, corral, shuttle, etc.)
-	 * @param {Object} opts - {clearance, maxAttemptsPerPlacement}
-	 * @returns {Array<number>} - ids de instancias colocadas
-	 */
 
-
-	/**
-	 * Place one instance of each requested type (or of all registered types if none provided)
-	 * Returns array of placed ids (in same order as types)
-	 */
 	placeOneOfEach(types = [], bounds = { minX: -100, maxX: 100, minZ: -100, maxZ: 100 }, avoidObjects = [], opts = {}) {
 		if (!Array.isArray(types) || types.length === 0) types = Array.from(this.prototypes.keys());
 		const placed = [];
@@ -473,7 +442,6 @@ export class BuildingManager {
 		// To avoid creating buildings in random locations, require explicit positions
 		// to be provided in opts.positions. If none provided, do not attempt random placement.
 		if (!opts.positions) {
-			console.warn('placeOneOfEach: no positions provided in opts.positions — skipping placement to avoid random spawns.');
 			return [];
 		}
 		for (const t of types) {
@@ -490,7 +458,6 @@ export class BuildingManager {
 			}
 			// If positions were provided but this type has no entry, skip to avoid randomness
 			if (opts.positions && !pos) {
-				console.warn(`No explicit position provided for ${t}; skipping placement to avoid random spawn.`);
 				continue;
 			}
 			if (pos) {
@@ -502,7 +469,6 @@ export class BuildingManager {
 				}
 				// Ensure provided position lies within bounds; otherwise try fallback
 				if (pos.x < bounds.minX || pos.x > bounds.maxX || pos.z < bounds.minZ || pos.z > bounds.maxZ) {
-					console.warn(`Provided position for ${t} is out of bounds, searching deterministic nearby fallback.`);
 					// clamp origin to bounds to start nearby search
 					const clampedX = Math.max(bounds.minX, Math.min(bounds.maxX, pos.x));
 					const clampedZ = Math.max(bounds.minZ, Math.min(bounds.maxZ, pos.z));
@@ -519,8 +485,6 @@ export class BuildingManager {
 					pos = nearby;
 				}
 			} else {
-				// No position provided for this type (should have been caught earlier); skip to avoid random placement
-				console.warn(`No position specified for ${t} and random placement disabled; skipping.`);
 				continue;
 			}
 			const id = this.addStructure(t, { position: pos, scale: opts.scale });
@@ -564,9 +528,8 @@ export class BuildingManager {
 			try {
 				if (bbox) {
 					const size = bbox.getSize(new THREE.Vector3());
-					console.log(`[BuildingManager] Collider for id=${inst.id} type=${inst.type} size=${size.x.toFixed(2)}x${size.y.toFixed(2)}x${size.z.toFixed(2)}`);
 				} else {
-					console.log(`[BuildingManager] Collider for id=${inst.id} type=${inst.type} has no bbox`);
+					return
 				}
 			} catch (e) {}
 			const collider = {

@@ -732,11 +732,8 @@ export class Corral {
       }
     }
     
-    console.log(`Wall ${wallSection} section health: ${newHealth}/${this.wallHealth}, Corral total health: ${this.health}/${this.maxHealth}`);
-    
     // Only destroy walls when the entire corral's health reaches zero
     if (this.health <= 0) {
-      console.log('Corral health reached zero, destroying wall section:', wallSection);
       this.destroyWall(wallSection);
       return true;
     }
@@ -749,7 +746,6 @@ export class Corral {
    * @param {string} wallSection - The section identifier to remove
    */
   destroyWall(wallSection) {
-    console.log(`Destroying wall section: ${wallSection}`);
     
     // Find and remove all walls with this section identifier
     const wallsToRemove = this.collisionBoxes.filter(collisionData => 

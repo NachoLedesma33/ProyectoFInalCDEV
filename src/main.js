@@ -9,6 +9,7 @@ import { Terrain } from "./utils/Terrain.js"; // Manejo del terreno
 import { Lighting } from "./utils/lighting.js"; // Sistema de iluminación
 // ControlsManager se usa internamente en CameraManager; no es necesario importarlo aquí
 import { ModelLoader } from "./utils/modelLoader.js"; // Carga de modelos 3D
+import * as SkeletonUtils from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/utils/SkeletonUtils.js";
 import { Skybox } from "./utils/Skybox.js"; // Fondo 360°
 import modelConfig from "./config/modelConfig.js"; // Configuración de modelos
 import { CameraManager } from "./utils/CameraManager.js"; // Gestor de cámara
@@ -36,6 +37,7 @@ import showDeathScreen from "./utils/DeathScreen.js";
 import WaveManager from "./utils/waves.js";
 import { AudioManager } from "./utils/AudioManager.js";
 import { safePlaySfx } from './utils/audioHelpers.js';
+import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js";
 
 // Inicialización del menú principal
 document.addEventListener("DOMContentLoaded", () => {
@@ -60,6 +62,131 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 100);
       });
     }
+
+// Clonar el Alien2 del mercado y colocarlo en posiciones fijas (solo visual)
+function createAlien2Clones() {
+  try {
+    try { if (!window.alien2Clones) window.alien2Clones = []; } catch (_) {}
+    // Remove any existing clones from the scene to avoid stacking
+    try {
+      if (Array.isArray(window.alien2Clones)) {
+        for (let i = 0; i < window.alien2Clones.length; i++) {
+          const c = window.alien2Clones[i];
+          try { if (c && c.parent) c.parent.remove(c); } catch (_) {}
+        }
+        window.alien2Clones.length = 0;
+      }
+    } catch (_) {}
+    // Also remove any previous static Alien2 instances (first ones) so only the last ones remain
+    try {
+      if (Array.isArray(window.alien2Statics)) {
+        for (let i = 0; i < window.alien2Statics.length; i++) {
+          const a = window.alien2Statics[i];
+          try { if (a && a.model && a.model.parent) a.model.parent.remove(a.model); } catch (_) {}
+        }
+        window.alien2Statics.length = 0;
+      }
+    } catch (_) {}
+    // reset mixers each time we recreate clones
+    try { alien2CloneMixers.length = 0; } catch (_) {}
+    if (!window.alien2 || !window.alien2.model) return;
+    const base = window.alien2.model;
+    const idlePath = modelConfig.getPath(modelConfig.characters.alien2.animations.idle);
+    const entries = [
+      { pos: { x: -81.2, y: 0.0, z: -65.9 }, look: { x: -79.9, y: 0.0, z: -64.4 } },
+      { pos: { x: -81.6, y: 0.0, z: -62.4 }, look: { x: -79.9, y: 0.0, z: -64.4 } },
+      { pos: { x: -153.2, y: 0.0, z: -119.9 }, look: { x: -149.1, y: 0.0, z: -118.6 } },
+      { pos: { x: -83.3, y: 0.0, z: 37.2 }, look: { x: -79.3, y: 0.0, z: 38.9 } },
+      { pos: { x: -81.1, y: 0.0, z: 36.6 }, look: { x: -79.3, y: 0.0, z: 38.9 } },
+    ];
+    const clones = [];
+    for (const e of entries) {
+      try {
+        const clone = SkeletonUtils.clone(base);
+        clone.position.set(e.pos.x, (e.pos.y || 0) + 0.2, e.pos.z);
+        clone.visible = true;
+        clone.traverse(o => { try { o.frustumCulled = false; o.visible = true; } catch(_){} });
+        const lookTarget = new THREE.Vector3(e.look.x, clone.position.y, e.look.z);
+        try { clone.lookAt(lookTarget); } catch (_) {}
+        scene.add(clone);
+
+        // Create an AnimationMixer for the clone and load Idle animation
+        try {
+          const mixer = new THREE.AnimationMixer(clone);
+          alien2CloneMixers.push(mixer);
+          const loader = new FBXLoader();
+          loader.load(
+            idlePath,
+            (fbx) => {
+              try {
+                if (fbx && fbx.animations && fbx.animations.length > 0) {
+                  const clip = fbx.animations[0];
+                  const action = mixer.clipAction(clip);
+                  action.loop = THREE.LoopRepeat;
+                  action.clampWhenFinished = false;
+                  action.play();
+                }
+              } catch (_) {}
+            },
+            undefined,
+            () => {}
+          );
+        } catch (_) {}
+        clones.push(clone);
+      } catch (_) {}
+    }
+    try { window.alien2Clones = clones; } catch (_) {}
+    try { window.createAlien2Clones = createAlien2Clones; } catch (_) {}
+    try { return false } catch(_){ }
+  } catch (_) {}
+}
+try { window.createAlien2Clones = createAlien2Clones; } catch (_) {}
+
+ 
+
+/**
+ * Crear Alien2 estáticos (idle) en posiciones fijas mirando a un objetivo
+ */
+async function createAlien2Statics() {
+  const entries = [
+    { pos: { x: -81.2, y: 0.0, z: -65.9 }, look: { x: -79.9, y: 0.0, z: -64.4 } },
+    { pos: { x: -81.6, y: 0.0, z: -62.4 }, look: { x: -79.9, y: 0.0, z: -64.4 } },
+    { pos: { x: -153.2, y: 0.0, z: -119.9 }, look: { x: -149.1, y: 0.0, z: -118.6 } },
+    { pos: { x: -83.3, y: 0.0, z: 37.2 }, look: { x: -79.3, y: 0.0, z: 38.9 } },
+    { pos: { x: -81.1, y: 0.0, z: 36.6 }, look: { x: -79.3, y: 0.0, z: 38.9 } },
+  ];
+
+  for (const e of entries) {
+    try {
+      const a = new Alien2(scene, modelLoader, e.pos, e.look);
+      await a.load();
+      // Asegurar idle y sin movimiento
+      try { a.forceIdleAnimation && a.forceIdleAnimation(); } catch (_) {}
+      try { a.movementSystem && (a.movementSystem.isActive = false); } catch (_) {}
+      // Nudge Y up slightly and ensure orientation after load
+      try {
+        if (a.model) {
+          a.model.position.set(e.pos.x, (e.pos.y || 0) + 0.2, e.pos.z);
+          a.model.visible = true;
+          a.model.traverse(o => { try { o.frustumCulled = false; o.visible = true; } catch(_){} });
+          const lookTarget = new THREE.Vector3(e.look.x, a.model.position.y, e.look.z);
+          const doOrient = () => { try { a.model && a.model.lookAt(lookTarget); } catch (_) {} };
+          doOrient();
+          setTimeout(doOrient, 200);
+          setTimeout(doOrient, 800);
+        }
+      } catch (_) {}
+      try { return false } catch (_) {}
+      alien2Statics.push(a);
+    } catch (err) { /* non-fatal */ }
+  }
+
+  try { window.alien2Statics = alien2Statics; } catch (_) {}
+  try { return false } catch(_){}
+}
+try { window.createAlien2Statics = createAlien2Statics; } catch (_) {}
+
+ 
 
  
 
@@ -118,7 +245,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (tutorialButton && typeof tutorialButton.addEventListener === 'function') {
     tutorialButton.addEventListener("click", () => {
       try { safePlaySfx('uiClick', { volume: 0.9 }); } catch(_){}
-      console.log("Tutorial button clicked");
     });
   }
 
@@ -193,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!visible) return;
 
           // debug log to help trace if handler runs
-          try { console.debug('[pause] Escape pressed, toggling pause'); } catch (_) {}
+          try { return false; } catch (_) {}
 
           // Prefer using the created pauseMenu object's API if present
           try {
@@ -369,6 +495,14 @@ let stones = [];
 
 // Array de cristales en el terreno
 let crystals = [];
+
+// Aliens estáticos (solo idle)
+let alien2Statics = [];
+try { window.alien2Statics = alien2Statics; } catch (_) {}
+
+// Mixers para clones de Alien2 (para reproducir IdleAlien2.fbx en los clones)
+let alien2CloneMixers = [];
+try { window.alien2CloneMixers = alien2CloneMixers; } catch (_) {}
 
 // Instancia de la casa
 let house;
@@ -851,7 +985,6 @@ async function init() {
       corral.healthComponent = corralHealth;
       corral.maxHealth = 300; // Match the health set in integrateEntityWithCombat
       corral.health = 300;
-      console.log('Corral health component connected');
     }
 
     // Crear HUD del corral cuando comience el gameplay, una sola vez
@@ -895,6 +1028,12 @@ async function init() {
   const alien2 = await createAlien2();
   window.alien2 = alien2;
 
+  // No crear aliens estáticos (para evitar duplicación/stack). Dejamos solo los últimos (clones)
+  try { /* static Alien2 disabled */ } catch (_) {}
+
+  // Clonar el alien2 del mercado para garantizar que se vean igual en las coordenadas pedidas
+  try { createAlien2Clones(); } catch (_) {}
+
   // Iniciar la secuencia de movimiento automático (5 minutos de delay)
   alien2.startMovementSequence();
 
@@ -931,7 +1070,7 @@ async function init() {
   const buildingMgr = new BuildingManager(scene, { basePath: 'src/models/characters/building/', terrain });
     window.buildingMgr = buildingMgr;
     // Preload prototypes (FBX) once
-    try { await buildingMgr.preloadDefaults(); } catch (e) { console.warn('Preload defaults failed', e); }
+    try { await buildingMgr.preloadDefaults(); } catch (e) { return e; }
 
     // Build avoid list: stones' models, house, market, corral, spaceShuttle
     const avoidObjects = [];
@@ -949,7 +1088,7 @@ async function init() {
       if (spaceShuttle) avoidObjects.push(spaceShuttle.model || spaceShuttle);
       if (shipRepair) avoidObjects.push(shipRepair);
     } catch (e) {
-      console.warn('Error building avoid list for buildings', e);
+      return e;
     }
 
     // Place exactly one of each structure (avoid clustering)
@@ -963,7 +1102,6 @@ async function init() {
 
   const placed = buildingMgr.placeOneOfEach(['alienHouse','alienLab','alienPyramid'], worldBounds, avoidObjects, { clearance: 10, maxAttemptsPerPlacement: 400, positions: preferredPositions });
       window.placedBuildings = placed;
-      console.log('Placed decorative buildings (one of each):', placed);
       // Provide placed buildings to the minimap manager if initialized; otherwise stash for later
       try {
         const buildingRefs = buildingMgr.getAllStructures();
@@ -974,13 +1112,13 @@ async function init() {
           window._pendingBuildingsForMinimap = buildingRefs;
         }
       } catch (e) {
-        console.warn('Failed to register buildings with minimap', e);
+        return e;
       }
     } catch (e) {
-      console.warn('Placing decorative buildings failed', e);
+      return e;
     }
   } catch (e) {
-    console.warn('BuildingManager init failed', e);
+    return e;
   }
 
   // Configurar los controles de la cámara
@@ -1166,7 +1304,6 @@ async function init() {
           // Aquí puedes agregar lógica adicional cuando se selecciona una herramienta
           // sin necesidad de equiparla visualmente en el personaje
         } else {
-          console.log('Ninguna herramienta seleccionada');
         }
       } catch (e) {
         return e;
@@ -1342,6 +1479,24 @@ function animate(currentTime = 0) {
     if (window.alien2 && window.alien2.update) {
       window.alien2.update(delta);
     }
+    // Update all static Alien2 instances so their idle AnimationMixers advance
+    try {
+      if (window.alien2Statics && Array.isArray(window.alien2Statics)) {
+        for (let i = 0; i < window.alien2Statics.length; i++) {
+          const a = window.alien2Statics[i];
+          if (a && typeof a.update === 'function') a.update(delta);
+        }
+      }
+    } catch (_) {}
+    // Update all Alien2 clone mixers (IdleAlien2.fbx on clones)
+    try {
+      if (window.alien2CloneMixers && Array.isArray(window.alien2CloneMixers)) {
+        for (let i = 0; i < window.alien2CloneMixers.length; i++) {
+          const m = window.alien2CloneMixers[i];
+          if (m && typeof m.update === 'function') m.update(delta);
+        }
+      }
+    } catch (_) {}
 
     // actualizar y mostrar contador de la primera oleada si está programado
     try {
@@ -1481,11 +1636,6 @@ window.forceOpenMarketHUD = function () {
 window.showPlayerPosition = function () {
   if (farmerController && farmerController.model) {
     const pos = farmerController.model.position;
-    console.log(
-      `Posición del jugador: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(
-        2
-      )}, z=${pos.z.toFixed(2)}`
-    );
     return `Posición: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(
       2
     )}, z=${pos.z.toFixed(2)}`;
