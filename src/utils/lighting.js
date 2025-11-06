@@ -3,6 +3,9 @@ import * as THREE from "three";
 export class Lighting {
   constructor(scene) {
     this.scene = scene;
+    this.time = 0; // seconds
+    this.dayLength = 120; // seconds for a full day-night cycle
+    this.nightFactor = 0; // 0=day, 1=night
     this.init();
   }
 
@@ -65,22 +68,49 @@ export class Lighting {
   }
 
   update(delta) {
-    // Actualizar la posición de la luz direccional para simular movimiento del sol
+    // Tiempo acumulado del ciclo día/noche (en segundos)
+    this.time += Math.max(0, delta || 0);
+    const phase = (this.time % this.dayLength) / this.dayLength; // 0..1
+
+    // Órbita elíptica del sol alrededor de la escena
+    // Escalas para la elipse (horizontal y altura)
+    const rx = 140;   // radio horizontal X
+    const rz = 90;    // radio horizontal Z
+    const ry = 90;    // altura máxima del sol
+    const angle = phase * Math.PI * 2; // 0..2π
+
+    const sunX = Math.cos(angle) * rx;
+    const sunY = Math.sin(angle) * ry; // negativo = noche, positivo = día
+    const sunZ = Math.sin(angle) * -rz; // contra-fase para variar dirección
+
     if (this.dirLight) {
-      const time = Date.now() * 0.00002;
-      this.dirLight.position.x = Math.sin(time) * 20;
-      this.dirLight.position.z = Math.cos(time) * 20;
+      this.dirLight.position.set(sunX, sunY, sunZ);
+      this.dirLight.target.position.set(0, 0, 0);
 
-      // Ajustar intensidad basado en la altura del sol
-      const sunHeight = Math.max(0, this.dirLight.position.y / 20);
-      this.dirLight.intensity = 0.5 + sunHeight * 0.8;
+      // Normalizar altura del sol a 0..1 para controlar intensidades
+      const height01 = THREE.MathUtils.clamp((sunY + ry) / (2 * ry), 0, 1); // 0 noche, 1 día
 
-      // Ajustar color basado en la altura del sol
-      const color = new THREE.Color();
-      color.setHSL(0.1 + sunHeight * 0.1, 0.9, 0.5);
-      this.dirLight.color.copy(color);
+      // Curvas de transición suaves (evita cortes bruscos)
+      const dayCurve = height01 * height01 * (3 - 2 * height01); // smoothstep
+      const nightCurve = 1 - dayCurve;
+      this.nightFactor = nightCurve; // Exponer factor nocturno
 
-      // Actualizar la cámara de sombra
+      // Intensidades
+      const dirIntensity = THREE.MathUtils.lerp(0.05, 1.2, dayCurve); // casi apagado en noche, fuerte de día
+      const ambIntensity = THREE.MathUtils.lerp(0.02, 0.28, dayCurve);
+      const hemiIntensity = THREE.MathUtils.lerp(0.05, 0.7, dayCurve);
+
+      this.dirLight.intensity = dirIntensity;
+      if (this.ambientLight) this.ambientLight.intensity = ambIntensity;
+      if (this.hemiLight) this.hemiLight.intensity = hemiIntensity;
+
+      // Color del sol: más cálido al amanecer/atardecer, más neutro al mediodía
+      const warm = new THREE.Color(0xffb36b);
+      const neutral = new THREE.Color(0xffffff);
+      const noonFactor = Math.sin(angle) * 0.5 + 0.5; // 0 en noche, 1 en mediodía
+      this.dirLight.color.copy(neutral).lerp(warm, 1 - Math.abs(noonFactor - 0.5) * 2);
+
+      // Actualizar cámara de sombras
       this.dirLight.shadow.camera.updateProjectionMatrix();
     }
   }

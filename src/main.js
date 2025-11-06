@@ -38,6 +38,7 @@ import WaveManager from "./utils/waves.js";
 import { AudioManager } from "./utils/AudioManager.js";
 import { safePlaySfx } from './utils/audioHelpers.js';
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js";
+import LightPost from "./utils/LightPost.js";
 
 // Inicialización del menú principal
 document.addEventListener("DOMContentLoaded", () => {
@@ -62,6 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 100);
       });
     }
+
+// (moved to global scope below)
 
 // Clonar el Alien2 del mercado y colocarlo en posiciones fijas (solo visual)
 function createAlien2Clones() {
@@ -105,7 +108,7 @@ function createAlien2Clones() {
         const clone = SkeletonUtils.clone(base);
         clone.position.set(e.pos.x, (e.pos.y || 0) + 0.2, e.pos.z);
         clone.visible = true;
-        clone.traverse(o => { try { o.frustumCulled = false; o.visible = true; } catch(_){} });
+        clone.traverse(o => { try { o.frustumCulled = true; o.visible = true; } catch(_){} });
         const lookTarget = new THREE.Vector3(e.look.x, clone.position.y, e.look.z);
         try { clone.lookAt(lookTarget); } catch (_) {}
         scene.add(clone);
@@ -168,7 +171,7 @@ async function createAlien2Statics() {
         if (a.model) {
           a.model.position.set(e.pos.x, (e.pos.y || 0) + 0.2, e.pos.z);
           a.model.visible = true;
-          a.model.traverse(o => { try { o.frustumCulled = false; o.visible = true; } catch(_){} });
+          a.model.traverse(o => { try { o.frustumCulled = true; o.visible = true; } catch(_){} });
           const lookTarget = new THREE.Vector3(e.look.x, a.model.position.y, e.look.z);
           const doOrient = () => { try { a.model && a.model.lookAt(lookTarget); } catch (_) {} };
           doOrient();
@@ -318,8 +321,8 @@ try { window.createAlien2Statics = createAlien2Statics; } catch (_) {}
           const visible = window.getComputedStyle ? getComputedStyle(gameCont).display !== 'none' : (gameCont.style.display !== 'none');
           if (!visible) return;
 
-          // debug log to help trace if handler runs
-          try { return false; } catch (_) {}
+          // debug log to help trace if handler runs (no early return)
+          try { console.debug && console.debug('[pause] Escape pressed, toggling pause'); } catch (_) {}
 
           // Prefer using the created pauseMenu object's API if present
           try {
@@ -503,6 +506,10 @@ try { window.alien2Statics = alien2Statics; } catch (_) {}
 // Mixers para clones de Alien2 (para reproducir IdleAlien2.fbx en los clones)
 let alien2CloneMixers = [];
 try { window.alien2CloneMixers = alien2CloneMixers; } catch (_) {}
+
+// Postes de luz
+let lightPosts = [];
+try { window.lightPosts = lightPosts; } catch (_) {}
 
 // Instancia de la casa
 let house;
@@ -787,6 +794,42 @@ function createHouse() {
 }
 
 /**
+ * Crear postes de luz en coordenadas especificadas (global)
+ */
+function createLightPosts() {
+  const positions = [
+    { x: -12.7, y: 0.0, z: 4.4 },
+    { x: -7.8, y: 0.0, z: -48.9 },
+    { x: 55.2, y: 0.0, z: -0.6 },
+    { x: 31.8, y: 0.0, z: 35.6 },
+    { x: -13.8, y: 0.0, z: 47.9 },
+    { x: -84.2, y: 0.0, z: 33.2 },
+    { x: -151.9, y: 0.0, z: 72.0 },
+  ];
+
+  // Altura ≈ 3x altura del farmer (fallback 6.0)
+  let poleHeight = 6.0;
+  try {
+    const fm = window.farmerController?.model;
+    if (fm) {
+      const box = new THREE.Box3().setFromObject(fm);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      if (size.y > 0) poleHeight = Math.max(4.5, Math.min(12, size.y * 3));
+    }
+  } catch (_) {}
+
+  for (const p of positions) {
+    try {
+      const post = new LightPost(scene, p, { height: poleHeight });
+      post.setEnabled(false);
+      lightPosts.push(post);
+    } catch (_) {}
+  }
+  try { window.lightPosts = lightPosts; } catch (_) {}
+}
+
+/**
  * Crear el mercado con textura de piedra y ventana frontal
  */
 function createMarket() {
@@ -854,10 +897,10 @@ async function init() {
     depth: true, // Habilitar búfer de profundidad
   });
   // Configuración del renderizador
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimizar para pantallas de alta densidad
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25)); // Cap pixel ratio para rendimiento
   renderer.setSize(window.innerWidth, window.innerHeight); // Tamaño completo de la ventana
   renderer.shadowMap.enabled = true; // Habilitar sombras
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Sombras suaves
+  renderer.shadowMap.type = THREE.PCFShadowMap; // Sombras más baratas
   renderer.physicallyCorrectLights = true; // Iluminación realista
   renderer.outputEncoding = THREE.sRGBEncoding; // Mejor representación de colores
   renderer.toneMapping = THREE.ACESFilmicToneMapping; // Mapeo de tonos cinematográfico
@@ -868,7 +911,7 @@ async function init() {
   cameraManager = new CameraManager(scene, {
     fov: 75,
     near: 0.5,
-    far: 2000,
+    far: 1400,
   });
 
   // Obtener la cámara para compatibilidad con el código existente
@@ -1024,6 +1067,8 @@ async function init() {
 
   // Crear la casa con puerta interactiva
   createHouse();
+  // Crear postes de luz en posiciones dadas
+  try { createLightPosts(); } catch (_) {}
   // Crear el alien2
   const alien2 = await createAlien2();
   window.alien2 = alien2;
@@ -1435,11 +1480,19 @@ const frameTime = 1000 / targetFPS;
 
 // Variables para optimización de actualizaciones
 let minimapUpdateCounter = 0;
-const minimapUpdateInterval = 10; // Actualizar minimap cada 10 frames
+const minimapUpdateInterval = 20; // Actualizar minimap cada 20 frames
 let terrainUpdateCounter = 0;
-const terrainUpdateInterval = 5; // Actualizar terreno cada 5 frames
+const terrainUpdateInterval = 8; // Actualizar terreno cada 8 frames
 let skyboxUpdateCounter = 0;
-const skyboxUpdateInterval = 3; // Actualizar skybox cada 3 frames
+const skyboxUpdateInterval = 6; // Actualizar skybox cada 6 frames
+let frameCounter = 0; // para escalonar actualizaciones
+
+// Escalador de rendimiento dinámico
+let __perfFrames = 0;
+let __perfAccumTime = 0;
+let __currentFps = 60;
+let __targetPixelRatio = 1.0;
+let __maxShadowPosts = 3; // presupuesto de sombras para postes
 
 function animate(currentTime = 0) {
   requestAnimationFrame(animate);
@@ -1450,6 +1503,28 @@ function animate(currentTime = 0) {
   lastTime = currentTime - (deltaTime % frameTime);
 
   const delta = Math.min(0.05, clock.getDelta()); // Reducir el delta máximo para mayor suavidad
+  frameCounter++;
+
+  // Medición simple de FPS y ajuste de presupuesto
+  __perfFrames++;
+  __perfAccumTime += delta;
+  if (__perfAccumTime >= 1.0) {
+    __currentFps = __perfFrames / __perfAccumTime;
+    __perfFrames = 0;
+    __perfAccumTime = 0;
+    // Ajustar pixel ratio dinamicamente entre 0.85 y 1.25
+    if (__currentFps < 42) {
+      __targetPixelRatio = Math.max(0.85, __targetPixelRatio - 0.1);
+    } else if (__currentFps > 58) {
+      __targetPixelRatio = Math.min(1.25, __targetPixelRatio + 0.05);
+    }
+    try { renderer.setPixelRatio(__targetPixelRatio); } catch (_) {}
+
+    // Ajustar presupuesto de sombras según FPS
+    if (__currentFps < 45) __maxShadowPosts = 2;
+    else if (__currentFps < 55) __maxShadowPosts = 3;
+    else __maxShadowPosts = 4;
+  }
 
   // If the game is paused via the pause menu, skip updates but keep rendering the current frame
   try {
@@ -1490,7 +1565,7 @@ function animate(currentTime = 0) {
     } catch (_) {}
     // Update all Alien2 clone mixers (IdleAlien2.fbx on clones)
     try {
-      if (window.alien2CloneMixers && Array.isArray(window.alien2CloneMixers)) {
+      if (window.alien2CloneMixers && Array.isArray(window.alien2CloneMixers) && (frameCounter % 2 === 0)) {
         for (let i = 0; i < window.alien2CloneMixers.length; i++) {
           const m = window.alien2CloneMixers[i];
           if (m && typeof m.update === 'function') m.update(delta);
@@ -1565,14 +1640,16 @@ function animate(currentTime = 0) {
       });
     }
 
-    // 5. Actualización de múltiples instancias (optimizado)
-    // Usar for en lugar de forEach para mejor rendimiento
-    for (let i = 0; i < cows.length; i++) {
-      cows[i].update(delta);
-    }
-
-    for (let i = 0; i < stones.length; i++) {
-      stones[i].update(delta);
+    // 5. Actualización de múltiples instancias (optimizado y escalonado)
+    // Actualizar vacas en frames pares y piedras en frames impares para repartir carga
+    if ((frameCounter & 1) === 0) {
+      for (let i = 0; i < cows.length; i++) {
+        cows[i].update(delta);
+      }
+    } else {
+      for (let i = 0; i < stones.length; i++) {
+        stones[i].update(delta);
+      }
     }
 
     // Actualizar el mercado con la posición del jugador
@@ -1602,9 +1679,60 @@ function animate(currentTime = 0) {
 
     // 8. Iluminación
     lighting?.update(delta);
+    // Ajustar postes según la noche (más realista: que la iluminación principal provenga de los postes)
+    try {
+      if (lighting && Array.isArray(lightPosts)) {
+        // Suavizado del factor nocturno para transición
+        const nf = Math.max(0, Math.min(1, (lighting.nightFactor || 0)));
+        // Curva para reforzar más brillo en plena noche
+        const factor = nf * nf;
+        for (let i = 0; i < lightPosts.length; i++) {
+          const lp = lightPosts[i];
+          if (lp && typeof lp.setEnabled === 'function') lp.setEnabled(factor);
+        }
 
-    // 8.1 Actualizar efecto de humo
-    if (smokeEffect) {
+        // Presupuesto de sombras: activar sombras solo en los postes más cercanos al jugador por la noche
+        if (factor > 0.1 && farmerController && farmerController.model) {
+          const playerPos = farmerController.model.position;
+          const entries = [];
+          for (let i = 0; i < lightPosts.length; i++) {
+            const lp = lightPosts[i];
+            if (!lp || !lp.light || !lp.group) continue;
+            const p = lp.group.position;
+            const dx = p.x - playerPos.x; const dz = p.z - playerPos.z;
+            const d2 = dx*dx + dz*dz;
+            entries.push({ i, d2, lp });
+          }
+          // ordenar por distancia
+          entries.sort((a,b)=>a.d2-b.d2);
+          const maxShadowLights = __maxShadowPosts; // presupuesto dinámico
+          for (let idx = 0; idx < entries.length; idx++) {
+            const { lp } = entries[idx];
+            if (!lp || !lp.light) continue;
+            const enableShadow = idx < maxShadowLights;
+            // Activar/desactivar castShadow dinámicamente
+            try { lp.light.castShadow = enableShadow; } catch (_) {}
+            // Ajustar resolución de sombras si es necesario
+            try {
+              const size = enableShadow ? 1024 : 256;
+              lp.light.shadow.mapSize.width = size;
+              lp.light.shadow.mapSize.height = size;
+            } catch (_) {}
+          }
+        } else {
+          // De día o sin jugador: desactivar sombras en postes
+          for (let i = 0; i < lightPosts.length; i++) {
+            const lp = lightPosts[i];
+            if (lp && lp.light) {
+              try { lp.light.castShadow = false; } catch (_) {}
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 8.1 Actualizar efecto de humo (menos frecuente)
+    if (smokeEffect && (frameCounter % 3 === 0)) {
       smokeEffect.update(delta);
     }
 
