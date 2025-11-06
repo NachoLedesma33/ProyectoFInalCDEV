@@ -15,6 +15,8 @@ export class House {
     this.position = position;
     this.size = size;
     this.walls = [];
+    // Contenedor para objetos interiores (piso, muebles) para gestión/limpieza
+    this.interiorObjects = [];
     this.collisionBoxes = [];
     this.gates = []; // Array para puertas
     this.gateSpeed = 4; // Velocidad de apertura/cierre de la puerta (más rápida para fluidez)
@@ -23,6 +25,142 @@ export class House {
     this.autoCloseTimers = new Map(); // Timers para cada puerta
 
     this.createHouse();
+  }
+
+  /**
+   * Añade una caja de colisión para un objeto dado y la registra en this.collisionBoxes
+   * @param {THREE.Object3D} object
+   * @param {string} side
+   */
+  addCollision(object, side = 'furniture') {
+    try {
+      const collisionBox = new THREE.Box3().setFromObject(object);
+      this.collisionBoxes.push({ box: collisionBox, side: side, wall: object });
+    } catch (e) {
+      // Si falla (por ejemplo objeto no renderizado aún), añadir entrada vacía y actualizar después
+      const collisionBox = new THREE.Box3();
+      collisionBox.makeEmpty();
+      this.collisionBoxes.push({ box: collisionBox, side: side, wall: object });
+    }
+  }
+
+  /**
+   * Crea decoración adicional: escritorio, cama, armario, heladera, cocina y alacenas
+   * @param {THREE.Material} woodMaterial
+   * @param {THREE.Material} metalMaterial
+   */
+  createInteriorDecorations(woodMaterial, metalMaterial) {
+    const px = this.position.x;
+    const py = this.position.y;
+    const pz = this.position.z;
+    const { width, depth } = this.size;
+
+    // --- Escritorio simple ---
+    const desk = new THREE.Group();
+  const deskTop = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.7), metalMaterial);
+    deskTop.position.set(0, 0.75, 0);
+    desk.add(deskTop);
+    const deskLegGeom = new THREE.BoxGeometry(0.08, 0.75, 0.08);
+    const deskLegs = [
+      [-0.75, -0.3],
+      [0.75, -0.3],
+      [-0.75, 0.3],
+      [0.75, 0.3],
+    ];
+    deskLegs.forEach((l) => {
+      const leg = new THREE.Mesh(deskLegGeom, metalMaterial);
+      leg.position.set(l[0], 0.375, l[1]);
+      desk.add(leg);
+    });
+    desk.position.set(px - width / 4, py, pz + depth / 4 - 0.5);
+    this.scene.add(desk);
+    this.interiorObjects.push(desk);
+    this.walls.push(desk);
+  this.addCollision(desk, 'furniture');
+
+    // --- Cama simple ---
+    const bedGroup = new THREE.Group();
+  const bedBase = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.9), metalMaterial);
+    bedBase.position.set(0, 0.2, 0);
+    bedGroup.add(bedBase);
+  const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.25, 0.85), metalMaterial);
+    mattress.position.set(0, 0.45, 0);
+    bedGroup.add(mattress);
+  const headboard = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 0.12), metalMaterial);
+    headboard.position.set(0, 0.65, -0.4);
+    bedGroup.add(headboard);
+    bedGroup.position.set(px + width / 4 - 1.0, py, pz - depth / 4 + 0.6);
+    this.scene.add(bedGroup);
+    this.interiorObjects.push(bedGroup);
+    this.walls.push(bedGroup);
+  this.addCollision(bedGroup, 'furniture');
+
+    // --- Armario (wardrobe) ---
+    const wardrobe = new THREE.Group();
+  const wardBody = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.8, 0.6), metalMaterial);
+    wardBody.position.set(0, 0.9, 0);
+    wardrobe.add(wardBody);
+    // puertas simples (solo visual)
+  const leftDoor = new THREE.Mesh(new THREE.BoxGeometry(0.48, 1.7, 0.02), metalMaterial);
+    leftDoor.position.set(-0.25, 0.9, 0.31);
+  const rightDoor = new THREE.Mesh(new THREE.BoxGeometry(0.48, 1.7, 0.02), metalMaterial);
+    rightDoor.position.set(0.25, 0.9, 0.31);
+    wardrobe.add(leftDoor);
+    wardrobe.add(rightDoor);
+    wardrobe.position.set(px - width / 2 + 0.7, py, pz - depth / 4 + 0.6);
+    this.scene.add(wardrobe);
+    this.interiorObjects.push(wardrobe);
+    this.walls.push(wardrobe);
+  this.addCollision(wardrobe, 'furniture');
+
+    // --- Heladera (fridge) ---
+    const fridge = new THREE.Group();
+    const fridgeBody = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.6, 0.7), metalMaterial);
+    fridgeBody.position.set(0, 0.8, 0);
+    fridge.add(fridgeBody);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8), metalMaterial);
+    handle.rotation.z = Math.PI / 2;
+    handle.position.set(0.25, 0.9, 0.38);
+    fridge.add(handle);
+    fridge.position.set(px + width / 2 - 0.9, py, pz + depth / 4 - 0.6);
+    this.scene.add(fridge);
+    this.interiorObjects.push(fridge);
+    this.walls.push(fridge);
+  this.addCollision(fridge, 'furniture');
+
+    // --- Cocina / Hornalla (stove) ---
+    const stove = new THREE.Group();
+    const stoveBody = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.6), metalMaterial);
+    stoveBody.position.set(0, 0.4, 0);
+    stove.add(stoveBody);
+    // Quemadores (pequeños cilindros)
+    const burnerGeom = new THREE.CylinderGeometry(0.08, 0.08, 0.02, 12);
+    const burnerPositions = [[-0.25, -0.15], [0.25, -0.15], [-0.25, 0.15], [0.25, 0.15]];
+    burnerPositions.forEach((b) => {
+      const br = new THREE.Mesh(burnerGeom, metalMaterial);
+      br.position.set(b[0], 0.82, b[1]);
+      br.rotation.x = Math.PI / 2;
+      stove.add(br);
+    });
+    stove.position.set(px + width / 2 - 1.6, py, pz + depth / 4 - 0.6);
+    this.scene.add(stove);
+    this.interiorObjects.push(stove);
+    this.walls.push(stove);
+  this.addCollision(stove, 'furniture');
+
+    // --- Alacenas (cajones de pared) ---
+    const cabinets = new THREE.Group();
+  const cab1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 0.3), metalMaterial);
+    cab1.position.set(0, 1.35, 0);
+    cabinets.add(cab1);
+  const cab2 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.3), metalMaterial);
+    cab2.position.set(0.9, 1.35, 0);
+    cabinets.add(cab2);
+    cabinets.position.set(px + width / 2 - 1.6, py, pz + depth / 4 - 0.6);
+    this.scene.add(cabinets);
+    this.interiorObjects.push(cabinets);
+    this.walls.push(cabinets);
+  this.addCollision(cabinets, 'furniture');
   }
 
   /**
@@ -71,6 +209,66 @@ export class House {
         // Crear el techo
         this.createRoof(roofMaterial);
 
+        // Crear piso interior con textura concreteDIFF.png y muebles
+        // Construir la URL de manera compatible con bundlers y módulos (import.meta.url)
+        let concretePath;
+        try {
+          concretePath = new URL('../assets/concreteDIFF.png', import.meta.url).href;
+        } catch (e) {
+          // Si import.meta.url no está disponible (entornos antiguos), usar ruta absoluta
+          concretePath = '/src/assets/concreteDIFF.png';
+        }
+
+        textureLoader.load(
+          concretePath,
+          (concreteTexture) => {
+            // Ajustes de textura
+            concreteTexture.wrapS = THREE.RepeatWrapping;
+            concreteTexture.wrapT = THREE.RepeatWrapping;
+            concreteTexture.repeat.set(2, 2);
+            // Si tu pipeline usa sRGB, descomenta:
+            // concreteTexture.encoding = THREE.sRGBEncoding;
+
+                const floorMaterial = new THREE.MeshStandardMaterial({
+                  map: concreteTexture,
+                  metalness: 0.02,
+                  roughness: 0.9,
+                  color: 0xffffff,
+                });
+
+                // Material metálico para electrodomésticos
+                const metalMaterial = new THREE.MeshStandardMaterial({
+                  color: 0xffffff,
+                  metalness: 0.8,
+                  roughness: 0.4,
+                });
+
+                this.createFloor(floorMaterial);
+                this.createFurniture(metalMaterial, floorMaterial);
+                this.createInteriorDecorations(brownMaterial, metalMaterial);
+          },
+          undefined,
+          (err) => {
+            // Fallback: si la textura no carga, usar material gris y avisar en consola
+            console.warn(`House: no se pudo cargar la textura ${concretePath}, usando color gris.`, err);
+            const floorMaterial = new THREE.MeshStandardMaterial({
+              color: 0x666666,
+              metalness: 0.02,
+              roughness: 0.9,
+            });
+
+            const metalMaterial = new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              metalness: 0.8,
+              roughness: 0.4,
+            });
+
+            this.createFloor(floorMaterial);
+            this.createFurniture(metalMaterial, floorMaterial);
+            this.createInteriorDecorations(brownMaterial, metalMaterial);
+          }
+        );
+
         // Crear la puerta principal con la misma textura de piedra
         this.createDoor(stoneMaterial);
       },
@@ -81,6 +279,104 @@ export class House {
         this.createHouseWithAlternativeMaterials();
       }
     );
+  }
+
+  /**
+   * Crea un piso simple gris dentro de la casa
+   * @param {THREE.Material} floorMaterial
+   */
+  createFloor(floorMaterial) {
+    const { width, depth } = this.size;
+
+    // Hacemos el piso ligeramente elevado para evitar z-fighting
+    const floorGeometry = new THREE.BoxGeometry(width - 0.6, 0.12, depth - 0.6);
+    const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
+    floorMesh.position.set(
+      this.position.x,
+      this.position.y + 0.06,
+      this.position.z
+    );
+    floorMesh.receiveShadow = true;
+    floorMesh.castShadow = false;
+    this.scene.add(floorMesh);
+
+    // Guardar en interiorObjects para limpieza posterior
+    this.interiorObjects.push(floorMesh);
+    // Opcionalmente añadir a walls para reutilizar la lógica de dispose
+    this.walls.push(floorMesh);
+  }
+
+  /**
+   * Crea algunos muebles sencillos dentro de la casa (mesa y sillas)
+   * @param {THREE.Material} woodMaterial
+   * @param {THREE.Material} floorMaterial - no usado actualmente, pero disponible
+   */
+  createFurniture(metalMaterial, floorMaterial) {
+    const tableGroup = new THREE.Group();
+
+    // Mesa: tapa y 4 patas
+    const tableTopGeom = new THREE.BoxGeometry(2.0, 0.12, 1.2);
+  const tableTop = new THREE.Mesh(tableTopGeom, metalMaterial);
+    tableTop.position.set(0, 0.9, 0);
+    tableTop.castShadow = true;
+    tableTop.receiveShadow = true;
+    tableGroup.add(tableTop);
+
+    const legGeom = new THREE.BoxGeometry(0.12, 0.9, 0.12);
+    const legOffsets = [
+      [-0.9, -0.45],
+      [0.9, -0.45],
+      [-0.9, 0.45],
+      [0.9, 0.45],
+    ];
+
+    legOffsets.forEach((off) => {
+      const leg = new THREE.Mesh(legGeom, metalMaterial);
+      leg.position.set(off[0], 0.45, off[1]);
+      leg.castShadow = true;
+      leg.receiveShadow = true;
+      tableGroup.add(leg);
+    });
+
+    // Posicionar la mesa hacia el centro de la casa
+    tableGroup.position.set(this.position.x, this.position.y, this.position.z - 0.5);
+    this.scene.add(tableGroup);
+    this.interiorObjects.push(tableGroup);
+    this.walls.push(tableGroup);
+  // Colisión para la mesa
+  this.addCollision(tableGroup, 'furniture');
+
+    // Crear dos sillas simples (cubos) alrededor de la mesa
+    const chairGeom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const backGeom = new THREE.BoxGeometry(0.5, 0.6, 0.12);
+
+    const chair1 = new THREE.Group();
+  const seat1 = new THREE.Mesh(chairGeom, metalMaterial);
+    seat1.position.set(0, 0.25, 0);
+  const back1 = new THREE.Mesh(backGeom, metalMaterial);
+    back1.position.set(0, 0.6, -0.2);
+    chair1.add(seat1);
+    chair1.add(back1);
+    chair1.position.set(this.position.x - 0.9, this.position.y, this.position.z - 0.5);
+    chair1.rotation.y = Math.PI / 8;
+    this.scene.add(chair1);
+    this.interiorObjects.push(chair1);
+    this.walls.push(chair1);
+  this.addCollision(chair1, 'furniture');
+
+    const chair2 = new THREE.Group();
+  const seat2 = new THREE.Mesh(chairGeom, metalMaterial);
+    seat2.position.set(0, 0.25, 0);
+  const back2 = new THREE.Mesh(backGeom, metalMaterial);
+    back2.position.set(0, 0.6, 0.2);
+    chair2.add(seat2);
+    chair2.add(back2);
+    chair2.position.set(this.position.x + 0.9, this.position.y, this.position.z - 0.5);
+    chair2.rotation.y = -Math.PI / 8;
+    this.scene.add(chair2);
+    this.interiorObjects.push(chair2);
+    this.walls.push(chair2);
+  this.addCollision(chair2, 'furniture');
   }
 
   /**
@@ -649,15 +945,55 @@ export class House {
       clearTimeout(timer);
     });
     this.autoCloseTimers.clear();
+    // Dispose de objetos interiores primero (evita duplicados si también están en walls)
+    const disposed = new Set();
+    this.interiorObjects.forEach((obj) => {
+      try {
+        this.scene.remove(obj);
+      } catch (e) {
+        // ignore
+      }
+      disposed.add(obj);
+      // Si es un Group, intentar disponer de sus hijos
+      if (obj.traverse) {
+        obj.traverse((child) => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
+            else child.material.dispose();
+          }
+        });
+      } else {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) {
+          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+          else obj.material.dispose();
+        }
+      }
+    });
+    this.interiorObjects = [];
 
+    // Ahora dispose del resto de walls, omitiendo ya los que se limpiaron
     this.walls.forEach((wall) => {
-      this.scene.remove(wall);
-      if (wall.geometry) wall.geometry.dispose();
-      if (wall.material) {
-        if (Array.isArray(wall.material)) {
-          wall.material.forEach((material) => material.dispose());
-        } else {
-          wall.material.dispose();
+      if (disposed.has(wall)) return;
+      try {
+        this.scene.remove(wall);
+      } catch (e) {
+        // ignore
+      }
+      if (wall.traverse) {
+        wall.traverse((child) => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose());
+            else child.material.dispose();
+          }
+        });
+      } else {
+        if (wall.geometry) wall.geometry.dispose();
+        if (wall.material) {
+          if (Array.isArray(wall.material)) wall.material.forEach((m) => m.dispose());
+          else wall.material.dispose();
         }
       }
     });

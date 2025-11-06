@@ -19,6 +19,7 @@ import { Cow } from "./utils/Cow.js"; // Modelo de vaca
 import { Stone } from "./utils/Stone.js"; // Modelo de piedra
 import { House } from "./utils/House.js"; // Casa con puerta interactiva
 import { Market } from "./utils/Market.js"; // Mercado con ventana frontal
+import BuildingManager from './utils/building.js';
 import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
 import { initObjectives } from "./utils/objectives.js"; // Sistema de objetivos
 import { Alien2 } from "./utils/Alien2.js"; // Alien2
@@ -443,14 +444,19 @@ function createCows() {
 function initMinimap() {
   // Solo inicializar si no se ha hecho ya
   if (!minimapManager) {
-    minimapManager = makeMinimap({ width: minimapWidth, height: minimapHeight, worldBounds });
-    
-    // Inicialización del manager
-    try {
-      minimapManager.init("minimap-canvas");
-    } catch (e) {
-      return e;
-    }
+      minimapManager = makeMinimap({ width: minimapWidth, height: minimapHeight, worldBounds });
+
+      // Inicialización del manager
+      try {
+        minimapManager.init("minimap-canvas");
+        // If building refs were created before minimap initialization, attach them now
+        if (window._pendingBuildingsForMinimap) {
+          try { minimapManager.setReferences({ buildings: window._pendingBuildingsForMinimap }); } catch (_) {}
+          window._pendingBuildingsForMinimap = null;
+        }
+      } catch (e) {
+        return e;
+      }
   }
 }
 
@@ -852,6 +858,63 @@ async function init() {
     }
   }
 
+  // --- Preload and place decorative buildings in free positions ---
+  try {
+  const buildingMgr = new BuildingManager(scene, { basePath: 'src/models/characters/building/', terrain });
+    window.buildingMgr = buildingMgr;
+    // Preload prototypes (FBX) once
+    try { await buildingMgr.preloadDefaults(); } catch (e) { console.warn('Preload defaults failed', e); }
+
+    // Build avoid list: stones' models, house, market, corral, spaceShuttle
+    const avoidObjects = [];
+    try {
+      if (stones && stones.length) {
+        for (const s of stones) {
+          if (!s) continue;
+          if (s.model) avoidObjects.push(s.model);
+          else avoidObjects.push(s);
+        }
+      }
+      if (house) avoidObjects.push(house);
+      if (market) avoidObjects.push(market);
+      if (corral) avoidObjects.push(corral);
+      if (spaceShuttle) avoidObjects.push(spaceShuttle.model || spaceShuttle);
+      if (shipRepair) avoidObjects.push(shipRepair);
+    } catch (e) {
+      console.warn('Error building avoid list for buildings', e);
+    }
+
+    // Place exactly one of each structure (avoid clustering)
+    try {
+  // Preferred fixed positions (explicit y provided; BuildingManager will snap to terrain if available)
+  const preferredPositions = {
+    alienPyramid: { x: 23.4, y: 0.0, z: 198.5 },
+    alienLab: { x: -137.3, y: 0.0, z: -145.4 },
+    alienHouse: { x: -79.9, y: 0.0, z: -70.3 },
+  };
+
+  const placed = buildingMgr.placeOneOfEach(['alienHouse','alienLab','alienPyramid'], worldBounds, avoidObjects, { clearance: 10, maxAttemptsPerPlacement: 400, positions: preferredPositions });
+      window.placedBuildings = placed;
+      console.log('Placed decorative buildings (one of each):', placed);
+      // Provide placed buildings to the minimap manager if initialized; otherwise stash for later
+      try {
+        const buildingRefs = buildingMgr.getAllStructures();
+        if (minimapManager) {
+          minimapManager.setReferences({ buildings: buildingRefs });
+        } else {
+          // store globally so initMinimap can pick it up
+          window._pendingBuildingsForMinimap = buildingRefs;
+        }
+      } catch (e) {
+        console.warn('Failed to register buildings with minimap', e);
+      }
+    } catch (e) {
+      console.warn('Placing decorative buildings failed', e);
+    }
+  } catch (e) {
+    console.warn('BuildingManager init failed', e);
+  }
+
   // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
   controls = cameraManager.getControls();
@@ -994,6 +1057,13 @@ async function init() {
             farmerController.setHouse(house);
             
           }
+          // Conectar el farmerController con los edificios (si el buildingMgr existe)
+          try {
+            if (farmerController && window.buildingMgr && typeof window.buildingMgr.getColliders === 'function') {
+              const buildingColliders = window.buildingMgr.getColliders();
+              farmerController.setBuildings(buildingColliders);
+            }
+          } catch (e) { /* non-fatal */ }
 
           // Conectar el farmerController con las vacas para detección de colisiones
           if (farmerController && cows && cows.length > 0) {

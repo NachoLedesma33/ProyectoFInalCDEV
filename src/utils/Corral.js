@@ -43,16 +43,18 @@ export class Corral {
     const postHeight = height + 0.5;
     const postRadius = 0.15;
 
-    // Material para las tablas de madera con textura más realista
-    const woodMaterial = new THREE.MeshLambertMaterial({
+    // Material para las tablas de madera con aspecto menos brillante (PBR)
+    const woodMaterial = new THREE.MeshStandardMaterial({
       color: 0x8b4513, // Color marrón madera
-      transparent: false,
-      opacity: 1,
+      metalness: 0.03,
+      roughness: 0.9,
     });
 
     // Material para los postes más oscuro
-    const postMaterial = new THREE.MeshLambertMaterial({
+    const postMaterial = new THREE.MeshStandardMaterial({
       color: 0x654321, // Color marrón oscuro para postes
+      metalness: 0.02,
+      roughness: 0.92,
     });
 
     // Crear las cuatro paredes del corral como vallas de madera (con espacio para la puerta)
@@ -184,8 +186,8 @@ export class Corral {
     const gateGroup = new THREE.Group();
     const numPlanks = Math.floor(gateHeight / (plankHeight + spacing));
 
-    // Material para los marcos y bisagras
-    const frameMaterial = new THREE.MeshLambertMaterial({ color: 0x4a4a4a });
+  // Material para los marcos y bisagras (PBR para menos brillo)
+  const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.05, roughness: 0.85 });
 
     // Crear tablas verticales de la puerta
     for (let i = 0; i < numPlanks; i++) {
@@ -230,8 +232,8 @@ export class Corral {
     gateGroup.add(centerFrame);
 
     // Añadir bisagras visibles
-    const hingeGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.1, 8);
-    const hingeMaterial = new THREE.MeshLambertMaterial({ color: 0x2c2c2c });
+  const hingeGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.1, 8);
+  const hingeMaterial = new THREE.MeshStandardMaterial({ color: 0x2c2c2c, metalness: 0.15, roughness: 0.6 });
 
     // Bisagras en el lado de la puerta
     for (let i = 0; i < 3; i++) {
@@ -339,8 +341,8 @@ export class Corral {
     }
 
     // Añadir travesaños horizontales para mayor realismo
-    const railGeometry = new THREE.BoxGeometry(width, 0.05, thickness * 1.2);
-    const railMaterial = new THREE.MeshLambertMaterial({ color: 0x654321 });
+  const railGeometry = new THREE.BoxGeometry(width, 0.05, thickness * 1.2);
+  const railMaterial = new THREE.MeshStandardMaterial({ color: 0x654321, metalness: 0.02, roughness: 0.9 });
 
     const rail1 = new THREE.Mesh(railGeometry, railMaterial);
     rail1.position.set(0, -height / 3, 0);

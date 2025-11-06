@@ -14,6 +14,7 @@ export class Minimap {
       spaceShuttle: null,
       corral: null,
       cows: [],
+      buildings: [],
       farmerController: null,
     };
   }
@@ -181,6 +182,53 @@ export class Minimap {
             ctx.arc(minimapPos.x, minimapPos.y, 1.5, 0, Math.PI * 2);
             ctx.fill();
           }
+        }
+      });
+    }
+
+    // Estructuras (buildings)
+    if (this.refs.buildings && this.refs.buildings.length) {
+      this.refs.buildings.forEach((b) => {
+        try {
+          if (!b || !b.object) return;
+          const pos = b.object.position;
+          const minimapPos = this.worldToMinimap(pos.x, pos.z);
+          if (
+            minimapPos.x < 0 || minimapPos.x > width ||
+            minimapPos.y < 0 || minimapPos.y > height
+          ) return;
+
+          // Draw icon by type
+          if (b.type === 'alienHouse') {
+            // medium white square
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            const s = 6;
+            ctx.fillRect(minimapPos.x - s/2, minimapPos.y - s/2, s, s);
+          } else if (b.type === 'alienPyramid') {
+            // medium grey triangle
+            ctx.fillStyle = 'rgba(160,160,160,0.95)';
+            const s = 7;
+            ctx.beginPath();
+            ctx.moveTo(minimapPos.x, minimapPos.y - s/2);
+            ctx.lineTo(minimapPos.x - s/2, minimapPos.y + s/2);
+            ctx.lineTo(minimapPos.x + s/2, minimapPos.y + s/2);
+            ctx.closePath();
+            ctx.fill();
+          } else if (b.type === 'alienLab') {
+            // medium blue circle
+            ctx.fillStyle = 'rgba(0,120,255,0.95)';
+            ctx.beginPath();
+            ctx.arc(minimapPos.x, minimapPos.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // default small dot
+            ctx.fillStyle = 'rgba(200,200,200,0.6)';
+            ctx.beginPath();
+            ctx.arc(minimapPos.x, minimapPos.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } catch (e) {
+          // ignore single-draw errors
         }
       });
     }

@@ -241,6 +241,7 @@ export class WaveManager {
     try { if (typeof this.getHouse === 'function') enemy.getHouse = this.getHouse; } catch(_) {}
     try { if (typeof this.getMarket === 'function') enemy.getMarket = this.getMarket; } catch(_) {}
     try { if (typeof this.getShip === 'function') enemy.getShip = this.getShip; } catch(_) {}
+  try { if (typeof this.getBuildings === 'function') enemy.getBuildings = this.getBuildings; else if (typeof window !== 'undefined' && window.buildingMgr && typeof window.buildingMgr.getColliders === 'function') enemy.getBuildings = () => window.buildingMgr.getColliders(); } catch(_) {}
 
   // Boost enemy damage based on wave and extend detection range to keep them moving toward corral
   try {

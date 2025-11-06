@@ -104,7 +104,48 @@ export class FarmerController {
       // Store references so we can remove them in dispose
       // Single-click melee: play one punch per click (no hold-to-repeat)
       this._onMouseDown = (event) => {
+        // Ignore non-left buttons
         if (event.button !== 0) return; // left button
+
+        // Prevent attacks when clicking on UI/HUD elements. We allow clicks only
+        // when they occur on the renderer canvas (or its children). This avoids
+        // accidental attacks when interacting with menus, inventory, minimap, etc.
+        try {
+          const canvas = (window && window.renderer && window.renderer.domElement) || null;
+          if (canvas) {
+            // If the event target is not the canvas (or a child), treat it as UI
+            if (!canvas.contains(event.target)) return;
+          } else {
+            // Fallback: walk up the DOM tree and ignore clicks inside common HUD ids/classes
+            let el = event.target;
+            while (el) {
+              if (el.id) {
+                const blockedIds = [
+                  'inventory-hud', 'minimap-hud', 'objectives-hud', 'sound-hud',
+                  'pause-overlay', 'main-menu', 'difficulty-menu', 'story-carousel',
+                  'controls-hud', 'hud-buttons-container', 'farmer-coordinate-hud',
+                  'inventory-container', 'minimap-container', 'objectives-container', 'ship-popup'
+                ];
+                if (blockedIds.includes(el.id)) return;
+              }
+              if (el.classList) {
+                if (
+                  el.classList.contains('menu-button') ||
+                  el.classList.contains('inventory-expanded') ||
+                  el.classList.contains('inventory-collapsed') ||
+                  el.classList.contains('minimap-expanded') ||
+                  el.classList.contains('minimap-collapsed') ||
+                  el.classList.contains('hud-button-container')
+                ) return;
+              }
+              el = el.parentElement;
+            }
+          }
+        } catch (e) {
+          // If anything goes wrong while detecting UI, be conservative and ignore the click
+          return;
+        }
+
         if (!this.inputEnabled || this._isDead) return;
 
         // Cancel any pending exit-to-idle timer so we stay in combat state briefly
@@ -1000,6 +1041,12 @@ export class FarmerController {
       return this.getSlidingMovement(currentPosition, movementVector);
     }
 
+    // Verificar colisión con edificios decorativos
+    if (this.buildings && this.checkBuildingsCollision(newPosition)) {
+      // Hay colisión con un edificio, intentar deslizamiento suave
+      return this.getSlidingMovement(currentPosition, movementVector);
+    }
+
     // Verificar colisión con las vacas
     if (this.cows && this.checkCowsCollision(newPosition)) {
       // Hay colisión con las vacas, detener movimiento completamente
@@ -1054,6 +1101,11 @@ export class FarmerController {
 
     // Verificar colisión con la casa
     if (this.house && this.checkHouseCollision(position)) {
+      return false;
+    }
+
+    // Verificar colisión con edificios (decorativos)
+    if (this.buildings && this.checkBuildingsCollision(position)) {
       return false;
     }
 
@@ -1147,6 +1199,62 @@ export class FarmerController {
 
   setMarket(market) {
     this.market = market;
+  }
+
+  /**
+   * Registra colisionadores de edificios para que el controlador los tenga en cuenta
+   * @param {Array} buildings - array de objetos que expongan checkCollision(position, size)
+   */
+  setBuildings(buildings) {
+    if (!buildings || buildings.length === 0) {
+      this.buildings = null;
+      return;
+    }
+    // Wrap entries that don't provide checkCollision
+    const wrapped = [];
+    for (const b of buildings) {
+      if (!b) continue;
+      if (typeof b.checkCollision === 'function') {
+        wrapped.push(b);
+        continue;
+      }
+      // if it has bbox or object, create a wrapper
+      const bbox = b.bbox || (b.object ? new THREE.Box3().setFromObject(b.object) : null);
+      wrapped.push({
+        id: b.id || null,
+        type: b.type || 'building',
+        bbox,
+        object: b.object || null,
+        checkCollision: (pos, size) => {
+          try {
+            if (!bbox) return false;
+            const charSize = size || new THREE.Vector3(1,1,1);
+            const characterBox = new THREE.Box3().setFromCenterAndSize(pos.clone(), charSize.clone());
+            return bbox.clone().expandByScalar(0.01).intersectsBox(characterBox);
+          } catch (e) { return false; }
+        }
+      });
+    }
+    this.buildings = wrapped;
+    try {
+      console.log(`[FarmerController] Registered ${this.buildings.length} building colliders`);
+    } catch (e) {}
+  }
+
+  checkBuildingsCollision(position) {
+    if (!this.buildings || !this.model) return false;
+    for (const b of this.buildings) {
+      try {
+        if (typeof b.checkCollision === 'function') {
+          const hit = b.checkCollision(position, this.characterSize);
+          if (hit) {
+            try { console.log('[FarmerController] Building collision with', b.id || b.type, b); } catch (e) {}
+            return true;
+          }
+        }
+      } catch (e) { console.warn('[FarmerController] Error checking building collision', e); }
+    }
+    return false;
   }
 
   isFacingCamera() {
