@@ -1013,6 +1013,18 @@ export class Alien1 {
 			if (!target || !target.ref) return false;
 			// si target es player/controller puede no tener healthComponent; so check position
 			if (target.ref.position === undefined) return false;
+			
+			// Check if cow is dead
+			if (target.type === 'cow') {
+				// Check userData.isDead flag
+				if (target.ref.userData && target.ref.userData.isDead) return false;
+				// Check cow controller
+				const cowController = target.ref.userData && target.ref.userData.cowController;
+				if (cowController && typeof cowController.isAlive === 'function' && !cowController.isAlive()) {
+					return false;
+				}
+			}
+			
 			// if the target has health property, ensure it's alive
 			if (target.ref.userData && target.ref.userData.controller && target.ref.userData.controller.healthComponent) {
 				return target.ref.userData.controller.healthComponent.isAlive();
@@ -1050,6 +1062,8 @@ export class Alien1 {
 					let closestDist = Infinity;
 					for (const c of cows) {
 						if (!c || !c.model) continue;
+						// Skip dead cows
+						if (c.isDead || !c.isAlive || (typeof c.isAlive === 'function' && !c.isAlive())) continue;
 						const d = this.model.position.distanceTo(c.model.position);
 						if (d < closestDist && d <= this.detectionRange) {
 							closest = c;
@@ -1141,6 +1155,9 @@ export class Alien1 {
 							this._impactTimeoutId = setTimeout(() => {
 							// aplicar hitbox justo en el momento del impacto
 							try {
+								// CUSTOM COW HIT DETECTION
+								this._applyCowDamage();
+								
 								if (this.combat && this.entityId) {
 									this.combat.applyFrontalAttack(this.entityId, {
 										damage: this.attackDamage,
@@ -1169,6 +1186,8 @@ export class Alien1 {
 					// fallback: no punch clips, play generic attack and schedule immediate hit
 					this.playAnimation('attack', { loop: THREE.LoopOnce, fadeIn: 0.06 });
 					try { safePlaySfx('punch', { object3D: this.model, volume: 0.95 }); } catch(_) {}
+					// Apply cow damage immediately
+					this._applyCowDamage();
 					try {
 						if (this.combat && this.entityId) {
 							this.combat.applyFrontalAttack(this.entityId, {
@@ -1209,6 +1228,68 @@ export class Alien1 {
 				} catch (err) {
 					console.warn('Alien1 attack error:', err);
 				}
+		}
+		
+		/**
+		 * Apply damage to cow if the current target is a cow
+		 * Requirement: Verify target is a cow before counting hit
+		 */
+		_applyCowDamage() {
+			if (!this.target || !this.target.ref) return;
+			
+			// Method 1: Check tag (preferred)
+			const hasTagCow = this.target.ref.userData && this.target.ref.userData.tag === "Cow";
+			
+			// Method 2: Check for Cow controller/component
+			const hasCowController = this.target.ref.userData && this.target.ref.userData.cowController;
+			
+			// Method 3: Check target type from AI system
+			const isTargetTypeCow = this.target.type === 'cow';
+			
+			if (!hasTagCow && !hasCowController && !isTargetTypeCow) {
+				// Not a cow - don't apply cow-specific damage
+				console.log(`[IgnoredHit] Target is not a cow - targetType: ${this.target.type}, tag: ${this.target.ref.userData?.tag}`);
+				return;
+			}
+			
+			// It's a cow! Apply hit
+			let cowController = null;
+			
+			if (hasCowController) {
+				cowController = this.target.ref.userData.cowController;
+			} else if (isTargetTypeCow) {
+				// Try to find cow from getCows function
+				try {
+					if (typeof this.getCows === 'function') {
+						const cows = this.getCows() || [];
+						for (const cow of cows) {
+							if (cow && cow.model === this.target.ref) {
+								cowController = cow;
+								break;
+							}
+						}
+					}
+				} catch (e) {
+					console.warn('Error finding cow controller:', e);
+				}
+			}
+			
+			if (!cowController || typeof cowController.onAlienHit !== 'function') {
+				console.warn('[Alien1] Found cow target but no valid controller with onAlienHit method');
+				return;
+			}
+			
+			// Register the hit
+			const attackerId = this.entityId || 'alien1_unknown';
+			try {
+				const died = cowController.onAlienHit(attackerId);
+				if (died) {
+					// Cow died - clear our target
+					this.target = null;
+				}
+			} catch (err) {
+				console.error('[Alien1] Error applying cow damage:', err);
+			}
 		}
 
 		// attach combat references from WaveManager after integration

@@ -28,6 +28,7 @@ export const AUDIO = {
     corralClose: "./src/assets/audio/sfx/corral_close.wav",
     farmerDeath: "./src/assets/audio/sfx/farmer_death.wav",
     cowMoo: "./src/assets/audio/sfx/cow_moo.wav",
+    cowDeath: "./src/assets/audio/sfx/cow_moo.wav", // Placeholder - uses cow moo for now
     spaceshipPanel: "./src/assets/audio/ui/spaceship_panel.wav",
     spaceshipStart: "./src/assets/audio/sfx/spaceship_start.wav",
     spaceshipLaunch: "./src/assets/audio/sfx/spaceship_launch.wav",

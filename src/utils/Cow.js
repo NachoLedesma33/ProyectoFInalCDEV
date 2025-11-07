@@ -8,6 +8,17 @@ export class Cow {
     this.scene = scene;
     this.model = null;
     this.position = position;
+    
+    // Tag for identification (for alien targeting)
+    this.tag = "Cow";
+    
+    // Health and hit tracking
+    this.maxHealth = 40; // 40 hits to die
+    this.hitCount = 0; // Current hits taken
+    this.isDead = false; // Death state
+    this.isInvulnerable = false; // Prevent duplicate hits in same frame
+    this._lastHitTime = 0; // Timestamp of last hit for debounce
+    this.invulnerabilityFrames = 100; // ms between hits (debounce)
 
     // Generar una pequeña variación de altura para evitar que las vacas se fusionen
     this.heightOffset = (Math.random() - 0.5) * 0.1; // Variación de -0.05 a +0.05
@@ -84,6 +95,10 @@ export class Cow {
 
   setupModel() {
     if (!this.model) return;
+    
+    // Add tag to model userData for identification
+    this.model.userData.tag = "Cow";
+    this.model.userData.cowController = this; // Reference back to this Cow instance
 
     // Escalar el modelo para que tenga la misma altura que el farmer (2 unidades)
     const box = new THREE.Box3().setFromObject(this.model);
@@ -290,5 +305,183 @@ export class Cow {
       // Crear una nueva barra de progreso
       this.progressBar = new ProgressBar(this, this.scene, 75000);
     }
+  }
+  
+  /**
+   * Register a hit from an alien
+   * @param {string} attackerId - ID of the attacking entity
+   * @returns {boolean} - true if cow died from this hit
+   */
+  onAlienHit(attackerId) {
+    // Ignore hits if dead
+    if (this.isDead) return false;
+    
+    // Debounce: prevent multiple hits in quick succession from same collision
+    const now = performance.now();
+    if (now - this._lastHitTime < this.invulnerabilityFrames) {
+      console.log(`[CowHit] Ignored duplicate hit (debounce) - Cow at (${this.model.position.x.toFixed(1)}, ${this.model.position.z.toFixed(1)})`);
+      return false;
+    }
+    
+    this._lastHitTime = now;
+    this.hitCount++;
+    
+    // Log the hit
+    const cowId = `Cow_${this.model.position.x.toFixed(0)}_${this.model.position.z.toFixed(0)}`;
+    console.log(`[CowHit] ${cowId} hit by ${attackerId} - Hits: ${this.hitCount}/${this.maxHealth}`);
+    
+    // Check if cow should die
+    if (this.hitCount >= this.maxHealth) {
+      console.log(`[CowDied] ${cowId} killed by ${attackerId} at ${new Date().toISOString()}`);
+      this.playDeathAnimationAndDestroy(attackerId);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Play Minecraft-style death animation and destroy the cow
+   * Uses the same destruction logic as corral walls
+   */
+  playDeathAnimationAndDestroy(attackerId) {
+    if (this.isDead) return;
+    this.isDead = true;
+    
+    // Immediately disable collisions and AI
+    if (this.model) {
+      this.model.userData.isDead = true;
+      this.model.userData.isCollidable = false;
+    }
+    
+    // Play death sound
+    try {
+      safePlaySfx('cowDeath', { object3D: this.model, volume: 1.0 });
+    } catch (e) {
+      console.warn('Could not play cow death sound:', e);
+    }
+    
+    // Create Minecraft-style death animation:
+    // 1. Rapid rotation and falling
+    // 2. Scale reduction
+    // 3. Fragmentation effect (particles)
+    const deathDuration = 1200; // 1.2 seconds total animation
+    const startTime = performance.now();
+    const startY = this.model.position.y;
+    const startScale = this.model.scale.clone();
+    
+    // Create particle effect (using smoke effect as base, customized for death)
+    let smokeEffect = null;
+    try {
+      // Import SmokeEffect dynamically
+      import('../effects/smokeEffect.js').then(({ SmokeEffect }) => {
+        smokeEffect = new SmokeEffect(this.scene, {
+          x: this.model.position.x,
+          y: this.model.position.y + 0.5,
+          z: this.model.position.z
+        });
+      }).catch(err => console.warn('Could not load SmokeEffect:', err));
+    } catch (e) {
+      console.warn('Could not create smoke effect:', e);
+    }
+    
+    // Animation loop
+    const animateDeath = () => {
+      if (!this.model || !this.scene) return;
+      
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / deathDuration, 1.0);
+      
+      if (progress < 1.0) {
+        // Rotation (spin wildly like Minecraft)
+        this.model.rotation.y += 0.3;
+        this.model.rotation.x = Math.sin(elapsed * 0.01) * 0.5;
+        this.model.rotation.z = Math.cos(elapsed * 0.01) * 0.5;
+        
+        // Fall and shrink
+        this.model.position.y = startY - (progress * 2); // Fall down
+        const scale = 1 - (progress * 0.8); // Shrink to 20% size
+        this.model.scale.copy(startScale).multiplyScalar(scale);
+        
+        // Fade opacity
+        this.model.traverse((child) => {
+          if (child.isMesh && child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => {
+                mat.transparent = true;
+                mat.opacity = 1 - progress;
+              });
+            } else {
+              child.material.transparent = true;
+              child.material.opacity = 1 - progress;
+            }
+          }
+        });
+        
+        requestAnimationFrame(animateDeath);
+      } else {
+        // Animation complete - remove from scene
+        this.destroyEntity();
+        
+        // Clean up smoke effect after a delay
+        if (smokeEffect) {
+          setTimeout(() => {
+            try {
+              smokeEffect.remove();
+            } catch (e) {}
+          }, 3000);
+        }
+      }
+    };
+    
+    // Hide progress bar immediately
+    if (this.progressBar) {
+      try {
+        this.progressBar.dispose();
+        this.progressBar = null;
+      } catch (e) {}
+    }
+    
+    // Start death animation
+    animateDeath();
+  }
+  
+  /**
+   * Destroy the cow entity (called at end of death animation)
+   * Matches the destroyWall logic from Corral
+   */
+  destroyEntity() {
+    if (!this.model) return;
+    
+    // Remove from scene
+    this.scene.remove(this.model);
+    
+    // Dispose of geometry and materials
+    this.model.traverse((child) => {
+      if (child.isMesh) {
+        if (child.geometry) {
+          child.geometry.dispose();
+        }
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(mat => mat.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      }
+    });
+    
+    // Clear reference
+    this.model = null;
+    
+    console.log('[CowDestroyed] Cow entity removed from scene');
+  }
+  
+  /**
+   * Check if this cow is alive
+   */
+  isAlive() {
+    return !this.isDead;
   }
 }
