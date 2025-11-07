@@ -451,33 +451,46 @@ export class Cow {
    * Matches the destroyWall logic from Corral
    */
   destroyEntity() {
-    if (!this.model) return;
-    
+    if (!this.model || !this.scene) return;
+
     // Remove from scene
-    this.scene.remove(this.model);
-    
-    // Dispose of geometry and materials
-    this.model.traverse((child) => {
-      if (child.isMesh) {
-        if (child.geometry) {
-          child.geometry.dispose();
-        }
-        if (child.material) {
-          if (Array.isArray(child.material)) {
-            child.material.forEach(mat => mat.dispose());
-          } else {
-            child.material.dispose();
+    try {
+      if (this.model.parent) {
+        this.model.parent.remove(this.model);
+      }
+    } catch (e) {
+      console.error('Error removing cow from scene:', e);
+    }
+
+    // Clean up resources
+    try {
+      // Dispose of geometry and materials
+      this.model.traverse((child) => {
+        if (child.isMesh) {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(material => {
+                if (material && material.map) material.map.dispose();
+                if (material) material.dispose();
+              });
+            } else {
+              if (child.material.map) child.material.map.dispose();
+              child.material.dispose();
+            }
           }
         }
-      }
-    });
-    
-    // Clear reference
-    this.model = null;
-    
-    console.log('[CowDestroyed] Cow entity removed from scene');
+      });
+    } catch (e) {
+      console.error('Error cleaning up cow resources:', e);
+    }
+
+    // Check if all cows are dead
+    if (window.checkAllCowsDead) {
+      window.checkAllCowsDead();
+    }
   }
-  
+
   /**
    * Check if this cow is alive
    */

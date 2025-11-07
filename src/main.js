@@ -533,9 +533,42 @@ const keys = {
 // init().catch(console.error);
 
 /**
+ * Función para verificar si todas las vacas están muertas
+ */
+function checkAllCowsDead() {
+  if (!cows || cows.length === 0) return false;
+  
+  const allDead = cows.every(cow => cow.isDead);
+  
+  if (allDead) {
+    // Mostrar pantalla de derrota
+    showDeathScreen({
+      title: '¡Todas las vacas han muerto!',
+      subtitle: 'Tu rebaño ha sido eliminado',
+      buttonText: 'Reiniciar'
+    });
+    
+    // Pausar el juego
+    if (window.pauseMenu) {
+      window.pauseMenu.togglePause(true);
+    }
+    
+    return true;
+  }
+  
+  return false;
+}
+
+// Hacer la función accesible globalmente
+window.checkAllCowsDead = checkAllCowsDead;
+
+/**
  * Crear 6 vacas dentro del corral
  */
 function createCows() {
+
+  // Asegurarse de que la función de verificación esté disponible
+  window.checkAllCowsDead = checkAllCowsDead;
 
   // Posiciones específicas para las 6 vacas dentro del corral
   const cowPositions = [
