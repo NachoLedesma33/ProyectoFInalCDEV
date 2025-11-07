@@ -4,7 +4,7 @@ export class Lighting {
   constructor(scene) {
     this.scene = scene;
     this.time = 0; // seconds
-    this.dayLength = 120; // seconds for a full day-night cycle
+    this.dayLength = 330; // seconds for a full day-night cycle (3:30 día + 2:00 noche)
     this.nightFactor = 0; // 0=day, 1=night
     this.init();
   }
@@ -77,7 +77,12 @@ export class Lighting {
     const rx = 140;   // radio horizontal X
     const rz = 90;    // radio horizontal Z
     const ry = 90;    // altura máxima del sol
-    const angle = phase * Math.PI * 2; // 0..2π
+    // Ajustar la fase para que el día dure 3:30 y la noche 2:00
+    const dayRatio = 210 / 330; // 3:30 de día / 5:30 total
+    const adjustedPhase = phase < dayRatio ? 
+      (phase / dayRatio) * 0.5 * Math.PI : // Día: 0 a π/2
+      Math.PI * 0.5 + ((phase - dayRatio) / (1 - dayRatio)) * 1.5 * Math.PI; // Noche: π/2 a 2π
+    const angle = adjustedPhase; // Usar el ángulo ajustado
 
     const sunX = Math.cos(angle) * rx;
     const sunY = Math.sin(angle) * ry; // negativo = noche, positivo = día
