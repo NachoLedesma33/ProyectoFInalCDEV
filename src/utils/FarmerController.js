@@ -350,9 +350,6 @@ export class FarmerController {
   this._runAudio = null; // reference (Promise or Audio instance) for looping run SFX
   this._milkingAudio = null; // reference (Promise or Audio instance) for milking loop SFX
 
-    // Crear HUD de coordenadas
-    this.createCoordinateDisplay();
-
     // Integrar con el sistema de combate y crear HUD de vida del jugador
     try {
       // Exponer controlador en model.userData para callbacks (integración con integrateEntityWithCombat)
@@ -554,61 +551,6 @@ export class FarmerController {
   }
 
   /**
-   * Crea un HUD rectangular HTML para mostrar coordenadas del farmer
-   */
-  createCoordinateDisplay() {
-    // Crear elemento HTML para el HUD
-    this.coordinateHUD = document.createElement("div");
-    this.coordinateHUD.id = "farmer-coordinate-hud";
-
-    // Estilo del HUD tipo D2 rectangular
-    this.coordinateHUD.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      left: auto;
-      min-width: 250px;
-      padding: 15px;
-      background: rgba(0, 0, 0, 0.8);
-      border: 2px solid #00ff00;
-      border-radius: 8px;
-      color: #00ff00;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      font-weight: bold;
-      z-index: 1000;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-      text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
-    `;
-
-    // Contenido inicial del HUD
-    this.coordinateHUD.innerHTML = `
-      <div style="margin-bottom: 8px; color: #ffffff; font-size: 12px;">FARMER COORDINATES</div>
-      <div id="coord-values">X: 0.0  Y: 0.0  Z: 0.0</div>
-    `;
-
-    // Añadir el HUD al documento
-    document.body.appendChild(this.coordinateHUD);
-
-    // Guardar referencia al elemento de valores
-    this.coordValuesElement = document.getElementById("coord-values");
-
-    // Actualizar coordenadas inicialmente
-    this.updateCoordinateDisplay();
-  }
-
-  /**
-   * Actualiza el texto del HUD de coordenadas
-   */
-  updateCoordinateDisplay() {
-    if (!this.coordValuesElement || !this.model) return;
-
-    const position = this.model.position;
-    const text = `X: ${position.x.toFixed(1)}  Y: ${position.y.toFixed(
-      1
-    )}  Z: ${position.z.toFixed(1)}`;
-
-    // Actualizar el contenido del HUD
     this.coordValuesElement.textContent = text;
   }
 
@@ -2424,9 +2366,6 @@ export class FarmerController {
       }
     }
 
-    // Actualizar el cartel de coordenadas
-    this.updateCoordinateDisplay();
-
     // Si hay arma equipada, actualizar su posición para seguir la mano
     if (this.equippedWeapon) {
       try {
@@ -2488,10 +2427,6 @@ export class FarmerController {
     try { this._clearNextPunchTimeout(); } catch (e) {}
     try { this._clearCombatExitTimer(); } catch (e) {}
 
-    // Limpiar el HUD de coordenadas
-    if (this.coordinateHUD && this.coordinateHUD.parentNode) {
-      this.coordinateHUD.parentNode.removeChild(this.coordinateHUD);
-    }
 
     // Limpiar el arma equipada si existe
     if (this.equippedWeapon && this.equippedWeapon.parent) {
