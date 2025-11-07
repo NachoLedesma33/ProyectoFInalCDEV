@@ -23,6 +23,20 @@ export class House {
     this.detectionDistance = 4.0; // Distancia de detección del farmer (aumentada)
     this.autoCloseDelay = 5000; // 5 segundos para autocierre
     this.autoCloseTimers = new Map(); // Timers para cada puerta
+    
+    // Sistema de control de techo
+    this.roofMeshes = []; // Almacena las mallas del techo
+    this.isInsideHouse = false; // Estado de si el jugador está dentro de la casa
+    
+    // Límites de la casa (ajustar según la posición y tamaño real)
+    this.houseBounds = {
+      minX: this.position.x - this.size.width/2 - 1,  // -1 para incluir el grosor de las paredes
+      maxX: this.position.x + this.size.width/2 + 1,
+      minZ: this.position.z - this.size.depth/2 - 1,
+      maxZ: this.position.z + this.size.depth/2 + 1,
+      minY: this.position.y,
+      maxY: this.position.y + this.size.height
+    };
 
     this.createHouse();
   }
@@ -542,6 +556,7 @@ export class House {
     roofBaseMesh.receiveShadow = true;
     this.scene.add(roofBaseMesh);
     this.walls.push(roofBaseMesh);
+    this.roofMeshes.push(roofBaseMesh); // Añadir a la lista de techos
 
     // Techo inclinado (forma triangular) - ajustado al nuevo tamaño del techo base
     const roofGeometry = new THREE.ConeGeometry((width + 1.0) / 1.4, 2, 4);
@@ -556,6 +571,7 @@ export class House {
     roofMesh.receiveShadow = true;
     this.scene.add(roofMesh);
     this.walls.push(roofMesh);
+    this.roofMeshes.push(roofMesh); // Añadir a la lista de techos
   }
 
   /**
@@ -929,13 +945,53 @@ export class House {
     });
   }
 
+  /**
+   * Verifica si el jugador está dentro del área de la casa
+   * @param {THREE.Vector3} position - Posición del jugador
+   * @returns {boolean} - True si el jugador está dentro de la casa
+   */
+  isPlayerInsideHouse(position) {
+    return position.x >= this.houseBounds.minX && 
+           position.x <= this.houseBounds.maxX &&
+           position.z >= this.houseBounds.minZ && 
+           position.z <= this.houseBounds.maxZ;
+  }
+  
+  /**
+   * Verifica si alguna puerta está abierta
+   * @returns {boolean} - True si al menos una puerta está abierta
+   */
+  isAnyDoorOpen() {
+    return this.gates.some(gate => gate.isOpen);
+  }
+  
+  /**
+   * Actualiza la visibilidad del techo basado en la posición del jugador
+   * @param {THREE.Vector3} playerPosition - Posición actual del jugador
+   */
+  updateRoofVisibility(playerPosition) {
+    if (!playerPosition) return;
+    
+    const wasInside = this.isInsideHouse;
+    this.isInsideHouse = this.isPlayerInsideHouse(playerPosition);
+    
+    // Solo actualizar la visibilidad si el estado cambió
+    if (wasInside !== this.isInsideHouse) {
+      const shouldHideRoof = this.isInsideHouse;
+      this.roofMeshes.forEach(mesh => {
+        mesh.visible = !shouldHideRoof;
+      });
+    }
+  }
+  
   update(delta, farmerPosition = null) {
     // Actualizar animaciones de las puertas
     this.updateGates(delta);
 
-    // Manejar interacción con el farmer
+    // Manejar interacción con el farmer y visibilidad del techo
     if (farmerPosition) {
       this.handleFarmerInteraction(farmerPosition);
+      this.updateRoofVisibility(farmerPosition);
     }
   }
 

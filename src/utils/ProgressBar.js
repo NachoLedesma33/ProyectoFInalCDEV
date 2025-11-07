@@ -155,8 +155,6 @@ export class ProgressBar {
     if (this.exclamationMark) {
       this.exclamationMark.visible = true;
     }
-    
-    console.log("¡Barra de progreso completada! Signo de exclamación mostrado.");
   }
   
   dispose() {

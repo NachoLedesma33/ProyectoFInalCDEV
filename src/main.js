@@ -838,6 +838,8 @@ function createLightPosts() {
     { x: -13.8, y: 0.0, z: 47.9 },
     { x: -84.2, y: 0.0, z: 33.2 },
     { x: -151.9, y: 0.0, z: 72.0 },
+    { x: -101.0, y: 0.0, z: 86.8 },
+    { x: -133.0, y: 0.0, z: 34.9 },
   ];
 
   // Altura ≈ 3x altura del farmer (fallback 6.0)
