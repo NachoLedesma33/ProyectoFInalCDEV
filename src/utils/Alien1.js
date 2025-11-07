@@ -195,16 +195,13 @@ export class Alien1 {
 			// Ensure sensible fallbacks to avoid T-poses when clips are missing or incompatible
 			try {
 				if (!this.animations.run && this.animations.walk) {
-					this.animations.run = this.animations.walk;
-					console.log("Alien1: fallback mapping 'run' -> 'walk' applied");
+					this.animations.run = this.animations.walk;;
 				}
 				if (!this.animations.walk && this.animations.run) {
-					this.animations.walk = this.animations.run;
-					console.log("Alien1: fallback mapping 'walk' -> 'run' applied");
+					this.animations.walk = this.animations.run;;
 				}
 				if (!this.animations.idle && this.animations.combatIdle) {
-					this.animations.idle = this.animations.combatIdle;
-					console.log("Alien1: fallback mapping 'idle' -> 'combatIdle' applied");
+					this.animations.idle = this.animations.combatIdle;;
 				}
 			} catch (e) {
 				// non-critical
@@ -223,15 +220,15 @@ export class Alien1 {
 
 				if (!this.animations.idle) {
 					const candidate = findKey(['idle','rest','stand']);
-					if (candidate) { this.animations.idle = this.animations[candidate]; console.log(`Alien1: auto-mapped idle -> '${candidate}'`); }
+					if (candidate) { this.animations.idle = this.animations[candidate]; }
 				}
 				if (!this.animations.walk) {
 					const candidate = findKey(['walk','walking','walk_forward','walkforward','stride']);
-					if (candidate) { this.animations.walk = this.animations[candidate]; console.log(`Alien1: auto-mapped walk -> '${candidate}'`); }
+					if (candidate) { this.animations.walk = this.animations[candidate]; }
 				}
 				if (!this.animations.run) {
 					const candidate = findKey(['run','sprint','fast','jog']);
-					if (candidate) { this.animations.run = this.animations[candidate]; console.log(`Alien1: auto-mapped run -> '${candidate}'`); }
+					if (candidate) { this.animations.run = this.animations[candidate]; }
 				}
 			} catch (e) {
 				// non-critical auto-mapping failure
@@ -459,7 +456,6 @@ export class Alien1 {
 		try {
 			if (this._animLogEnabled) {
 				const id = this.entityId || 'unknown';
-				console.log(`[Alien1:${id}] playAnimation -> ${name}`);
 			}
 			const clip = this.animations[name];
 			const action = this.mixer.clipAction(clip, this.model);
@@ -955,13 +951,11 @@ export class Alien1 {
 						};
 						
 						// Mostrar progreso cada cierto tiempo para no saturar la consola
-						if (Math.floor(corral.health) % 5 === 0 && Math.random() < 0.01) {
-							console.log(`Pared ${currentWall} - Salud restante: ${corral.health.toFixed(2)}/${corral.maxHealth}`);
+						if (Math.floor(corral.health) % 5 === 0 && Math.random() < 0.01) {;
 						}
 						
 						// If the corral's health is zero, we can pass through the wall
-						if (corral.health <= 0) {
-							console.log(`Corral wall ${currentWall} destroyed!`);
+						if (corral.health <= 0) {;
 							this._obstaclesBuilt = false;
 							return false;
 						}
@@ -1246,9 +1240,7 @@ export class Alien1 {
 			// Method 3: Check target type from AI system
 			const isTargetTypeCow = this.target.type === 'cow';
 			
-			if (!hasTagCow && !hasCowController && !isTargetTypeCow) {
-				// Not a cow - don't apply cow-specific damage
-				console.log(`[IgnoredHit] Target is not a cow - targetType: ${this.target.type}, tag: ${this.target.ref.userData?.tag}`);
+			if (!hasTagCow && !hasCowController && !isTargetTypeCow) {;
 				return;
 			}
 			
@@ -1384,10 +1376,7 @@ export class Alien1 {
 // Debug helpers globales
 window.debugAlien1 = function () {
 	if (window.alien1) {
-		console.log('Alien1 model:', !!window.alien1.model);
-		console.log('Mixer:', !!window.alien1.mixer);
-		console.log('Animations:', Object.keys(window.alien1.animations));
-		if (window.alien1.currentAction) console.log('Current clip:', window.alien1.currentAction.getClip().name);
+		if (window.alien1.currentAction);
 	} else {
 		console.warn('Alien1 no definido en window.alien1');
 	}
@@ -1406,7 +1395,6 @@ window.setAlienAnimLog = function (enabled) {
 		return;
 	}
 	window.aliens.forEach(a => a.setAnimationLogging && a.setAnimationLogging(enabled));
-	console.log(`Alien animation logging ${enabled ? 'enabled' : 'disabled'} for ${window.aliens.length} aliens.`);
 };
 
 // Print a detailed diagnosis of animation compatibility/retarget

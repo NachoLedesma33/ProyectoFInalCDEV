@@ -2,7 +2,7 @@
 export const storySlides = [
   {
     image: "./src/assets/imagen1.png",
-    text: "BUM! El granjero espacial Kael sintió como su viaje se desmoronaba luego de chocar un asteroide",
+    text: "!BOOM! El granjero espacial ''Kael'' sintió como su viaje se desmoronaba luego de chocar un asteroide",
   },
   {
     image: "./src/assets/imagen2.png",
@@ -14,7 +14,7 @@ export const storySlides = [
   },
   {
     image: "./src/assets/imagen4.png",
-    text: "Luego de tanto buscar, Kael encontró a los aliens nativos",
+    text: "Luego de tanto buscar, ''Kael'' por fin encontró a los aliens nativos!",
   },
   {
     image: "./src/assets/imagen5.png",
@@ -22,11 +22,11 @@ export const storySlides = [
   },
   {
     image: "./src/assets/imagen6.png",
-    text: "Los aliens aceptaron pero le dieron una advertencia para Kael... Algunos aliens malvados trataran de tomar las vacas sin nada a cambio...",
+    text: "Los aliens aceptaron pero le dieron una advertencia para Kael... Algunos aliens hostiles intentarán hacerte daño a tí y tu rebaño.",
   },
   {
     image: "./src/assets/imagen7.png",
-    text: "Entonces Kael miro al horizonte y dijo: ''Protegeré a toda costa mi ganado!!'' ",
+    text: "Entonces ''Kael'' miro al horizonte y dijo: ''Protegeré a toda costa mi ganado!!'' ",
   },
 ];
 

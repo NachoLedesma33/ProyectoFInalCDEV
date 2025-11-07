@@ -21,7 +21,7 @@ export class Market {
         name: "Núcleo de Fusión",
         description: "Alimenta el motor principal del transbordador con energía cuántica estable",
         image: "../assets/Núcleo de Fusión.png",
-        price: 500,
+        price: 25,
         owned: false
       },
       {
@@ -29,7 +29,7 @@ export class Market {
         name: "Membrana de Vacío",
         description: "Un panel flexible que se usa para sellar grietas en el casco",
         image: "../assets/Membrana de Vacío.png",
-        price: 300,
+        price: 20,
         owned: false
       },
       {
@@ -37,7 +37,7 @@ export class Market {
         name: "Chip de Navegación",
         description: "Un microprocesador que predice rutas seguras a través del espacio",
         image: "../assets/Chip de Navegación.png",
-        price: 400,
+        price: 30,
         owned: false
       },
       {
@@ -45,7 +45,7 @@ export class Market {
         name: "Catalizador de Plasma",
         description: "Cristal que contiene una sustancia incandescente que reacciona a la electricidad",
         image: "../assets/Catalizador de Plasma.png",
-        price: 450,
+        price: 40,
         owned: false
       },
       {
@@ -53,7 +53,7 @@ export class Market {
         name: "Llave Multipropósito",
         description: "Herramienta avanzada que permite manipular la masa de los objetos",
         image: "../assets/Llave de Ajuste multiproposito.png",
-        price: 350,
+        price: 25,
         owned: false
       },
       {
@@ -61,7 +61,7 @@ export class Market {
         name: "Cristal de Poder",
         description: "Potencia el motor para volver a casa",
         image: "../assets/Fragmento de Cristal.png",
-        price: 600,
+        price: 10,
         owned: false
       }
     ];
@@ -846,7 +846,7 @@ export class Market {
         name: "Núcleo de Fusión",
         description: "Alimenta el motor principal del transbordador con energía cuántica estable",
         image: "../assets/Núcleo de Fusión.png",
-        price: 50,
+        price: 25,
         owned: false
       },
       {
@@ -854,7 +854,7 @@ export class Market {
         name: "Membrana de Vacío",
         description: "Un panel flexible que se usa para sellar grietas en el casco",
         image: "../assets/Membrana de Vacío.png",
-        price: 30,
+        price: 20,
         owned: false
       },
       {
@@ -862,7 +862,7 @@ export class Market {
         name: "Chip de Navegación",
         description: "Un microprocesador antiguo que predice rutas seguras a través de tormentas espaciales y campos de asteroides",
         image: "../assets/Chip de Navegación.png",
-        price: 40,
+        price: 30,
         owned: false
       },
       {
@@ -870,7 +870,7 @@ export class Market {
         name: "Catalizador de Plasma",
         description: "Cristal flotante que contiene una sustancia incandescente que reacciona al contacto con la electricidad",
         image: "../assets/Catalizador de Plasma.png",
-        price: 45,
+        price: 40,
         owned: false
       },
       {
@@ -878,7 +878,7 @@ export class Market {
         name: "Llave Multipropósito",
         description: "Herramienta de ingeniería avanzada que permite manipular la masa de los objetos para montarlos",
         image: "../assets/Llave de Ajuste multipropósito.png",
-        price: 35,
+        price: 25,
         owned: false
       },
       {
@@ -886,7 +886,7 @@ export class Market {
         name: "Cristal de Poder",
         description: "Potencia el poder del motor para volver a casa",
         image: "../assets/Fragmento de Cristal.png",
-        price: 60,
+        price: 10,
         owned: false
       }
     ];

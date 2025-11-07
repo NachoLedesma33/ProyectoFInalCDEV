@@ -79,7 +79,7 @@ export class FarmerController {
     this.cowCollisionStartTime = 0;
     this.currentCollidedCow = null; // Vaca con la que se colisionó actualmente
     this.kneelingDownDuration = 2000; // 2 segundos para la animación de transición
-    this.kneelingDuration = 15000; // 15 segundos para la animación final agachada
+    this.kneelingDuration = 8000; // 8 segundos para la animación final agachada
 
     // Tamaño unificado del bounding box del personaje para todas las colisiones
     this.characterSize = new THREE.Vector3(1, 1, 1);

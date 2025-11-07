@@ -1466,7 +1466,7 @@ function createWaveWarningElement() {
   el.style.textAlign = 'center';
   el.style.zIndex = '10000';
   el.style.pointerEvents = 'none';
-  el.textContent = 'Cuidado: los aliens comenzarán a atacar para llevarse las vacas. Debes defenderlas y escapar';
+  el.textContent = 'Cuidado: los aliens comenzarán a atacar al rebaño. Debes defenderlas y escapar';
   document.body.appendChild(el);
 
   // Auto-ocultar luego de unos segundos

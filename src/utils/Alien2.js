@@ -1266,8 +1266,7 @@ export class Alien2 {
     ) {
       this.interactionSystem.dialogueHud.style.display = "none";
       this.interactionSystem.isDialogueOpen = false;
-      this.interactionSystem.playerStayTime = 0; // Resetear tiempo
-      console.log("Diálogo cerrado con Alien2");
+      this.interactionSystem.playerStayTime = 0; ;
 
       // Ejecutar callback opcional registrado en openDialogue()
       try {
@@ -1329,7 +1328,6 @@ window.debugAlien2Movement = function () {
     // Verificar detalles de cada animación
     Object.keys(window.alien2.animations).forEach((animName) => {
       const anim = window.alien2.animations[animName];
-      console.log(`  ${animName}:`, anim.name, `(${anim.duration}s)`);
     });
   };
 
