@@ -477,10 +477,22 @@ export class AudioManager {
   // Efectos (SFX)
   // ========================
   async playSFX(key, { object3D = null, position = null, volume = 1, loop = false } = {}) {
-    const url = AUDIO.sfx[key];
-    if (!url) return null;
+    const src = AUDIO.sfx[key];
+    if (!src) return null;
     try {
-      const buffer = await this._loadBuffer(url);
+      // Permitir múltiples rutas de SFX (fallback): array o string
+      const urls = Array.isArray(src) ? src : [src];
+      let buffer = null;
+      let pickedUrl = null;
+      for (const u of urls) {
+        try {
+          buffer = await this._loadBuffer(u);
+          pickedUrl = u;
+          if (buffer) break;
+        } catch (_) {
+          // intenta siguiente URL
+        }
+      }
       if (!buffer) return null;
 
       const isPositional = !!(object3D || position);

@@ -1,42 +1,72 @@
-// utils/consoleFilter.js
+// utils/consoleFilter.js — silenciar absolutamente toda la consola y errores del navegador
 
-const originalWarn = console.warn;
-const originalError = console.error;
+(function () {
+  if (window.__CONSOLE_SILENCED__) return; // evitar doble aplicación
+  window.__CONSOLE_SILENCED__ = true;
 
-console.warn = function (...args) {
-    const filteredWarnings = [
-        'THREE.FBXLoader',
-        'Multiple instances of Three.js',
-        'Permissions-Policy',
-        'Origin trial controlled feature',
-        'T_Stones_Metalic.png',
-        'T_Stones_Roughness.png'
-    ];
-    const argStrs = args.map(a => {
-        if (typeof a === 'string') return a;
-        try { if (a && typeof a.message === 'string') return a.message; } catch (_) {}
-        try { return JSON.stringify(a); } catch (_) { return String(a); }
-    });
-    if (!filteredWarnings.some(warning => argStrs.some(s => typeof s === 'string' && s.includes(warning)))) {
-        originalWarn.apply(console, args);
+  // Guardar métodos originales por si se quiere reactivar
+  const originalConsole = { ...console };
+  Object.defineProperty(window, '__ORIGINAL_CONSOLE__', {
+    value: originalConsole,
+    configurable: false,
+    writable: false,
+    enumerable: false,
+  });
+
+  const noop = function () {};
+  const methods = [
+    'log', 'info', 'warn', 'error', 'debug', 'trace', 'table',
+    'group', 'groupCollapsed', 'groupEnd',
+    'time', 'timeEnd', 'timeLog',
+    'assert', 'dir', 'dirxml', 'count', 'countReset',
+    'clear', 'profile', 'profileEnd'
+  ];
+
+  for (const m of methods) {
+    try { console[m] = noop; } catch (_) {}
+  }
+
+  // Silenciar errores globales (incluye muchos 404/GET y runtime errors)
+  try {
+    window.onerror = function () { return true; };
+    window.onunhandledrejection = function () { return true; };
+
+    // Captura en fase de captura para recursos (<img>, loaders, etc.)
+    window.addEventListener('error', function (e) {
+      try {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      } catch (_) {}
+      return false;
+    }, true);
+
+    window.addEventListener('unhandledrejection', function (e) {
+      try {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      } catch (_) {}
+      return false;
+    }, true);
+
+    // Silenciar violaciones de políticas (CSP, Permissions-Policy, etc.) si el navegador las emite como evento
+    window.addEventListener('securitypolicyviolation', function (e) {
+      try {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      } catch (_) {}
+      return false;
+    }, true);
+  } catch (_) {}
+
+  // API para reactivar (opcional)
+  window.enableConsoleLogs = function () {
+    for (const m of methods) {
+      try { console[m] = originalConsole[m] || noop; } catch (_) {}
     }
-};
-
-console.error = function (...args) {
-    const filteredErrors = [
-        'AudioContext',
-        'Permissions-Policy',
-        'Origin trial controlled feature',
-        // Expected 404s from FBX-referenced textures we override later
-        'T_Stones_Metalic.png',
-        'T_Stones_Roughness.png'
-    ];
-    const argStrs = args.map(a => {
-        if (typeof a === 'string') return a;
-        try { if (a && typeof a.message === 'string') return a.message; } catch (_) {}
-        try { return JSON.stringify(a); } catch (_) { return String(a); }
-    });
-    if (!filteredErrors.some(errFrag => argStrs.some(s => typeof s === 'string' && s.includes(errFrag)))) {
-        originalError.apply(console, args);
-    }
-};
+    try {
+      window.onerror = null;
+      window.onunhandledrejection = null;
+    } catch (_) {}
+    window.__CONSOLE_SILENCED__ = false;
+  };
+})();

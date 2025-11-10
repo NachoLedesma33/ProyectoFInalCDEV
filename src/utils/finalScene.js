@@ -2,6 +2,7 @@
  * Módulo para manejar la escena final y la UI asociada.
  * Exporta funciones compat en top-level pero internamente usa una clase.
  */
+import { safePlaySfx } from './audioHelpers.js';
 export class FinalScene {
   constructor({ shipRepair, cameraManager } = {}) {
     this.shipRepair = shipRepair;
@@ -73,6 +74,9 @@ export class FinalScene {
     } catch (e) {
       try { console.warn('No se pudo iniciar música final', e); } catch (_) {}
     }
+
+    // Disparar un sonido corto de victoria alegre
+    try { safePlaySfx('victory', { volume: 0.95 }); } catch (_) {}
 
     // Imagen de fondo (reusa la clase .background-image pero aseguramos posición y z-index)
     const bg = document.createElement("div");

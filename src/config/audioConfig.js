@@ -41,6 +41,11 @@ export const AUDIO = {
     alienVoice2: "./src/assets/audio/sfx/alien_voice2.wav",
     popup: "./src/assets/audio/ui/popup.wav",
     cashRegister: "./src/assets/audio/ui/cash_register.wav",
+    // Sonido de victoria: primero intenta un sample de cheer externo, luego fallback local
+    victory: [
+      "https://assets.mixkit.co/sfx/preview/mixkit-crowd-cheering-231.mp3",
+      "./src/assets/audio/sfx/victory_cheer.mp3"
+    ],
 
     // hit: "./src/assets/audio/sfx/hit.wav",
   },
