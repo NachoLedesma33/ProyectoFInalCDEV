@@ -109,25 +109,11 @@ export class Stone {
   getModel() {
     return this.model;
   }
-
-  /**
-   * Verifica si una posición colisiona con esta piedra usando sistema robusto
-   * @param {THREE.Vector3} position - Posición a verificar
-   * @param {THREE.Vector3} characterSize - Tamaño del bounding box del personaje
-   * @returns {boolean} - True si hay colisión
-   */
   checkCollision(position, characterSize) {
     if (!this.model) return false;
 
     return this.checkRobustCollision(position, characterSize);
   }
-
-  /**
-   * Sistema de colisión robusto que evita que el farmer atraviese las piedras
-   * @param {THREE.Vector3} position - Posición a verificar
-   * @param {THREE.Vector3} characterSize - Tamaño del personaje
-   * @returns {boolean} - True si hay colisión
-   */
   checkRobustCollision(position, characterSize) {
     const stoneBox = this.getBoundingBox();
 
@@ -171,10 +157,6 @@ export class Stone {
     return collision;
   }
 
-  /**
-   * Obtiene el bounding box de la piedra para depuración
-   * @returns {THREE.Box3} - Bounding box de la piedra
-   */
   getBoundingBox() {
     if (!this.model) {
       return new THREE.Box3();

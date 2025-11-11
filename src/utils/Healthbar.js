@@ -1,5 +1,4 @@
-// Healthbar HUD para el granjero
-// Crea un HUD simple en DOM y lo actualiza según un HealthComponent
+
 
 export class HealthBar {
   constructor(opts = {}) {
@@ -7,7 +6,7 @@ export class HealthBar {
     this.width = opts.width || 300;
     this.height = opts.height || 24;
     this.showNumbers = opts.showNumbers !== undefined ? opts.showNumbers : true;
-    this.position = opts.position || 'top-left'; // 'top-left' | 'bottom-center' | custom
+    this.position = opts.position || 'top-left';
     this.opts = opts || {};
     this.label = opts.label || '';
     this.container = null;
@@ -22,16 +21,13 @@ export class HealthBar {
   }
 
   _createDom() {
-    // Contenedor principal
     const wrapper = document.createElement('div');
     wrapper.id = this.id;
     wrapper.style.position = 'fixed';
-    // Positioning based on option
     if (this.position === 'bottom-center') {
       wrapper.style.left = '50%';
       wrapper.style.bottom = (this.opts && this.opts.y !== undefined) ? `${this.opts.y}px` : '20px';
       wrapper.style.transform = 'translateX(-50%)';
-      // ensure top is not set
       wrapper.style.top = 'auto';
     } else if (this.position === 'top-center') {
       wrapper.style.left = '50%';
@@ -48,14 +44,11 @@ export class HealthBar {
     wrapper.style.borderRadius = '6px';
     wrapper.style.boxShadow = '0 6px 18px rgba(0,0,0,0.6)';
     wrapper.style.padding = '4px';
-  // Keep HUD elements behind modal overlays (pause/menu). Pause overlay uses z-index ~10005,
-  // so choose a value lower than that so the pause modal visually appears on top.
   wrapper.style.zIndex = 9000;
     wrapper.style.display = 'flex';
     wrapper.style.alignItems = 'center';
     wrapper.style.gap = '8px';
 
-    // Etiqueta izquierda (opcional)
     const label = document.createElement('div');
     label.style.minWidth = '72px';
     label.style.color = '#fff';
@@ -66,7 +59,6 @@ export class HealthBar {
     label.style.textTransform = 'uppercase';
     label.textContent = (this.label || '').toString();
 
-    // barra de fondo
     const barBg = document.createElement('div');
     barBg.style.flex = '1';
     barBg.style.height = '100%';
@@ -75,7 +67,6 @@ export class HealthBar {
     barBg.style.overflow = 'hidden';
     barBg.style.position = 'relative';
 
-    // fill
     const fill = document.createElement('div');
     fill.style.position = 'absolute';
     fill.style.left = '0';
@@ -88,7 +79,6 @@ export class HealthBar {
 
     barBg.appendChild(fill);
 
-    // Texto numérico
     const text = document.createElement('div');
     text.style.minWidth = '64px';
     text.style.color = '#fff';
@@ -117,12 +107,10 @@ export class HealthBar {
       this.container.style.top = opts.y !== undefined ? `${opts.y}px` : '20px';
     }
 
-    // actualizar etiqueta si se pasa en attach
     if (opts.label !== undefined && this.labelEl) {
       this.labelEl.textContent = (opts.label || '').toString();
     }
 
-    // start RAF loop
     if (!this._raf) this._raf = requestAnimationFrame(this._tick.bind(this));
   }
 
@@ -133,10 +121,8 @@ export class HealthBar {
     const pct = Math.max(0, Math.min(1, current / max));
 
     const pctCss = `${(pct * 100).toFixed(1)}%`;
-    // update width
     this.fill.style.width = pctCss;
 
-    // cambio de color dependiendo del %
     if (pct > 0.6) {
       this.fill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
     } else if (pct > 0.3) {
@@ -147,7 +133,6 @@ export class HealthBar {
 
     if (this.showNumbers) this.text.textContent = `${Math.round(current)}/${Math.round(max)}`;
 
-    // flash when damaged
     if (this._lastValue !== null && current < this._lastValue) {
       this._flash();
     }
@@ -175,7 +160,6 @@ export class HealthBar {
   }
 }
 
-// Helper global para crear el HUD del jugador (granjero)
 window.createPlayerHealthBar = function (hc, opts) {
   const hb = new HealthBar(Object.assign({ id: 'player-healthbar', width: 320, height: 28 }, opts || {}));
   hb.attachTo(hc, opts || {});

@@ -1,42 +1,39 @@
-import './utils/consoleFilter.js';
-
-// Importaciones de Three.js y módulos personalizados
-import PauseMenu from './utils/pauseMenu.js';
+import "./utils/consoleFilter.js";
+import PauseMenu from "./utils/pauseMenu.js";
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js";
-
-// Módulos personalizados
-import { Terrain } from "./utils/Terrain.js"; // Manejo del terreno
-import { Lighting } from "./utils/lighting.js"; // Sistema de iluminación
-// ControlsManager se usa internamente en CameraManager; no es necesario importarlo aquí
-import { ModelLoader } from "./utils/modelLoader.js"; // Carga de modelos 3D
+import { Terrain } from "./utils/Terrain.js";
+import { Lighting } from "./utils/lighting.js";
+import { ModelLoader } from "./utils/modelLoader.js"; 
 import * as SkeletonUtils from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/utils/SkeletonUtils.js";
-import { Skybox } from "./utils/Skybox.js"; // Fondo 360°
-import modelConfig from "./config/modelConfig.js"; // Configuración de modelos
-import { CameraManager } from "./utils/CameraManager.js"; // Gestor de cámara
-import { FarmerController } from "./utils/FarmerController.js"; // Controlador del granjero
-import { Corral } from "./utils/Corral.js"; // Corral con sistema de colisiones
-import { SpaceShuttle } from "./utils/SpaceShuttle.js"; // Space Shuttle Orbiter
-import { Cow } from "./utils/Cow.js"; // Modelo de vaca
-import { Stone } from "./utils/Stone.js"; // Modelo de piedra
-import { Crystal } from "./utils/Crystal.js"; // Modelo de cristal
-import { House } from "./utils/House.js"; // Casa con puerta interactiva
-import { Market } from "./utils/Market.js"; // Mercado con ventana frontal
-import BuildingManager from './utils/building.js';
-import { Inventory } from "./utils/Inventory.js"; // Inventario del personaje
-import { initObjectives } from "./utils/objectives.js"; // Sistema de objetivos
-import { Alien2 } from "./utils/Alien2.js"; // Alien2
+import { Skybox } from "./utils/Skybox.js";
+import modelConfig from "./config/modelConfig.js";
+import { CameraManager } from "./utils/CameraManager.js";
+import { FarmerController } from "./utils/FarmerController.js";
+import { Corral } from "./utils/Corral.js";
+import { SpaceShuttle } from "./utils/SpaceShuttle.js";
+import { Cow } from "./utils/Cow.js";
+import { Stone } from "./utils/Stone.js";
+import { Crystal } from "./utils/Crystal.js"; 
+import { House } from "./utils/House.js";
+import { Market } from "./utils/Market.js";
+import BuildingManager from "./utils/building.js";
+import { Inventory } from "./utils/Inventory.js";
+import { initObjectives } from "./utils/objectives.js";
+import { Alien2 } from "./utils/Alien2.js";
 import { ShipRepair } from "./utils/ShipRepair.js";
-import { SmokeEffect } from "./utils/smokeEffect.js"; // Efecto de humo
+import { SmokeEffect } from "./utils/smokeEffect.js";
 import { showFinalScene } from "./utils/finalScene.js";
 import { makeMinimap } from "./utils/minimap.js";
 import { createStoryManager, storySlides } from "./utils/startMenu.js";
 import createSoundHUD from "./utils/soundHUD.js";
-import CombatSystem, { integrateEntityWithCombat } from "./utils/CombatSystem.js";
+import CombatSystem, {
+  integrateEntityWithCombat,
+} from "./utils/CombatSystem.js";
 import HealthBar from "./utils/Healthbar.js";
 import showDeathScreen from "./utils/DeathScreen.js";
 import WaveManager from "./utils/waves.js";
 import { AudioManager } from "./utils/AudioManager.js";
-import { safePlaySfx } from './utils/audioHelpers.js';
+import { safePlaySfx } from "./utils/audioHelpers.js";
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js";
 import LightPost from "./utils/LightPost.js";
 
@@ -64,136 +61,216 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-// (moved to global scope below)
+    // (moved to global scope below)
 
-// Clonar el Alien2 del mercado y colocarlo en posiciones fijas (solo visual)
-function createAlien2Clones() {
-  try {
-    try { if (!window.alien2Clones) window.alien2Clones = []; } catch (_) {}
-    // Remove any existing clones from the scene to avoid stacking
-    try {
-      if (Array.isArray(window.alien2Clones)) {
-        for (let i = 0; i < window.alien2Clones.length; i++) {
-          const c = window.alien2Clones[i];
-          try { if (c && c.parent) c.parent.remove(c); } catch (_) {}
-        }
-        window.alien2Clones.length = 0;
-      }
-    } catch (_) {}
-    // Also remove any previous static Alien2 instances (first ones) so only the last ones remain
-    try {
-      if (Array.isArray(window.alien2Statics)) {
-        for (let i = 0; i < window.alien2Statics.length; i++) {
-          const a = window.alien2Statics[i];
-          try { if (a && a.model && a.model.parent) a.model.parent.remove(a.model); } catch (_) {}
-        }
-        window.alien2Statics.length = 0;
-      }
-    } catch (_) {}
-    // reset mixers each time we recreate clones
-    try { alien2CloneMixers.length = 0; } catch (_) {}
-    if (!window.alien2 || !window.alien2.model) return;
-    const base = window.alien2.model;
-    const idlePath = modelConfig.getPath(modelConfig.characters.alien2.animations.idle);
-    const entries = [
-      { pos: { x: -81.2, y: 0.0, z: -65.9 }, look: { x: -79.9, y: 0.0, z: -64.4 } },
-      { pos: { x: -81.6, y: 0.0, z: -62.4 }, look: { x: -79.9, y: 0.0, z: -64.4 } },
-      { pos: { x: -153.2, y: 0.0, z: -119.9 }, look: { x: -149.1, y: 0.0, z: -118.6 } },
-      { pos: { x: -83.3, y: 0.0, z: 37.2 }, look: { x: -79.3, y: 0.0, z: 38.9 } },
-      { pos: { x: -81.1, y: 0.0, z: 36.6 }, look: { x: -79.3, y: 0.0, z: 38.9 } },
-    ];
-    const clones = [];
-    for (const e of entries) {
+    // Clonar el Alien2 del mercado y colocarlo en posiciones fijas (solo visual)
+    function createAlien2Clones() {
       try {
-        const clone = SkeletonUtils.clone(base);
-        clone.position.set(e.pos.x, (e.pos.y || 0) + 0.2, e.pos.z);
-        clone.visible = true;
-        clone.traverse(o => { try { o.frustumCulled = true; o.visible = true; } catch(_){} });
-        const lookTarget = new THREE.Vector3(e.look.x, clone.position.y, e.look.z);
-        try { clone.lookAt(lookTarget); } catch (_) {}
-        scene.add(clone);
-
-        // Create an AnimationMixer for the clone and load Idle animation
         try {
-          const mixer = new THREE.AnimationMixer(clone);
-          alien2CloneMixers.push(mixer);
-          const loader = new FBXLoader();
-          loader.load(
-            idlePath,
-            (fbx) => {
-              try {
-                if (fbx && fbx.animations && fbx.animations.length > 0) {
-                  const clip = fbx.animations[0];
-                  const action = mixer.clipAction(clip);
-                  action.loop = THREE.LoopRepeat;
-                  action.clampWhenFinished = false;
-                  action.play();
-                }
-              } catch (_) {}
-            },
-            undefined,
-            () => {}
-          );
+          if (!window.alien2Clones) window.alien2Clones = [];
         } catch (_) {}
-        clones.push(clone);
+        // Remove any existing clones from the scene to avoid stacking
+        try {
+          if (Array.isArray(window.alien2Clones)) {
+            for (let i = 0; i < window.alien2Clones.length; i++) {
+              const c = window.alien2Clones[i];
+              try {
+                if (c && c.parent) c.parent.remove(c);
+              } catch (_) {}
+            }
+            window.alien2Clones.length = 0;
+          }
+        } catch (_) {}
+        // Also remove any previous static Alien2 instances (first ones) so only the last ones remain
+        try {
+          if (Array.isArray(window.alien2Statics)) {
+            for (let i = 0; i < window.alien2Statics.length; i++) {
+              const a = window.alien2Statics[i];
+              try {
+                if (a && a.model && a.model.parent)
+                  a.model.parent.remove(a.model);
+              } catch (_) {}
+            }
+            window.alien2Statics.length = 0;
+          }
+        } catch (_) {}
+        // reset mixers each time we recreate clones
+        try {
+          alien2CloneMixers.length = 0;
+        } catch (_) {}
+        if (!window.alien2 || !window.alien2.model) return;
+        const base = window.alien2.model;
+        const idlePath = modelConfig.getPath(
+          modelConfig.characters.alien2.animations.idle
+        );
+        const entries = [
+          {
+            pos: { x: -81.2, y: 0.0, z: -65.9 },
+            look: { x: -79.9, y: 0.0, z: -64.4 },
+          },
+          {
+            pos: { x: -81.6, y: 0.0, z: -62.4 },
+            look: { x: -79.9, y: 0.0, z: -64.4 },
+          },
+          {
+            pos: { x: -153.2, y: 0.0, z: -119.9 },
+            look: { x: -149.1, y: 0.0, z: -118.6 },
+          },
+          {
+            pos: { x: -83.3, y: 0.0, z: 37.2 },
+            look: { x: -79.3, y: 0.0, z: 38.9 },
+          },
+          {
+            pos: { x: -81.1, y: 0.0, z: 36.6 },
+            look: { x: -79.3, y: 0.0, z: 38.9 },
+          },
+        ];
+        const clones = [];
+        for (const e of entries) {
+          try {
+            const clone = SkeletonUtils.clone(base);
+            clone.position.set(e.pos.x, (e.pos.y || 0) + 0.2, e.pos.z);
+            clone.visible = true;
+            clone.traverse((o) => {
+              try {
+                o.frustumCulled = true;
+                o.visible = true;
+              } catch (_) {}
+            });
+            const lookTarget = new THREE.Vector3(
+              e.look.x,
+              clone.position.y,
+              e.look.z
+            );
+            try {
+              clone.lookAt(lookTarget);
+            } catch (_) {}
+            scene.add(clone);
+
+            // Create an AnimationMixer for the clone and load Idle animation
+            try {
+              const mixer = new THREE.AnimationMixer(clone);
+              alien2CloneMixers.push(mixer);
+              const loader = new FBXLoader();
+              loader.load(
+                idlePath,
+                (fbx) => {
+                  try {
+                    if (fbx && fbx.animations && fbx.animations.length > 0) {
+                      const clip = fbx.animations[0];
+                      const action = mixer.clipAction(clip);
+                      action.loop = THREE.LoopRepeat;
+                      action.clampWhenFinished = false;
+                      action.play();
+                    }
+                  } catch (_) {}
+                },
+                undefined,
+                () => {}
+              );
+            } catch (_) {}
+            clones.push(clone);
+          } catch (_) {}
+        }
+        try {
+          window.alien2Clones = clones;
+        } catch (_) {}
+        try {
+          window.createAlien2Clones = createAlien2Clones;
+        } catch (_) {}
+        try {
+          return false;
+        } catch (_) {}
       } catch (_) {}
     }
-    try { window.alien2Clones = clones; } catch (_) {}
-    try { window.createAlien2Clones = createAlien2Clones; } catch (_) {}
-    try { return false } catch(_){ }
-  } catch (_) {}
-}
-try { window.createAlien2Clones = createAlien2Clones; } catch (_) {}
-
- 
-
-/**
- * Crear Alien2 estáticos (idle) en posiciones fijas mirando a un objetivo
- */
-async function createAlien2Statics() {
-  const entries = [
-    { pos: { x: -81.2, y: 0.0, z: -65.9 }, look: { x: -79.9, y: 0.0, z: -64.4 } },
-    { pos: { x: -81.6, y: 0.0, z: -62.4 }, look: { x: -79.9, y: 0.0, z: -64.4 } },
-    { pos: { x: -153.2, y: 0.0, z: -119.9 }, look: { x: -149.1, y: 0.0, z: -118.6 } },
-    { pos: { x: -83.3, y: 0.0, z: 37.2 }, look: { x: -79.3, y: 0.0, z: 38.9 } },
-    { pos: { x: -81.1, y: 0.0, z: 36.6 }, look: { x: -79.3, y: 0.0, z: 38.9 } },
-  ];
-
-  for (const e of entries) {
     try {
-      const a = new Alien2(scene, modelLoader, e.pos, e.look);
-      await a.load();
-      // Asegurar idle y sin movimiento
-      try { a.forceIdleAnimation && a.forceIdleAnimation(); } catch (_) {}
-      try { a.movementSystem && (a.movementSystem.isActive = false); } catch (_) {}
-      // Nudge Y up slightly and ensure orientation after load
-      try {
-        if (a.model) {
-          a.model.position.set(e.pos.x, (e.pos.y || 0) + 0.2, e.pos.z);
-          a.model.visible = true;
-          a.model.traverse(o => { try { o.frustumCulled = true; o.visible = true; } catch(_){} });
-          const lookTarget = new THREE.Vector3(e.look.x, a.model.position.y, e.look.z);
-          const doOrient = () => { try { a.model && a.model.lookAt(lookTarget); } catch (_) {} };
-          doOrient();
-          setTimeout(doOrient, 200);
-          setTimeout(doOrient, 800);
+      window.createAlien2Clones = createAlien2Clones;
+    } catch (_) {}
+
+    /**
+     * Crear Alien2 estáticos (idle) en posiciones fijas mirando a un objetivo
+     */
+    async function createAlien2Statics() {
+      const entries = [
+        {
+          pos: { x: -81.2, y: 0.0, z: -65.9 },
+          look: { x: -79.9, y: 0.0, z: -64.4 },
+        },
+        {
+          pos: { x: -81.6, y: 0.0, z: -62.4 },
+          look: { x: -79.9, y: 0.0, z: -64.4 },
+        },
+        {
+          pos: { x: -153.2, y: 0.0, z: -119.9 },
+          look: { x: -149.1, y: 0.0, z: -118.6 },
+        },
+        {
+          pos: { x: -83.3, y: 0.0, z: 37.2 },
+          look: { x: -79.3, y: 0.0, z: 38.9 },
+        },
+        {
+          pos: { x: -81.1, y: 0.0, z: 36.6 },
+          look: { x: -79.3, y: 0.0, z: 38.9 },
+        },
+      ];
+
+      for (const e of entries) {
+        try {
+          const a = new Alien2(scene, modelLoader, e.pos, e.look);
+          await a.load();
+          // Asegurar idle y sin movimiento
+          try {
+            a.forceIdleAnimation && a.forceIdleAnimation();
+          } catch (_) {}
+          try {
+            a.movementSystem && (a.movementSystem.isActive = false);
+          } catch (_) {}
+          // Nudge Y up slightly and ensure orientation after load
+          try {
+            if (a.model) {
+              a.model.position.set(e.pos.x, (e.pos.y || 0) + 0.2, e.pos.z);
+              a.model.visible = true;
+              a.model.traverse((o) => {
+                try {
+                  o.frustumCulled = true;
+                  o.visible = true;
+                } catch (_) {}
+              });
+              const lookTarget = new THREE.Vector3(
+                e.look.x,
+                a.model.position.y,
+                e.look.z
+              );
+              const doOrient = () => {
+                try {
+                  a.model && a.model.lookAt(lookTarget);
+                } catch (_) {}
+              };
+              doOrient();
+              setTimeout(doOrient, 200);
+              setTimeout(doOrient, 800);
+            }
+          } catch (_) {}
+          try {
+            return false;
+          } catch (_) {}
+          alien2Statics.push(a);
+        } catch (err) {
+          /* non-fatal */
         }
+      }
+
+      try {
+        window.alien2Statics = alien2Statics;
       } catch (_) {}
-      try { return false } catch (_) {}
-      alien2Statics.push(a);
-    } catch (err) { /* non-fatal */ }
-  }
+      try {
+        return false;
+      } catch (_) {}
+    }
+    try {
+      window.createAlien2Statics = createAlien2Statics;
+    } catch (_) {}
 
-  try { window.alien2Statics = alien2Statics; } catch (_) {}
-  try { return false } catch(_){}
-}
-try { window.createAlien2Statics = createAlien2Statics; } catch (_) {}
-
- 
-
- 
-
- 
     return window.__gameInitPromise;
   });
 
@@ -205,15 +282,17 @@ try { window.createAlien2Statics = createAlien2Statics; } catch (_) {}
   // be toggled and the UI SFX play.
   try {
     if (!soundButton && playButton && playButton.parentNode) {
-      soundButton = document.createElement('button');
-      soundButton.id = 'sound-button';
-      soundButton.className = 'menu-button';
-      soundButton.type = 'button';
-      soundButton.innerText = 'Sonido';
+      soundButton = document.createElement("button");
+      soundButton.id = "sound-button";
+      soundButton.className = "menu-button";
+      soundButton.type = "button";
+      soundButton.innerText = "Sonido";
       playButton.parentNode.insertBefore(soundButton, playButton.nextSibling);
     } else if (playButton && soundButton && playButton.parentNode) {
       // If the button exists in the DOM, ensure it's right after the Play button
-      try { playButton.parentNode.insertBefore(soundButton, playButton.nextSibling); } catch(_) {}
+      try {
+        playButton.parentNode.insertBefore(soundButton, playButton.nextSibling);
+      } catch (_) {}
     }
   } catch (e) {
     return e;
@@ -245,103 +324,149 @@ try { window.createAlien2Statics = createAlien2Statics; } catch (_) {}
   // Por ahora, los otros botones no tienen funcionalidad. Guardamos las
   // comprobaciones por si no existen en el markup (evita que el script se
   // detenga con un TypeError y deje sin listeners al botón de sonido).
-  if (tutorialButton && typeof tutorialButton.addEventListener === 'function') {
+  if (tutorialButton && typeof tutorialButton.addEventListener === "function") {
     tutorialButton.addEventListener("click", () => {
-      try { safePlaySfx('uiClick', { volume: 0.9 }); } catch(_){}
+      try {
+        safePlaySfx("uiClick", { volume: 0.9 });
+      } catch (_) {}
     });
   }
 
-  if (controlsButton && typeof controlsButton.addEventListener === 'function') {
+  if (controlsButton && typeof controlsButton.addEventListener === "function") {
     controlsButton.addEventListener("click", () => {
-      try { safePlaySfx('uiClick', { volume: 0.9 }); } catch(_){};
+      try {
+        safePlaySfx("uiClick", { volume: 0.9 });
+      } catch (_) {}
     });
   }
 
   // Mostrar/ocultar HUD de sonido al pulsar el botón
-  const soundHud = (typeof createSoundHUD === 'function') ? createSoundHUD({ container: document.body }) : null;
-  try { if (soundHud) soundHud.style.display = 'none'; } catch(_) {}
+  const soundHud =
+    typeof createSoundHUD === "function"
+      ? createSoundHUD({ container: document.body })
+      : null;
+  try {
+    if (soundHud) soundHud.style.display = "none";
+  } catch (_) {}
 
   // Crear el menú de pausa (overlay) y mantenerlo oculto por defecto
-    let pauseMenu = null;
-    try {
-      if (typeof PauseMenu === 'function') {
-        pauseMenu = new PauseMenu({ container: document.body });
-        // hide immediately in case constructor left it visible
-        try { if (pauseMenu && typeof pauseMenu.hide === 'function') pauseMenu.hide(); } catch (_) {}
-      }
-    } catch (e) { return e; }
-    // expose for debugging from console
-    try { window.pauseMenu = pauseMenu; } catch (_) {}
-  try { if (pauseMenu && typeof pauseMenu.hide === 'function') pauseMenu.hide(); } catch(_) {}
+  let pauseMenu = null;
+  try {
+    if (typeof PauseMenu === "function") {
+      pauseMenu = new PauseMenu({ container: document.body });
+      // hide immediately in case constructor left it visible
+      try {
+        if (pauseMenu && typeof pauseMenu.hide === "function") pauseMenu.hide();
+      } catch (_) {}
+    }
+  } catch (e) {
+    return e;
+  }
+  // expose for debugging from console
+  try {
+    window.pauseMenu = pauseMenu;
+  } catch (_) {}
+  try {
+    if (pauseMenu && typeof pauseMenu.hide === "function") pauseMenu.hide();
+  } catch (_) {}
 
   if (soundButton) {
     // Play hover SFX when the user moves the pointer over the button
-      try {
-        soundButton.addEventListener("pointerenter", () => { try { safePlaySfx('uiHover', { volume: 0.6 }); } catch(_){} });
-        // fallback for older browsers
-        soundButton.addEventListener("mouseenter", () => { try { safePlaySfx('uiHover', { volume: 0.6 }); } catch(_){} });
-      } catch (e) {
-        // non-fatal
-      }
+    try {
+      soundButton.addEventListener("pointerenter", () => {
+        try {
+          safePlaySfx("uiHover", { volume: 0.6 });
+        } catch (_) {}
+      });
+      // fallback for older browsers
+      soundButton.addEventListener("mouseenter", () => {
+        try {
+          safePlaySfx("uiHover", { volume: 0.6 });
+        } catch (_) {}
+      });
+    } catch (e) {
+      // non-fatal
+    }
 
     soundButton.addEventListener("click", () => {
-    try { safePlaySfx('uiClick', { volume: 0.9 }); } catch(_) {}
+      try {
+        safePlaySfx("uiClick", { volume: 0.9 });
+      } catch (_) {}
 
-    try {
-      // Only allow the sound HUD to be opened while the main menu is visible.
-      const mainMenu = document.getElementById('main-menu');
-      const menuVisible = mainMenu && window.getComputedStyle(mainMenu).display !== 'none';
-      if (!menuVisible) {
-        // do not open HUD outside of the start screen
-        return;
+      try {
+        // Only allow the sound HUD to be opened while the main menu is visible.
+        const mainMenu = document.getElementById("main-menu");
+        const menuVisible =
+          mainMenu && window.getComputedStyle(mainMenu).display !== "none";
+        if (!menuVisible) {
+          // do not open HUD outside of the start screen
+          return;
+        }
+
+        if (!soundHud) return;
+        const visible =
+          soundHud.style.display !== "none" && soundHud.style.display !== "";
+        soundHud.style.display = visible ? "none" : "block";
+      } catch (e) {
+        return e;
       }
-
-      if (!soundHud) return;
-      const visible = soundHud.style.display !== 'none' && soundHud.style.display !== '';
-      soundHud.style.display = visible ? 'none' : 'block';
-    } catch (e) {
-      return e;
-    }
     });
   } else {
-    return 'sound-button not found and could not be created; sound HUD will not be toggleable via button';
+    return "sound-button not found and could not be created; sound HUD will not be toggleable via button";
   }
 
   // Toggle pause menu with Escape while gameplay is active
   try {
-    window.addEventListener('keydown', (ev) => {
+    window.addEventListener("keydown", (ev) => {
       if (!ev || !ev.key) return;
-      if (ev.key === 'Escape' || ev.key === 'Esc') {
+      if (ev.key === "Escape" || ev.key === "Esc") {
         // Toggle pause when the game container is visible (allow flows that didn't set __gameplayStarted)
         try {
-          const tag = (document.activeElement && document.activeElement.tagName) || '';
-          if (tag === 'INPUT' || tag === 'TEXTAREA') return; // don't toggle while typing
-          const gameCont = document.getElementById('game-container');
+          const tag =
+            (document.activeElement && document.activeElement.tagName) || "";
+          if (tag === "INPUT" || tag === "TEXTAREA") return; // don't toggle while typing
+          const gameCont = document.getElementById("game-container");
           if (!gameCont) return;
-          const visible = window.getComputedStyle ? getComputedStyle(gameCont).display !== 'none' : (gameCont.style.display !== 'none');
+          const visible = window.getComputedStyle
+            ? getComputedStyle(gameCont).display !== "none"
+            : gameCont.style.display !== "none";
           if (!visible) return;
 
           // debug log to help trace if handler runs (no early return)
-          try { console.debug && console.debug('[pause] Escape pressed, toggling pause'); } catch (_) {}
+          try {
+            console.debug &&
+              console.debug("[pause] Escape pressed, toggling pause");
+          } catch (_) {}
 
           // Prefer using the created pauseMenu object's API if present
           try {
-            if (pauseMenu && typeof pauseMenu.show === 'function' && typeof pauseMenu.hide === 'function' && typeof pauseMenu.isShown === 'function') {
+            if (
+              pauseMenu &&
+              typeof pauseMenu.show === "function" &&
+              typeof pauseMenu.hide === "function" &&
+              typeof pauseMenu.isShown === "function"
+            ) {
               // use PauseMenu instance API
               const isShown = pauseMenu.isShown();
-              if (isShown) pauseMenu.hide(); else pauseMenu.show();
+              if (isShown) pauseMenu.hide();
+              else pauseMenu.show();
               return;
             }
-          } catch (err) {return err;}
+          } catch (err) {
+            return err;
+          }
 
-          const overlay = document.getElementById('pause-overlay');
+          const overlay = document.getElementById("pause-overlay");
           if (!overlay) return;
-          const overlayVisible = window.getComputedStyle ? getComputedStyle(overlay).display !== 'none' && getComputedStyle(overlay).opacity !== '0' : (overlay.style.display === 'block');
+          const overlayVisible = window.getComputedStyle
+            ? getComputedStyle(overlay).display !== "none" &&
+              getComputedStyle(overlay).opacity !== "0"
+            : overlay.style.display === "block";
           if (overlayVisible) {
-            overlay.style.display = 'none';
+            overlay.style.display = "none";
             window.__gamePaused = false;
           } else {
-            overlay.style.display = 'block';
+            overlay.style.display = "block";
             window.__gamePaused = true;
           }
         } catch (e) {
@@ -349,49 +474,62 @@ try { window.createAlien2Statics = createAlien2Statics; } catch (_) {}
         }
       }
     });
-  } catch (e) { return e; }
+  } catch (e) {
+    return e;
+  }
 
   // Iniciar música cuando arranca el gameplay (tras controles)
   try {
-    window.addEventListener('gameplaystart', () => {
-      try { if (window.audio && typeof window.audio.stopMusic === 'function') window.audio.stopMusic(); } catch (_) {}
+    window.addEventListener("gameplaystart", () => {
+      try {
+        if (window.audio && typeof window.audio.stopMusic === "function")
+          window.audio.stopMusic();
+      } catch (_) {}
       // start background ambience when gameplay begins
       try {
-        if (window.audio && typeof window.audio.playAmbience === 'function') {
-          window.audio.playAmbience('noise', { loop: true, volume: 0.6 });
+        if (window.audio && typeof window.audio.playAmbience === "function") {
+          window.audio.playAmbience("noise", { loop: true, volume: 0.6 });
         }
         // Start occasional ambient music cues (randomly play ambient1 or ambient2 every so often)
-        if (window.audio && typeof window.audio.startRandomAmbient === 'function') {
+        if (
+          window.audio &&
+          typeof window.audio.startRandomAmbient === "function"
+        ) {
           // casual: between 30s and 180s, ~60% chance each window, moderate volume
-          window.audio.startRandomAmbient({ minDelay: 30, maxDelay: 180, playProbability: 0.6, volume: 0.7 });
+          window.audio.startRandomAmbient({
+            minDelay: 30,
+            maxDelay: 180,
+            playProbability: 0.6,
+            volume: 0.7,
+          });
         }
       } catch (_) {}
     });
   } catch (_) {}
 
   try {
-    const invToggle = document.getElementById('inventory-toggle');
-    const mapToggle = document.getElementById('minimap-toggle');
-    const objToggle = document.getElementById('objectives-toggle');
+    const invToggle = document.getElementById("inventory-toggle");
+    const mapToggle = document.getElementById("minimap-toggle");
+    const objToggle = document.getElementById("objectives-toggle");
 
-    const invHud = document.getElementById('inventory-hud');
-    const mapHud = document.getElementById('minimap-hud');
-    const objHud = document.getElementById('objectives-hud');
+    const invHud = document.getElementById("inventory-hud");
+    const mapHud = document.getElementById("minimap-hud");
+    const objHud = document.getElementById("objectives-hud");
 
-    const invClose = document.getElementById('inventory-close');
-    const mapClose = document.getElementById('minimap-close');
-    const objClose = document.getElementById('objectives-close');
+    const invClose = document.getElementById("inventory-close");
+    const mapClose = document.getElementById("minimap-close");
+    const objClose = document.getElementById("objectives-close");
 
     if (invToggle && mapToggle && objToggle && invHud && mapHud && objHud) {
       const hideOtherToggles = () => {};
       const showAllToggles = () => {};
       const closeAllHuds = () => {
-        invHud.classList.remove('inventory-expanded');
-        invHud.classList.add('inventory-collapsed');
-        mapHud.classList.remove('minimap-expanded');
-        mapHud.classList.add('minimap-collapsed');
-        objHud.classList.remove('objectives-expanded');
-        objHud.classList.add('objectives-collapsed');
+        invHud.classList.remove("inventory-expanded");
+        invHud.classList.add("inventory-collapsed");
+        mapHud.classList.remove("minimap-expanded");
+        mapHud.classList.add("minimap-collapsed");
+        objHud.classList.remove("objectives-expanded");
+        objHud.classList.add("objectives-collapsed");
       };
 
       const toggleHud = (hud, expandedClass, collapsedClass, srcBtn) => {
@@ -399,32 +537,59 @@ try { window.createAlien2Statics = createAlien2Statics; } catch (_) {}
         if (isExpanded) {
           hud.classList.remove(expandedClass);
           hud.classList.add(collapsedClass);
-          if (hud === invHud && invClose) invClose.style.display = 'none';
+          if (hud === invHud && invClose) invClose.style.display = "none";
         } else {
           closeAllHuds();
           hud.classList.remove(collapsedClass);
           hud.classList.add(expandedClass);
           hideOtherToggles();
-          if (hud === invHud && invClose) invClose.style.display = 'flex';
+          if (hud === invHud && invClose) invClose.style.display = "flex";
         }
       };
 
-      invToggle.addEventListener('click', () => {
-        toggleHud(invHud, 'inventory-expanded', 'inventory-collapsed', invToggle);
+      invToggle.addEventListener("click", () => {
+        toggleHud(
+          invHud,
+          "inventory-expanded",
+          "inventory-collapsed",
+          invToggle
+        );
       });
-      mapToggle.addEventListener('click', () => {
-        toggleHud(mapHud, 'minimap-expanded', 'minimap-collapsed', mapToggle);
-        try { if (mapHud.classList.contains('minimap-expanded')) initMinimap(); } catch(_){ }
+      mapToggle.addEventListener("click", () => {
+        toggleHud(mapHud, "minimap-expanded", "minimap-collapsed", mapToggle);
+        try {
+          if (mapHud.classList.contains("minimap-expanded")) initMinimap();
+        } catch (_) {}
       });
-      objToggle.addEventListener('click', () => {
-        toggleHud(objHud, 'objectives-expanded', 'objectives-collapsed', objToggle);
+      objToggle.addEventListener("click", () => {
+        toggleHud(
+          objHud,
+          "objectives-expanded",
+          "objectives-collapsed",
+          objToggle
+        );
       });
 
-      if (invClose) invClose.addEventListener('click', () => { invHud.classList.remove('inventory-expanded'); invHud.classList.add('inventory-collapsed'); invClose.style.display = 'none'; });
-      if (mapClose) mapClose.addEventListener('click', () => { mapHud.classList.remove('minimap-expanded'); mapHud.classList.add('minimap-collapsed'); });
-      if (objClose) objClose.addEventListener('click', () => { objHud.classList.remove('objectives-expanded'); objHud.classList.add('objectives-collapsed'); });
+      if (invClose)
+        invClose.addEventListener("click", () => {
+          invHud.classList.remove("inventory-expanded");
+          invHud.classList.add("inventory-collapsed");
+          invClose.style.display = "none";
+        });
+      if (mapClose)
+        mapClose.addEventListener("click", () => {
+          mapHud.classList.remove("minimap-expanded");
+          mapHud.classList.add("minimap-collapsed");
+        });
+      if (objClose)
+        objClose.addEventListener("click", () => {
+          objHud.classList.remove("objectives-expanded");
+          objHud.classList.add("objectives-collapsed");
+        });
     }
-  } catch (e) { /* non-fatal */ }
+  } catch (e) {
+    /* non-fatal */
+  }
 });
 
 // Variables globales principales de Three.js
@@ -465,8 +630,10 @@ let waveStartAt = null;
 // helper to pause/resume absolute timestamps (avoid countdowns advancing while paused)
 let __globalPauseAt = null;
 try {
-  window.addEventListener('gamepause', () => { __globalPauseAt = Date.now(); });
-  window.addEventListener('gameresume', () => {
+  window.addEventListener("gamepause", () => {
+    __globalPauseAt = Date.now();
+  });
+  window.addEventListener("gameresume", () => {
     try {
       if (__globalPauseAt) {
         const pausedMs = Date.now() - __globalPauseAt;
@@ -501,15 +668,21 @@ let crystals = [];
 
 // Aliens estáticos (solo idle)
 let alien2Statics = [];
-try { window.alien2Statics = alien2Statics; } catch (_) {}
+try {
+  window.alien2Statics = alien2Statics;
+} catch (_) {}
 
 // Mixers para clones de Alien2 (para reproducir IdleAlien2.fbx en los clones)
 let alien2CloneMixers = [];
-try { window.alien2CloneMixers = alien2CloneMixers; } catch (_) {}
+try {
+  window.alien2CloneMixers = alien2CloneMixers;
+} catch (_) {}
 
 // Postes de luz
 let lightPosts = [];
-try { window.lightPosts = lightPosts; } catch (_) {}
+try {
+  window.lightPosts = lightPosts;
+} catch (_) {}
 
 // Instancia de la casa
 let house;
@@ -537,25 +710,25 @@ const keys = {
  */
 function checkAllCowsDead() {
   if (!cows || cows.length === 0) return false;
-  
-  const allDead = cows.every(cow => cow.isDead);
-  
+
+  const allDead = cows.every((cow) => cow.isDead);
+
   if (allDead) {
     // Mostrar pantalla de derrota
     showDeathScreen({
-      title: '¡Todas las vacas han muerto!',
-      subtitle: 'Tu rebaño ha sido eliminado',
-      buttonText: 'Reiniciar'
+      title: "¡Todas las vacas han muerto!",
+      subtitle: "Tu rebaño ha sido eliminado",
+      buttonText: "Reiniciar",
     });
-    
+
     // Pausar el juego
     if (window.pauseMenu) {
       window.pauseMenu.togglePause(true);
     }
-    
+
     return true;
   }
-  
+
   return false;
 }
 
@@ -566,7 +739,6 @@ window.checkAllCowsDead = checkAllCowsDead;
  * Crear 6 vacas dentro del corral
  */
 function createCows() {
-
   // Asegurarse de que la función de verificación esté disponible
   window.checkAllCowsDead = checkAllCowsDead;
 
@@ -626,19 +798,27 @@ function createCows() {
 function initMinimap() {
   // Solo inicializar si no se ha hecho ya
   if (!minimapManager) {
-      minimapManager = makeMinimap({ width: minimapWidth, height: minimapHeight, worldBounds });
+    minimapManager = makeMinimap({
+      width: minimapWidth,
+      height: minimapHeight,
+      worldBounds,
+    });
 
-      // Inicialización del manager
-      try {
-        minimapManager.init("minimap-canvas");
-        // If building refs were created before minimap initialization, attach them now
-        if (window._pendingBuildingsForMinimap) {
-          try { minimapManager.setReferences({ buildings: window._pendingBuildingsForMinimap }); } catch (_) {}
-          window._pendingBuildingsForMinimap = null;
-        }
-      } catch (e) {
-        return e;
+    // Inicialización del manager
+    try {
+      minimapManager.init("minimap-canvas");
+      // If building refs were created before minimap initialization, attach them now
+      if (window._pendingBuildingsForMinimap) {
+        try {
+          minimapManager.setReferences({
+            buildings: window._pendingBuildingsForMinimap,
+          });
+        } catch (_) {}
+        window._pendingBuildingsForMinimap = null;
       }
+    } catch (e) {
+      return e;
+    }
   }
 }
 
@@ -655,7 +835,8 @@ function updateMinimap() {
       if (wm && wm.activeEnemies) {
         for (const entry of wm.activeEnemies.values()) {
           if (!entry) continue;
-          if (entry.instance && entry.instance.model) enemyModels.push(entry.instance.model);
+          if (entry.instance && entry.instance.model)
+            enemyModels.push(entry.instance.model);
           else if (entry.model) enemyModels.push(entry.model);
         }
       }
@@ -683,7 +864,6 @@ function updateMinimap() {
  * Crear 30 piedras con posiciones y modelos fijos
  */
 function createStones() {
-
   // Array con posiciones y modelos fijos para las 30 piedras
   const stonePositions = [
     // Zona izquierda (lejos del corral)
@@ -746,14 +926,9 @@ function createStones() {
     stones.push(stone);
   });
 
-  // Hacer las piedras accesibles para depuración
   window.stones = stones;
-
 }
 
-/**
- * Crear cristales en posiciones fijas
- */
 function createCrystals() {
   const crystalPositions = [
     { x: 27.0, y: 0.0, z: -29.3 },
@@ -805,14 +980,15 @@ function createCrystals() {
   });
 
   // Exponer para depuración
-  try { window.crystals = crystals; } catch (_) {}
+  try {
+    window.crystals = crystals;
+  } catch (_) {}
 }
 
 /**
  * Crear la casa con textura de piedra y puerta interactiva
  */
 function createHouse() {
-
   // Crear la casa en las coordenadas especificadas
   house = new House(
     scene,
@@ -861,14 +1037,15 @@ function createLightPosts() {
       lightPosts.push(post);
     } catch (_) {}
   }
-  try { window.lightPosts = lightPosts; } catch (_) {}
+  try {
+    window.lightPosts = lightPosts;
+  } catch (_) {}
 }
 
 /**
  * Crear el mercado con textura de piedra y ventana frontal
  */
 function createMarket() {
-
   // Crear efecto de humo en las coordenadas especificadas
   smokeEffect = new SmokeEffect(scene, { x: 52.4, y: 0.0, z: -30.2 });
 
@@ -903,7 +1080,7 @@ async function createAlien2() {
   );
 
   await alien2.load();
-  window.alien2 = alien2;;
+  window.alien2 = alien2;
   return alien2;
 }
 /**
@@ -952,7 +1129,10 @@ async function init() {
   // Obtener la cámara para compatibilidad con el código existente
   camera = cameraManager.getCamera();
   // Exponer cámara también en la escena para utilidades que hacen billboard (healthbars, etc.)
-  try { scene.userData = scene.userData || {}; scene.userData.camera = camera; } catch (e) {}
+  try {
+    scene.userData = scene.userData || {};
+    scene.userData.camera = camera;
+  } catch (e) {}
 
   // Inicializar audio manager (ligado a la cámara para audio 3D)
   try {
@@ -963,7 +1143,8 @@ async function init() {
       // Reusar la instancia creada previamente en DOMContentLoaded. Adjuntar listener a la cámara si es necesario.
       audioManager = window.audio;
       try {
-        if (camera && typeof camera.add === 'function') camera.add(audioManager.listener);
+        if (camera && typeof camera.add === "function")
+          camera.add(audioManager.listener);
       } catch (e) {}
     }
   } catch (e) {
@@ -1014,14 +1195,15 @@ async function init() {
   lighting = new Lighting(scene);
 
   // Expose DeathScreen helper globally (redundant but explicit)
-  try { window.showDeathScreen = showDeathScreen; } catch (e) {}
+  try {
+    window.showDeathScreen = showDeathScreen;
+  } catch (e) {}
 
   // Crear y configurar el terreno
   terrain = new Terrain(scene, renderer);
 
   // Inicializar el cargador de modelos 3D
   modelLoader = new ModelLoader(scene);
-
 
   // Crear un CombatSystem global temprano para que FarmerController y WaveManager
   // se registren en la misma instancia (evita tener múltiples instancias aisladas)
@@ -1050,14 +1232,24 @@ async function init() {
 
     // Crear un ancla simple en el centro del corral para registrar vida/daño
     const corralAnchor = new THREE.Object3D();
-    corralAnchor.position.set(corral.position.x, corral.position.y + 1, corral.position.z);
+    corralAnchor.position.set(
+      corral.position.x,
+      corral.position.y + 1,
+      corral.position.z
+    );
     scene.add(corralAnchor);
     window.corralAnchor = corralAnchor;
 
     // Integrar con vida propia (p.ej. 300 de vida), equipo aliado para evitar Fuego Amigo si aplica
-    const corralHealth = integrateEntityWithCombat(combatSystem, 'corral', corralAnchor, 500, { team: 'ally' });
+    const corralHealth = integrateEntityWithCombat(
+      combatSystem,
+      "corral",
+      corralAnchor,
+      500,
+      { team: "ally" }
+    );
     window.corralHealth = corralHealth;
-    
+
     // Connect the corral's health component to the corral instance
     if (corral) {
       corral.healthComponent = corralHealth;
@@ -1069,8 +1261,21 @@ async function init() {
     const spawnCorralHealthbar = () => {
       try {
         if (window.corralHealthBar) return;
-        const hb = new HealthBar({ id: 'corral-healthbar', position: 'top-left', x: 20, y: 56, width: 320, height: 24, label: 'corral' });
-        hb.attachTo(corralHealth, { position: 'top-left', x: 20, y: 56, label: 'corral' });
+        const hb = new HealthBar({
+          id: "corral-healthbar",
+          position: "top-left",
+          x: 20,
+          y: 56,
+          width: 320,
+          height: 24,
+          label: "corral",
+        });
+        hb.attachTo(corralHealth, {
+          position: "top-left",
+          x: 20,
+          y: 56,
+          label: "corral",
+        });
         window.corralHealthBar = hb;
       } catch (_) {}
     };
@@ -1079,10 +1284,16 @@ async function init() {
       if (window.__gameplayStarted) {
         spawnCorralHealthbar();
       } else {
-        window.addEventListener('gameplaystart', spawnCorralHealthbar, { once: true });
+        window.addEventListener("gameplaystart", spawnCorralHealthbar, {
+          once: true,
+        });
       }
-    } catch (_) { spawnCorralHealthbar(); }
-  } catch (e) { /* no fatal */ }
+    } catch (_) {
+      spawnCorralHealthbar();
+    }
+  } catch (e) {
+    /* no fatal */
+  }
 
   // Crear el Space Shuttle Orbiter
   spaceShuttle = new SpaceShuttle(
@@ -1103,16 +1314,22 @@ async function init() {
   // Crear la casa con puerta interactiva
   createHouse();
   // Crear postes de luz en posiciones dadas
-  try { createLightPosts(); } catch (_) {}
+  try {
+    createLightPosts();
+  } catch (_) {}
   // Crear el alien2
   const alien2 = await createAlien2();
   window.alien2 = alien2;
 
   // No crear aliens estáticos (para evitar duplicación/stack). Dejamos solo los últimos (clones)
-  try { /* static Alien2 disabled */ } catch (_) {}
+  try {
+    /* static Alien2 disabled */
+  } catch (_) {}
 
   // Clonar el alien2 del mercado para garantizar que se vean igual en las coordenadas pedidas
-  try { createAlien2Clones(); } catch (_) {}
+  try {
+    createAlien2Clones();
+  } catch (_) {}
 
   // Iniciar la secuencia de movimiento automático (5 minutos de delay)
   alien2.startMovementSequence();
@@ -1147,10 +1364,17 @@ async function init() {
 
   // --- Preload and place decorative buildings in free positions ---
   try {
-  const buildingMgr = new BuildingManager(scene, { basePath: 'src/models/characters/building/', terrain });
+    const buildingMgr = new BuildingManager(scene, {
+      basePath: "src/models/characters/building/",
+      terrain,
+    });
     window.buildingMgr = buildingMgr;
     // Preload prototypes (FBX) once
-    try { await buildingMgr.preloadDefaults(); } catch (e) { return e; }
+    try {
+      await buildingMgr.preloadDefaults();
+    } catch (e) {
+      return e;
+    }
 
     // Build avoid list: stones' models, house, market, corral, spaceShuttle
     const avoidObjects = [];
@@ -1173,14 +1397,23 @@ async function init() {
 
     // Place exactly one of each structure (avoid clustering)
     try {
-  // Preferred fixed positions (explicit y provided; BuildingManager will snap to terrain if available)
-  const preferredPositions = {
-    alienPyramid: { x: 23.4, y: 0.0, z: 198.5 },
-    alienLab: { x: -137.3, y: 0.0, z: -145.4 },
-    alienHouse: { x: -79.9, y: 0.0, z: -70.3 },
-  };
+      // Preferred fixed positions (explicit y provided; BuildingManager will snap to terrain if available)
+      const preferredPositions = {
+        alienPyramid: { x: 23.4, y: 0.0, z: 198.5 },
+        alienLab: { x: -137.3, y: 0.0, z: -145.4 },
+        alienHouse: { x: -79.9, y: 0.0, z: -70.3 },
+      };
 
-  const placed = buildingMgr.placeOneOfEach(['alienHouse','alienLab','alienPyramid'], worldBounds, avoidObjects, { clearance: 10, maxAttemptsPerPlacement: 400, positions: preferredPositions });
+      const placed = buildingMgr.placeOneOfEach(
+        ["alienHouse", "alienLab", "alienPyramid"],
+        worldBounds,
+        avoidObjects,
+        {
+          clearance: 10,
+          maxAttemptsPerPlacement: 400,
+          positions: preferredPositions,
+        }
+      );
       window.placedBuildings = placed;
       // Provide placed buildings to the minimap manager if initialized; otherwise stash for later
       try {
@@ -1224,13 +1457,11 @@ async function init() {
 
   // Cargar el modelo 3D con sus animaciones
   try {
-
     // Cargar el modelo principal con sus animaciones
     await modelLoader.load(
       modelConfig.getPath(farmerConfig.model), // Ruta al archivo del modelo
       animationPaths, // Diccionario de animaciones
       (instance) => {
-
         // Configurar la cámara isométrica para seguir al modelo
         if (instance.model) {
           // Configurar el objetivo de la cámara para seguir al modelo en modo isométrico
@@ -1261,7 +1492,7 @@ async function init() {
               farmerController.setInventory(inventory);
             }
           } catch (e) {
-           return e;
+            return e;
           }
 
           // Conectar el corral con el controlador del granjero
@@ -1286,25 +1517,36 @@ async function init() {
             window.combatSystem = combatSystem;
 
             // Crear wave manager con helpers para localizar jugador y vacas
-            waveManager = new WaveManager(scene, modelLoader, window.combatSystem, {
-              getPlayer: () => (window.farmerController ? window.farmerController.model : null),
-              getCows: () => window.cows || [],
-              getCorral: () => window.corral || corral,
-              getStones: () => window.stones || stones || [],
-              getMarket: () => window.market || market,
-              getHouse: () => window.house || house,
-              getSpaceShuttle: () => window.spaceShuttle || spaceShuttle,
-              difficultyMode: (typeof window !== 'undefined' && window.selectedDifficulty) ? window.selectedDifficulty : 'easy',
-              // Generar spawns alrededor del corral (alrededores), evitando piedras
-              spawnPoints: [ ], // fallback vacío: el WaveManager generará alrededor del corral
-              // Spawns todavía más alejados del corral
-              spawnRingMin: 100, // mucho más lejos del corral
-              spawnRingMax: 200, // anillo amplio
-              alienDetectionRange: 220, // ampliar para detectar antes al acercarse
-              playerAggroRadius: 14, // si el jugador está muy cerca, priorizarlo sobre vacas
-              baseCount: 3,
-              waveCount: 6,
-            });
+            waveManager = new WaveManager(
+              scene,
+              modelLoader,
+              window.combatSystem,
+              {
+                getPlayer: () =>
+                  window.farmerController
+                    ? window.farmerController.model
+                    : null,
+                getCows: () => window.cows || [],
+                getCorral: () => window.corral || corral,
+                getStones: () => window.stones || stones || [],
+                getMarket: () => window.market || market,
+                getHouse: () => window.house || house,
+                getSpaceShuttle: () => window.spaceShuttle || spaceShuttle,
+                difficultyMode:
+                  typeof window !== "undefined" && window.selectedDifficulty
+                    ? window.selectedDifficulty
+                    : "easy",
+                // Generar spawns alrededor del corral (alrededores), evitando piedras
+                spawnPoints: [], // fallback vacío: el WaveManager generará alrededor del corral
+                // Spawns todavía más alejados del corral
+                spawnRingMin: 100, // mucho más lejos del corral
+                spawnRingMax: 200, // anillo amplio
+                alienDetectionRange: 220, // ampliar para detectar antes al acercarse
+                playerAggroRadius: 14, // si el jugador está muy cerca, priorizarlo sobre vacas
+                baseCount: 3,
+                waveCount: 6,
+              }
+            );
 
             window.waveManager = waveManager;
             // Programar oleadas solo cuando el jugador empiece el gameplay (tras pantalla de controles)
@@ -1313,19 +1555,29 @@ async function init() {
                 // Evitar reprogramar si ya existe una cuenta regresiva activa
                 if (waveStartAt) return;
                 // Mostrar advertencia previa a la primera oleada
-                try { createWaveWarningElement(); } catch (e) {}
+                try {
+                  createWaveWarningElement();
+                } catch (e) {}
                 isFirstWaveCountdown = true;
                 waveStartAt = performance.now() + 60000;
-                try { createWaveCountdownElement(); } catch (e) {}
+                try {
+                  createWaveCountdownElement();
+                } catch (e) {}
                 // waveManager will be started from the main loop when waveStartAt elapses
-              } catch (e) { return e; }
+              } catch (e) {
+                return e;
+              }
             };
 
             try {
               if (window.__gameplayStarted) {
                 scheduleWavesAfterStart();
               } else {
-                window.addEventListener('gameplaystart', scheduleWavesAfterStart, { once: true });
+                window.addEventListener(
+                  "gameplaystart",
+                  scheduleWavesAfterStart,
+                  { once: true }
+                );
               }
             } catch (_) {
               scheduleWavesAfterStart();
@@ -1337,29 +1589,34 @@ async function init() {
           // Conectar el farmerController con las piedras para detección de colisiones
           if (farmerController && stones && stones.length > 0) {
             farmerController.setStones(stones);
-          } 
+          }
           // Conectar el farmerController con la casa para detección de colisiones
           if (farmerController && house) {
             farmerController.setHouse(house);
-            
           }
           // Conectar el farmerController con los edificios (si el buildingMgr existe)
           try {
-            if (farmerController && window.buildingMgr && typeof window.buildingMgr.getColliders === 'function') {
+            if (
+              farmerController &&
+              window.buildingMgr &&
+              typeof window.buildingMgr.getColliders === "function"
+            ) {
               const buildingColliders = window.buildingMgr.getColliders();
               farmerController.setBuildings(buildingColliders);
             }
-          } catch (e) { /* non-fatal */ }
+          } catch (e) {
+            /* non-fatal */
+          }
 
           // Conectar el farmerController con las vacas para detección de colisiones
           if (farmerController && cows && cows.length > 0) {
             farmerController.setCows(cows);
-          } 
+          }
           // Conectar el farmerController con el mercado para detección de colisiones
           if (farmerController && market) {
             farmerController.setMarket(market);
           }
-          
+
           // Conectar el farmerController con los cristales para detección de colisiones
           if (farmerController && crystals && crystals.length > 0) {
             farmerController.setCrystals(crystals);
@@ -1367,7 +1624,6 @@ async function init() {
 
           // Mostrar las animaciones disponibles en consola
           const availableAnims = Object.keys(instance.actions);
-
         }
       },
       farmerConfig // Pasar la configuración completa del modelo
@@ -1385,7 +1641,9 @@ async function init() {
       try {
         // Mostrar mensaje de herramienta seleccionada
         if (toolName) {
-          console.log(`Herramienta seleccionada: ${toolName} (slot ${slotIndex + 1})`);
+          console.log(
+            `Herramienta seleccionada: ${toolName} (slot ${slotIndex + 1})`
+          );
           // Aquí puedes agregar lógica adicional cuando se selecciona una herramienta
           // sin necesidad de equiparla visualmente en el personaje
         } else {
@@ -1418,29 +1676,28 @@ function setupEventListeners() {
     // Ignorar si el usuario está escribiendo en un input/textarea
     // Se eliminó el manejo de la tecla 'i' para abrir/cerrar el inventario
     // Ahora solo se puede interactuar con el botón del inventario
-  }
-  );
+  });
 }
 
 // --- Wave countdown HUD helpers ---
 function createWaveCountdownElement() {
   if (waveCountdownEl) return waveCountdownEl;
-  const el = document.createElement('div');
-  el.id = 'wave-countdown';
-  el.style.position = 'fixed';
-  el.style.top = '12px';
-  el.style.left = '50%';
-  el.style.transform = 'translateX(-50%)';
-  el.style.padding = '8px 12px';
-  el.style.background = 'rgba(0,0,0,0.65)';
-  el.style.color = '#fff';
-  el.style.fontFamily = 'Arial, sans-serif';
-  el.style.fontSize = '18px';
-  el.style.borderRadius = '6px';
-  el.style.zIndex = '9999';
-  el.style.pointerEvents = 'none';
-  el.style.opacity = '0.95';
-  el.textContent = 'Primera oleada: 1:00';
+  const el = document.createElement("div");
+  el.id = "wave-countdown";
+  el.style.position = "fixed";
+  el.style.top = "12px";
+  el.style.left = "50%";
+  el.style.transform = "translateX(-50%)";
+  el.style.padding = "8px 12px";
+  el.style.background = "rgba(0,0,0,0.65)";
+  el.style.color = "#fff";
+  el.style.fontFamily = "Arial, sans-serif";
+  el.style.fontSize = "18px";
+  el.style.borderRadius = "6px";
+  el.style.zIndex = "9999";
+  el.style.pointerEvents = "none";
+  el.style.opacity = "0.95";
+  el.textContent = "Primera oleada: 1:00";
   document.body.appendChild(el);
   waveCountdownEl = el;
   return el;
@@ -1449,26 +1706,27 @@ function createWaveCountdownElement() {
 // Advertencia previa a la primera oleada
 function createWaveWarningElement() {
   if (waveWarningEl) return waveWarningEl;
-  const el = document.createElement('div');
-  el.id = 'wave-warning';
-  el.style.position = 'fixed';
-  el.style.top = '28%';
-  el.style.left = '50%';
-  el.style.transform = 'translate(-50%, -50%)';
-  el.style.maxWidth = '80%';
-  el.style.padding = '16px 20px';
-  el.style.background = 'rgba(180,0,0,0.85)';
-  el.style.color = '#fff';
-  el.style.fontFamily = 'Arial, sans-serif';
-  el.style.fontSize = '20px';
-  el.style.fontWeight = '700';
-  el.style.border = '2px solid rgba(255,255,255,0.2)';
-  el.style.borderRadius = '8px';
-  el.style.boxShadow = '0 10px 24px rgba(0,0,0,0.6)';
-  el.style.textAlign = 'center';
-  el.style.zIndex = '10000';
-  el.style.pointerEvents = 'none';
-  el.textContent = 'Cuidado: los aliens comenzarán a atacar al rebaño. Debes defenderlas y escapar';
+  const el = document.createElement("div");
+  el.id = "wave-warning";
+  el.style.position = "fixed";
+  el.style.top = "28%";
+  el.style.left = "50%";
+  el.style.transform = "translate(-50%, -50%)";
+  el.style.maxWidth = "80%";
+  el.style.padding = "16px 20px";
+  el.style.background = "rgba(180,0,0,0.85)";
+  el.style.color = "#fff";
+  el.style.fontFamily = "Arial, sans-serif";
+  el.style.fontSize = "20px";
+  el.style.fontWeight = "700";
+  el.style.border = "2px solid rgba(255,255,255,0.2)";
+  el.style.borderRadius = "8px";
+  el.style.boxShadow = "0 10px 24px rgba(0,0,0,0.6)";
+  el.style.textAlign = "center";
+  el.style.zIndex = "10000";
+  el.style.pointerEvents = "none";
+  el.textContent =
+    "Cuidado: los aliens comenzarán a atacar al rebaño. Debes defenderlas y escapar";
   document.body.appendChild(el);
 
   // Auto-ocultar luego de unos segundos
@@ -1486,7 +1744,7 @@ function createWaveWarningElement() {
 function formatTimeMMSS(totalSeconds) {
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
+  return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
 // Referencia global para debug: invoca la función modular importada con las dependencias actuales
@@ -1558,7 +1816,9 @@ function animate(currentTime = 0) {
     } else if (__currentFps > 58) {
       __targetPixelRatio = Math.min(1.25, __targetPixelRatio + 0.05);
     }
-    try { renderer.setPixelRatio(__targetPixelRatio); } catch (_) {}
+    try {
+      renderer.setPixelRatio(__targetPixelRatio);
+    } catch (_) {}
 
     // Ajustar presupuesto de sombras según FPS
     if (__currentFps < 45) __maxShadowPosts = 2;
@@ -1570,7 +1830,9 @@ function animate(currentTime = 0) {
   try {
     if (window.__gamePaused) {
       if (renderer && scene && camera) {
-        try { renderer.render(scene, camera); } catch (e) {}
+        try {
+          renderer.render(scene, camera);
+        } catch (e) {}
       }
       return;
     }
@@ -1599,16 +1861,20 @@ function animate(currentTime = 0) {
       if (window.alien2Statics && Array.isArray(window.alien2Statics)) {
         for (let i = 0; i < window.alien2Statics.length; i++) {
           const a = window.alien2Statics[i];
-          if (a && typeof a.update === 'function') a.update(delta);
+          if (a && typeof a.update === "function") a.update(delta);
         }
       }
     } catch (_) {}
     // Update all Alien2 clone mixers (IdleAlien2.fbx on clones)
     try {
-      if (window.alien2CloneMixers && Array.isArray(window.alien2CloneMixers) && (frameCounter % 2 === 0)) {
+      if (
+        window.alien2CloneMixers &&
+        Array.isArray(window.alien2CloneMixers) &&
+        frameCounter % 2 === 0
+      ) {
         for (let i = 0; i < window.alien2CloneMixers.length; i++) {
           const m = window.alien2CloneMixers[i];
-          if (m && typeof m.update === 'function') m.update(delta);
+          if (m && typeof m.update === "function") m.update(delta);
         }
       }
     } catch (_) {}
@@ -1622,17 +1888,27 @@ function animate(currentTime = 0) {
           const remainingSec = Math.ceil(remainingMs / 1000);
           // crear elemento si no existe
           if (!waveCountdownEl) createWaveCountdownElement();
-          if (waveCountdownEl) waveCountdownEl.textContent = `${isFirstWaveCountdown ? 'Primera oleada' : 'Siguiente oleada'}: ${formatTimeMMSS(remainingSec)}`;
+          if (waveCountdownEl)
+            waveCountdownEl.textContent = `${
+              isFirstWaveCountdown ? "Primera oleada" : "Siguiente oleada"
+            }: ${formatTimeMMSS(remainingSec)}`;
         } else {
           // oculta cuando llegue la hora
           try {
-            if (waveManager && typeof waveManager.start === 'function' && !waveManager._running) {
+            if (
+              waveManager &&
+              typeof waveManager.start === "function" &&
+              !waveManager._running
+            ) {
               try {
                 waveManager.start();
-              } catch (e) { return e; }
+              } catch (e) {
+                return e;
+              }
             }
           } catch (_) {}
-          if (waveCountdownEl && waveCountdownEl.parentElement) waveCountdownEl.parentElement.removeChild(waveCountdownEl);
+          if (waveCountdownEl && waveCountdownEl.parentElement)
+            waveCountdownEl.parentElement.removeChild(waveCountdownEl);
           waveCountdownEl = null;
           waveStartAt = null; // no necesitamos más el timestamp
           isFirstWaveCountdown = false;
@@ -1643,7 +1919,7 @@ function animate(currentTime = 0) {
     }
 
     // actualizar sistema de combate (procesa hitboxes)
-    if (combatSystem && typeof combatSystem.update === 'function') {
+    if (combatSystem && typeof combatSystem.update === "function") {
       try {
         combatSystem.update(delta);
       } catch (e) {
@@ -1652,7 +1928,7 @@ function animate(currentTime = 0) {
     }
 
     // actualizar wave manager (spawns + actualiza enemigos)
-    if (waveManager && typeof waveManager.update === 'function') {
+    if (waveManager && typeof waveManager.update === "function") {
       try {
         waveManager.update(delta);
       } catch (e) {
@@ -1696,7 +1972,7 @@ function animate(currentTime = 0) {
     if (window.market && farmerController?.model) {
       window.market.update(farmerController.model.position);
     }
-    
+
     // Actualizar el sistema de reparación de la nave
     if (shipRepair && farmerController?.model) {
       shipRepair.update(farmerController.model.position);
@@ -1723,12 +1999,12 @@ function animate(currentTime = 0) {
     try {
       if (lighting && Array.isArray(lightPosts)) {
         // Suavizado del factor nocturno para transición
-        const nf = Math.max(0, Math.min(1, (lighting.nightFactor || 0)));
+        const nf = Math.max(0, Math.min(1, lighting.nightFactor || 0));
         // Curva para reforzar más brillo en plena noche
         const factor = nf * nf;
         for (let i = 0; i < lightPosts.length; i++) {
           const lp = lightPosts[i];
-          if (lp && typeof lp.setEnabled === 'function') lp.setEnabled(factor);
+          if (lp && typeof lp.setEnabled === "function") lp.setEnabled(factor);
         }
 
         // Presupuesto de sombras: activar sombras solo en los postes más cercanos al jugador por la noche
@@ -1739,19 +2015,22 @@ function animate(currentTime = 0) {
             const lp = lightPosts[i];
             if (!lp || !lp.light || !lp.group) continue;
             const p = lp.group.position;
-            const dx = p.x - playerPos.x; const dz = p.z - playerPos.z;
-            const d2 = dx*dx + dz*dz;
+            const dx = p.x - playerPos.x;
+            const dz = p.z - playerPos.z;
+            const d2 = dx * dx + dz * dz;
             entries.push({ i, d2, lp });
           }
           // ordenar por distancia
-          entries.sort((a,b)=>a.d2-b.d2);
+          entries.sort((a, b) => a.d2 - b.d2);
           const maxShadowLights = __maxShadowPosts; // presupuesto dinámico
           for (let idx = 0; idx < entries.length; idx++) {
             const { lp } = entries[idx];
             if (!lp || !lp.light) continue;
             const enableShadow = idx < maxShadowLights;
             // Activar/desactivar castShadow dinámicamente
-            try { lp.light.castShadow = enableShadow; } catch (_) {}
+            try {
+              lp.light.castShadow = enableShadow;
+            } catch (_) {}
             // Ajustar resolución de sombras si es necesario
             try {
               const size = enableShadow ? 1024 : 256;
@@ -1764,7 +2043,9 @@ function animate(currentTime = 0) {
           for (let i = 0; i < lightPosts.length; i++) {
             const lp = lightPosts[i];
             if (lp && lp.light) {
-              try { lp.light.castShadow = false; } catch (_) {}
+              try {
+                lp.light.castShadow = false;
+              } catch (_) {}
             }
           }
         }
@@ -1772,7 +2053,7 @@ function animate(currentTime = 0) {
     } catch (_) {}
 
     // 8.1 Actualizar efecto de humo (menos frecuente)
-    if (smokeEffect && (frameCounter % 3 === 0)) {
+    if (smokeEffect && frameCounter % 3 === 0) {
       smokeEffect.update(delta);
     }
 

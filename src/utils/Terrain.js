@@ -6,12 +6,11 @@ export class Terrain {
     this.scene = scene;
     this.renderer = renderer;
     this.floor = null;
-    this.size = 500; // Tamaño del plano base
-    this.repeat = 20; // Repetición de la textura
+    this.size = 500; 
+    this.repeat = 20; 
     this.floorDecale = 0;
-    this.walls = []; // Array para almacenar las paredes
+    this.walls = []; 
 
-    // Configuración del terreno procedural
     this.chunkSize = 64;
     this.renderDistance = 2;
     this.chunks = new Map();
@@ -19,10 +18,9 @@ export class Terrain {
     this.lastChunkX = null;
     this.lastChunkZ = null;
 
-    // Configuración del terreno
     this.terrainConfig = {
-      scale: 40, // Aumentado para colinas más suaves
-      height: 5, // Aumentada la altura máxima
+      scale: 40, 
+      height: 5, 
       octaves: 4,
       persistence: 0.5,
       lacunarity: 2.0,
@@ -34,7 +32,6 @@ export class Terrain {
   init() {
     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
 
-    // Cargar textura de suelo rojo
     const redSoilTexture = new THREE.TextureLoader().load(
       "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/red_laterite_soil_stones/red_laterite_soil_stones_diff_4k.jpg"
     );
@@ -43,15 +40,13 @@ export class Terrain {
     redSoilTexture.wrapS = redSoilTexture.wrapT = THREE.RepeatWrapping;
     redSoilTexture.anisotropy = maxAnisotropy;
 
-    // Material para el plano base
     const mat = new THREE.MeshStandardMaterial({
       map: redSoilTexture,
-      color: 0x8b4513, // Tinte marrón
+      color: 0x8b4513, 
       roughness: 0.9,
       metalness: 0.1,
     });
 
-    // Crear plano base
     const geometry = new THREE.PlaneGeometry(this.size, this.size, 1, 1);
     geometry.rotateX(-Math.PI / 2);
 
@@ -59,10 +54,9 @@ export class Terrain {
     this.floor.receiveShadow = true;
     this.scene.add(this.floor);
 
-    // Material para el terreno procedural
     this.terrainMaterial = new THREE.MeshStandardMaterial({
       map: redSoilTexture.clone(),
-      color: 0x8b4513, // Tinte marrón
+      color: 0x8b4513, 
       roughness: 0.9,
       metalness: 0.1,
       side: THREE.DoubleSide,
@@ -70,13 +64,9 @@ export class Terrain {
     });
 
     this.floorDecale = (this.size / this.repeat) * 4;
-
-    // Crear las paredes alrededor del terreno
-    // this.createBoundaryWalls();
   }
 
   generateHeight(x, z) {
-    // Retornar siempre 0 para un terreno completamente plano
     return 0;
   }
 
@@ -84,33 +74,22 @@ export class Terrain {
     const chunkX = Math.floor(x / this.chunkSize) * this.chunkSize;
     const chunkZ = Math.floor(z / this.chunkSize) * this.chunkSize;
     const chunkId = `${chunkX},${chunkZ}`;
-
-    // Si el chunk ya existe, no hacer nada
     if (this.chunks.has(chunkId)) return;
-
-    // Crear geometría del chunk
     const geometry = new THREE.PlaneBufferGeometry(
       this.chunkSize,
       this.chunkSize,
       this.chunkSize - 1,
       this.chunkSize - 1
     );
-
-    // Aplicar desplazamiento a los vértices para crear terreno
     const position = geometry.attributes.position;
     const vertices = position.array;
-
     for (let i = 0; i < vertices.length; i += 3) {
       const x = vertices[i] + chunkX;
       const z = vertices[i + 2] + chunkZ;
       vertices[i + 1] = this.generateHeight(x, z);
     }
-
-    // Actualizar normales para iluminación correcta
     geometry.computeVertexNormals();
     geometry.rotateX(-Math.PI / 2);
-
-    // Crear el mesh del chunk
     const chunk = new THREE.Mesh(geometry, this.terrainMaterial);
     chunk.position.set(
       chunkX + this.chunkSize / 2,
@@ -119,20 +98,14 @@ export class Terrain {
     );
     chunk.receiveShadow = true;
     chunk.castShadow = true;
-
-    // Almacenar referencia al chunk
     this.chunks.set(chunkId, {
       mesh: chunk,
       x: chunkX,
       z: chunkZ,
     });
-
-    // Añadir a la escena
     this.scene.add(chunk);
-
     return chunk;
   }
-
   removeDistantChunks(cameraX, cameraZ) {
     const renderDistance = this.chunkSize * (this.renderDistance + 1);
 
@@ -149,30 +122,23 @@ export class Terrain {
   }
 
   addTerrainVariation() {
-    // Añadir algunas colinas o variaciones al terreno
     const geometry = this.floor.geometry;
     const positionAttribute = geometry.getAttribute("position");
     const vertex = new THREE.Vector3();
 
     for (let i = 0; i < positionAttribute.count; i++) {
       vertex.fromBufferAttribute(positionAttribute, i);
-
-      // Crear colinas suaves
       const distance = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
       const height = Math.sin(distance * 0.1) * 0.5;
-
       vertex.y = height;
       positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
     }
 
     positionAttribute.needsUpdate = true;
     geometry.computeVertexNormals();
-
-    // Se ha eliminado la adición de decoraciones (esferas/rocas)
   }
 
   addDecorations() {
-    // Añadir algunas rocas simples
     const rockGeometry = new THREE.SphereGeometry(0.3, 7, 7);
     const rockMaterial = new THREE.MeshStandardMaterial({
       color: 0x888888,
@@ -202,8 +168,6 @@ export class Terrain {
 
     const cameraX = cameraPosition.x;
     const cameraZ = cameraPosition.z;
-
-    // Calcular el chunk actual de la cámara
     const chunkX = Math.floor(cameraX / this.chunkSize) * this.chunkSize;
     const chunkZ = Math.floor(cameraZ / this.chunkSize) * this.chunkSize;
 
@@ -217,41 +181,26 @@ export class Terrain {
           this.createChunk(worldX, worldZ);
         }
       }
-
-      // Eliminar chunks lejanos
       this.removeDistantChunks(cameraX, cameraZ);
 
       this.lastChunkX = chunkX;
       this.lastChunkZ = chunkZ;
     }
   }
-
-  /**
-   * Obtiene la altura del terreno en una posición X,Z específica
-   * @param {number} x - Coordenada X
-   * @param {number} z - Coordenada Z
-   * @returns {number} - Altura del terreno en esa posición
-   */
   getHeightAtPosition(x, z) {
     return this.generateHeight(x, z);
   }
-
-  /**
-   * Crea paredes alrededor de los límites del terreno
-   */
   createBoundaryWalls() {
-    const wallHeight = 20; // Altura de las paredes
-    const wallThickness = 2; // Grosor de las paredes
+    const wallHeight = 20; 
+    const wallThickness = 2; 
     const halfSize = this.size / 2;
 
-    // Cargar la textura del contorno
     const contornoTexture = new THREE.TextureLoader().load(
       "./src/assets/Contorno.png"
     );
     contornoTexture.colorSpace = THREE.SRGBColorSpace;
     contornoTexture.wrapS = contornoTexture.wrapT = THREE.RepeatWrapping;
 
-    // Material para las paredes
     const wallMaterial = new THREE.MeshStandardMaterial({
       map: contornoTexture,
       color: 0xffffff,
@@ -259,10 +208,6 @@ export class Terrain {
       metalness: 0.2,
       side: THREE.DoubleSide,
     });
-
-    // Crear las cuatro paredes
-
-    // Pared norte (frontal)
     const northWallGeometry = new THREE.BoxGeometry(
       this.size,
       wallHeight,
@@ -287,8 +232,6 @@ export class Terrain {
     southWall.receiveShadow = true;
     this.scene.add(southWall);
     this.walls.push(southWall);
-
-    // Pared este (derecha)
     const eastWallGeometry = new THREE.BoxGeometry(
       wallThickness,
       wallHeight,
@@ -300,8 +243,6 @@ export class Terrain {
     eastWall.receiveShadow = true;
     this.scene.add(eastWall);
     this.walls.push(eastWall);
-
-    // Pared oeste (izquierda)
     const westWallGeometry = new THREE.BoxGeometry(
       wallThickness,
       wallHeight,
@@ -315,12 +256,7 @@ export class Terrain {
     this.walls.push(westWall);
 
   }
-
-  /**
-   * Limpia todos los recursos del terreno
-   */
   dispose() {
-    // Limpiar las paredes
     for (const wall of this.walls) {
       this.scene.remove(wall);
       if (wall.geometry) wall.geometry.dispose();

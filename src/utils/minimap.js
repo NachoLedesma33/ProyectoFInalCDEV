@@ -142,11 +142,9 @@ export class Minimap {
     const height = this.height;
     const worldBounds = this.worldBounds;
 
-    // Fondo sutil
     ctx.fillStyle = "rgba(25, 25, 25, 0.2)";
     ctx.fillRect(0, 0, width, height);
 
-    // Cuadrícula
     ctx.strokeStyle = "rgba(255, 255, 255, 0.01)";
     ctx.lineWidth = 0.3;
 
@@ -165,7 +163,6 @@ export class Minimap {
       ctx.stroke();
     }
 
-    // Dibujar piedras
     if (this.refs.stones && this.refs.stones.length) {
       this.refs.stones.forEach((stone) => {
         if (stone.model) {
@@ -186,7 +183,6 @@ export class Minimap {
       });
     }
 
-    // Estructuras (buildings)
     if (this.refs.buildings && this.refs.buildings.length) {
       this.refs.buildings.forEach((b) => {
         try {
@@ -233,14 +229,12 @@ export class Minimap {
       });
     }
 
-    // Casa
     if (this.refs.house && this.refs.house.position) {
       const minimapPos = this.worldToMinimap(this.refs.house.position.x, this.refs.house.position.z);
       ctx.fillStyle = "rgba(139, 69, 19, 0.5)";
       ctx.fillRect(minimapPos.x - 3, minimapPos.y - 3, 6, 6);
     }
 
-    // Space Shuttle
     if (this.refs.spaceShuttle && this.refs.spaceShuttle.model) {
       const pos = this.refs.spaceShuttle.model.position;
       const minimapPos = this.worldToMinimap(pos.x, pos.z);
@@ -250,7 +244,6 @@ export class Minimap {
       ctx.fill();
     }
 
-    // Mercado (dibujar como un cuadrado púrpura)
     if (this.refs.market && this.refs.market.position) {
       const minimapPos = this.worldToMinimap(this.refs.market.position.x, this.refs.market.position.z);
       ctx.fillStyle = "rgba(153, 102, 204, 0.9)"; // púrpura
@@ -262,7 +255,6 @@ export class Minimap {
       ctx.strokeRect(minimapPos.x - s/2, minimapPos.y - s/2, s, s);
     }
 
-    // Corral
     if (this.refs.corral && this.refs.corral.position) {
       const minimapPos = this.worldToMinimap(this.refs.corral.position.x, this.refs.corral.position.z);
       const size = 20;
@@ -273,7 +265,6 @@ export class Minimap {
       ctx.strokeRect(minimapPos.x - sizeX / 2, minimapPos.y - sizeZ / 2, sizeX, sizeZ);
     }
 
-    // Vacas
     if (this.refs.cows && this.refs.cows.length) {
       this.refs.cows.forEach((cow) => {
         if (cow.model) {
@@ -287,7 +278,6 @@ export class Minimap {
       });
     }
 
-    // Enemigos (puntos rojos)
     if (this.refs.enemies && this.refs.enemies.length) {
       this.refs.enemies.forEach((enemy) => {
         try {
@@ -316,7 +306,6 @@ export class Minimap {
       });
     }
 
-    // Farmer
     if (this.refs.farmerController && this.refs.farmerController.model) {
       const pos = this.refs.farmerController.model.position;
       const minimapPos = this.worldToMinimap(pos.x, pos.z);
@@ -337,7 +326,6 @@ export class Minimap {
   }
 }
 
-// Keep the factory function name for backward compatibility
 export function makeMinimap(opts = {}) {
   return new Minimap(opts);
 }

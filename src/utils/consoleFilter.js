@@ -1,10 +1,7 @@
-// utils/consoleFilter.js — silenciar absolutamente toda la consola y errores del navegador
-
 (function () {
-  if (window.__CONSOLE_SILENCED__) return; // evitar doble aplicación
+  if (window.__CONSOLE_SILENCED__) return; 
   window.__CONSOLE_SILENCED__ = true;
 
-  // Guardar métodos originales por si se quiere reactivar
   const originalConsole = { ...console };
   Object.defineProperty(window, '__ORIGINAL_CONSOLE__', {
     value: originalConsole,
@@ -25,13 +22,9 @@
   for (const m of methods) {
     try { console[m] = noop; } catch (_) {}
   }
-
-  // Silenciar errores globales (incluye muchos 404/GET y runtime errors)
   try {
     window.onerror = function () { return true; };
     window.onunhandledrejection = function () { return true; };
-
-    // Captura en fase de captura para recursos (<img>, loaders, etc.)
     window.addEventListener('error', function (e) {
       try {
         e.preventDefault();
@@ -47,8 +40,6 @@
       } catch (_) {}
       return false;
     }, true);
-
-    // Silenciar violaciones de políticas (CSP, Permissions-Policy, etc.) si el navegador las emite como evento
     window.addEventListener('securitypolicyviolation', function (e) {
       try {
         e.preventDefault();
@@ -57,8 +48,6 @@
       return false;
     }, true);
   } catch (_) {}
-
-  // API para reactivar (opcional)
   window.enableConsoleLogs = function () {
     for (const m of methods) {
       try { console[m] = originalConsole[m] || noop; } catch (_) {}

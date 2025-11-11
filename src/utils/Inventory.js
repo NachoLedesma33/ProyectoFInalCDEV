@@ -1,16 +1,13 @@
   export class Inventory {
   constructor({ pricePerLiter = 5 } = {}) {
-    this.milkLiters = 30; // Iniciar con 30 litros de leche para pruebas
-    // tools represented as array of slot strings (null = empty)
-    this.slotCount = 6; // Aumentado a 6 slots
+    this.milkLiters = 30; 
+    this.slotCount = 6; 
     this.tools = new Array(this.slotCount).fill(null);
-    this.coins = 500; // Iniciar con 100 monedas para pruebas
+    this.coins = 500; 
     this.pricePerLiter = pricePerLiter;
     this._createUI();
     this._updateUI();
-    // Iniciar con el inventario cerrado
     this.hide();
-    // callback cuando cambia equipamiento: (slotIndex, toolName|null)
     this.onEquipChange = null;
   }
 
@@ -21,7 +18,6 @@
     return this.milkLiters;
   }
   
-  // Establece directamente la cantidad de leche
   setMilk(liters) {
     this.milkLiters = Math.max(0, Number(liters) || 0);
     this._updateUI();
@@ -36,7 +32,6 @@
     return this.coins;
   }
 
-  // Añadir una herramienta a la primera ranura libre. Devuelve el índice o -1 si no hay espacio
   addTool(name) {
     if (!name) return -1;
     const freeIndex = this.tools.findIndex((t) => t === null);
@@ -48,24 +43,20 @@
     return freeIndex;
   }
 
-  // Obtener herramienta en slot (1-based index for callers is nicer; internal 0-based)
   getToolInSlot(index0) {
     if (index0 == null) return null;
     if (index0 < 0 || index0 >= this.slotCount) return null;
     return this.tools[index0];
   }
 
-  // Toggle slot. index0 = 0..slotCount-1
   toggleSlot(index0) {
     if (index0 == null) return;
     if (index0 < 0 || index0 >= this.slotCount) return;
     const tool = this.tools[index0];
     if (!tool) {
-      // nothing to select
       this._flash('Ranura vacía');
       return;
     }
-    // Notificar que se seleccionó una herramienta
     if (typeof this.onEquipChange === 'function') {
       this.onEquipChange(index0, tool);
     }
@@ -96,11 +87,9 @@
     };
   }
 
-  // UI helpers (minimal, auto-insert HUD)
   _createUI() {
     const id = "inventory-hud";
     
-    // Obtener o crear el contenedor de botones HUD
     let hudButtonsContainer = document.getElementById('hud-buttons-container');
     if (!hudButtonsContainer) {
       hudButtonsContainer = document.createElement('div');
@@ -108,13 +97,11 @@
       document.body.appendChild(hudButtonsContainer);
     }
     
-    // Eliminar cualquier instancia previa del inventario
     const existingContainer = document.getElementById('inventory-container');
     if (existingContainer) {
       existingContainer.remove();
     }
     
-    // Crear el contenedor del inventario
     const container = document.createElement('div');
     container.id = 'inventory-container';
     container.className = 'hud-button-container';
@@ -125,15 +112,12 @@
       </div>
     `;
     
-    // Insertar el contenedor del inventario en el contenedor de botones HUD
     hudButtonsContainer.appendChild(container);
     
-    // Obtener referencias a los elementos
     const el = document.getElementById(id);
     const toggleBtn = document.getElementById('inventory-toggle');
     const closeBtn = document.getElementById('inventory-close');
     
-    // Configurar eventos de toggle
     const toggleInventory = () => {
       const isExpanded = el.classList.contains('inventory-expanded');
       if (isExpanded) {
@@ -152,15 +136,13 @@
       e.stopPropagation();
       this.hide();
     });
-    
-    // Cerrar al hacer clic fuera del inventario
+
     document.addEventListener('click', (e) => {
       if (!el.contains(e.target) && e.target !== toggleBtn) {
         this.hide();
       }
     });
     
-    // Prevenir que los clics en el inventario se propaguen al documento
     el.addEventListener('click', (e) => {
       e.stopPropagation();
     });
@@ -245,12 +227,11 @@
 
   popup(msg, ms = 2800, opts = {}) {
     try {
-      const { screenPos } = opts; // { x, y } in pixels relative to viewport
+      const { screenPos } = opts;
 
       const toast = document.createElement("div");
-      // Estilos base: fondo transparente, texto visible
       Object.assign(toast.style, {
-        background: "rgba(0,0,0,0)", // transparente por requerimiento
+        background: "rgba(0,0,0,0)", 
         color: "#fff",
         padding: "6px 10px",
         borderRadius: "6px",
@@ -267,7 +248,6 @@
       toast.textContent = msg;
 
       if (screenPos && typeof screenPos.x === "number" && typeof screenPos.y === "number") {
-        // Position the toast absolutely at the given screen coords (above character)
         Object.assign(toast.style, {
           position: "absolute",
           left: `${Math.round(screenPos.x)}px`,
@@ -278,7 +258,6 @@
         });
         document.body.appendChild(toast);
       } else {
-        // Default fallback: stacked toasts bottom-right
         const containerId = "inventory-toast-container";
         let container = document.getElementById(containerId);
         if (!container) {
@@ -301,16 +280,12 @@
         container.appendChild(toast);
       }
 
-      // Forzar layout y animar entrada
       requestAnimationFrame(() => {
         toast.style.opacity = "1";
         toast.style.transform = toast.style.transform.replace("translateY(6px)", "translateY(0)");
       });
-
-      // Ocultar y eliminar después de ms
       setTimeout(() => {
         toast.style.opacity = "0";
-        // si estaba posicionado absolute sobre el personaje, deslizar hacia abajo
         toast.style.transform = toast.style.transform.replace("translateY(0)", "translateY(6px)");
         setTimeout(() => {
           if (toast.parentNode) toast.parentNode.removeChild(toast);
@@ -321,7 +296,6 @@
     }
   }
 
-  // Public methods to show/hide/toggle the HUD
   show() {
     const el = document.getElementById('inventory-hud');
     const inventoryToggle = document.getElementById('inventory-toggle');
@@ -332,33 +306,27 @@
     const objectivesToggle = document.getElementById('objectives-toggle');
     
     if (el) {
-      // Cerrar el minimapa si está abierto
       if (minimapEl && minimapEl.classList.contains('minimap-expanded')) {
         minimapEl.classList.remove('minimap-expanded');
         minimapEl.classList.add('minimap-collapsed');
         if (minimapToggle) minimapToggle.style.display = 'block';
       }
       
-      // Cerrar el panel de objetivos si está abierto
       if (objectivesHud && objectivesHud.classList.contains('objectives-expanded')) {
         objectivesHud.classList.remove('objectives-expanded');
         objectivesHud.classList.add('objectives-collapsed');
         if (objectivesToggle) objectivesToggle.style.display = 'block';
         
-        // También actualizar el estado del gestor de objetivos si está disponible
         if (window.ObjectivesManager) {
           window.ObjectivesManager.isExpanded = false;
         }
       }
       
-      // Asegurarse de que el contenedor sea visible
       el.style.display = 'block';
       
-      // Mostrar el inventario
       el.classList.remove('inventory-collapsed');
       el.classList.add('inventory-expanded');
       
-      // Ocultar el botón de toggle y mostrar el de cierre
       if (inventoryToggle) {
         inventoryToggle.style.display = 'none';
       }
@@ -380,7 +348,6 @@
       el.classList.remove('inventory-expanded');
       el.classList.add('inventory-collapsed');
       
-      // Mostrar el botón de toggle y ocultar el de cierre
       if (inventoryToggle) {
         inventoryToggle.style.display = 'block';
       }

@@ -30,13 +30,6 @@ export const storySlides = [
   },
 ];
 
-/**
- * createStoryManager(storySlides, initStarter)
- * - storySlides: array de slides (imagen/texto)
- * - initStarter: función opcional que cuando se llame debe devolver una Promise que resuelve cuando la inicialización del juego termine.
- *
- * El manager se encarga de mostrar el carousel y manejar los botones prev/next/skip.
- */
 import { safePlaySfx } from "./audioHelpers.js";
 
 export class StoryManager {
@@ -222,7 +215,6 @@ export class StoryManager {
   }
 }
 
-// Backwards-compatible factory wrapper
 export function createStoryManager(storySlidesArg = storySlides, initStarter) {
   return new StoryManager(storySlidesArg, initStarter);
 }

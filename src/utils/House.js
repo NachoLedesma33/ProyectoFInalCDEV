@@ -2,9 +2,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.m
 
 import { safePlaySfx } from './audioHelpers.js';
 
-/**
- * Clase para crear una casa con textura de piedra y puerta interactiva
- */
+
 export class House {
   constructor(
     scene,
@@ -15,22 +13,19 @@ export class House {
     this.position = position;
     this.size = size;
     this.walls = [];
-    // Contenedor para objetos interiores (piso, muebles) para gestión/limpieza
     this.interiorObjects = [];
     this.collisionBoxes = [];
-    this.gates = []; // Array para puertas
-    this.gateSpeed = 4; // Velocidad de apertura/cierre de la puerta (más rápida para fluidez)
-    this.detectionDistance = 4.0; // Distancia de detección del farmer (aumentada)
-    this.autoCloseDelay = 5000; // 5 segundos para autocierre
-    this.autoCloseTimers = new Map(); // Timers para cada puerta
+    this.gates = []; 
+    this.gateSpeed = 4; 
+    this.detectionDistance = 4.0; 
+    this.autoCloseDelay = 5000; 
+    this.autoCloseTimers = new Map(); 
     
-    // Sistema de control de techo
-    this.roofMeshes = []; // Almacena las mallas del techo
-    this.isInsideHouse = false; // Estado de si el jugador está dentro de la casa
+    this.roofMeshes = []; 
+    this.isInsideHouse = false; 
     
-    // Límites de la casa (ajustar según la posición y tamaño real)
     this.houseBounds = {
-      minX: this.position.x - this.size.width/2 - 1,  // -1 para incluir el grosor de las paredes
+      minX: this.position.x - this.size.width/2 - 1, 
       maxX: this.position.x + this.size.width/2 + 1,
       minZ: this.position.z - this.size.depth/2 - 1,
       maxZ: this.position.z + this.size.depth/2 + 1,
@@ -41,35 +36,23 @@ export class House {
     this.createHouse();
   }
 
-  /**
-   * Añade una caja de colisión para un objeto dado y la registra en this.collisionBoxes
-   * @param {THREE.Object3D} object
-   * @param {string} side
-   */
   addCollision(object, side = 'furniture') {
     try {
       const collisionBox = new THREE.Box3().setFromObject(object);
       this.collisionBoxes.push({ box: collisionBox, side: side, wall: object });
     } catch (e) {
-      // Si falla (por ejemplo objeto no renderizado aún), añadir entrada vacía y actualizar después
       const collisionBox = new THREE.Box3();
       collisionBox.makeEmpty();
       this.collisionBoxes.push({ box: collisionBox, side: side, wall: object });
     }
   }
 
-  /**
-   * Crea decoración adicional: escritorio, cama, armario, heladera, cocina y alacenas
-   * @param {THREE.Material} woodMaterial
-   * @param {THREE.Material} metalMaterial
-   */
   createInteriorDecorations(woodMaterial, metalMaterial) {
     const px = this.position.x;
     const py = this.position.y;
     const pz = this.position.z;
     const { width, depth } = this.size;
 
-    // --- Escritorio simple ---
     const desk = new THREE.Group();
   const deskTop = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.7), metalMaterial);
     deskTop.position.set(0, 0.75, 0);
@@ -92,7 +75,6 @@ export class House {
     this.walls.push(desk);
   this.addCollision(desk, 'furniture');
 
-    // --- Cama simple ---
     const bedGroup = new THREE.Group();
   const bedBase = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.9), metalMaterial);
     bedBase.position.set(0, 0.2, 0);
@@ -109,12 +91,11 @@ export class House {
     this.walls.push(bedGroup);
   this.addCollision(bedGroup, 'furniture');
 
-    // --- Armario (wardrobe) ---
     const wardrobe = new THREE.Group();
   const wardBody = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.8, 0.6), metalMaterial);
     wardBody.position.set(0, 0.9, 0);
     wardrobe.add(wardBody);
-    // puertas simples (solo visual)
+    
   const leftDoor = new THREE.Mesh(new THREE.BoxGeometry(0.48, 1.7, 0.02), metalMaterial);
     leftDoor.position.set(-0.25, 0.9, 0.31);
   const rightDoor = new THREE.Mesh(new THREE.BoxGeometry(0.48, 1.7, 0.02), metalMaterial);
@@ -127,7 +108,6 @@ export class House {
     this.walls.push(wardrobe);
   this.addCollision(wardrobe, 'furniture');
 
-    // --- Heladera (fridge) ---
     const fridge = new THREE.Group();
     const fridgeBody = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.6, 0.7), metalMaterial);
     fridgeBody.position.set(0, 0.8, 0);
@@ -142,12 +122,11 @@ export class House {
     this.walls.push(fridge);
   this.addCollision(fridge, 'furniture');
 
-    // --- Cocina / Hornalla (stove) ---
     const stove = new THREE.Group();
     const stoveBody = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.6), metalMaterial);
     stoveBody.position.set(0, 0.4, 0);
     stove.add(stoveBody);
-    // Quemadores (pequeños cilindros)
+    
     const burnerGeom = new THREE.CylinderGeometry(0.08, 0.08, 0.02, 12);
     const burnerPositions = [[-0.25, -0.15], [0.25, -0.15], [-0.25, 0.15], [0.25, 0.15]];
     burnerPositions.forEach((b) => {
@@ -162,7 +141,6 @@ export class House {
     this.walls.push(stove);
   this.addCollision(stove, 'furniture');
 
-    // --- Alacenas (cajones de pared) ---
     const cabinets = new THREE.Group();
   const cab1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 0.3), metalMaterial);
     cab1.position.set(0, 1.35, 0);
@@ -177,14 +155,10 @@ export class House {
   this.addCollision(cabinets, 'furniture');
   }
 
-  /**
-   * Crea la casa con sus paredes, techo, puerta y sistema de colisiones
-   */
   createHouse() {
     const { width, height, depth } = this.size;
     const wallThickness = 0.3;
 
-    // Cargar la textura de piedra
     const textureLoader = new THREE.TextureLoader();
 
     textureLoader.load(
@@ -192,9 +166,7 @@ export class House {
       (texture) => {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(2, 2); // Repetir la textura para mejor cobertura
-
-        // Material principal de piedra
+        texture.repeat.set(2, 2); 
         const stoneMaterial = new THREE.MeshStandardMaterial({
           map: texture,
           metalness: 0.05,
@@ -202,14 +174,12 @@ export class House {
           color: 0xffffff,
         });
 
-        // Material secundario marrón para detalles
         const brownMaterial = new THREE.MeshStandardMaterial({
           color: 0x8b4513, // Marrón madera
           metalness: 0.1,
           roughness: 0.8,
         });
 
-        // Material para el techo (misma textura de grava de coral)
         const roofMaterial = new THREE.MeshStandardMaterial({
           map: texture.clone(),
           metalness: 0.05,
@@ -217,31 +187,22 @@ export class House {
           color: 0xffffff,
         });
 
-        // Crear las paredes de la casa
         this.createWalls(stoneMaterial, brownMaterial);
 
-        // Crear el techo
         this.createRoof(roofMaterial);
-
-        // Crear piso interior con textura concreteDIFF.png y muebles
-        // Construir la URL de manera compatible con bundlers y módulos (import.meta.url)
         let concretePath;
         try {
           concretePath = new URL('../assets/concreteDIFF.png', import.meta.url).href;
         } catch (e) {
-          // Si import.meta.url no está disponible (entornos antiguos), usar ruta absoluta
           concretePath = '/src/assets/concreteDIFF.png';
         }
 
         textureLoader.load(
           concretePath,
           (concreteTexture) => {
-            // Ajustes de textura
             concreteTexture.wrapS = THREE.RepeatWrapping;
             concreteTexture.wrapT = THREE.RepeatWrapping;
             concreteTexture.repeat.set(2, 2);
-            // Si tu pipeline usa sRGB, descomenta:
-            // concreteTexture.encoding = THREE.sRGBEncoding;
 
                 const floorMaterial = new THREE.MeshStandardMaterial({
                   map: concreteTexture,
@@ -250,7 +211,6 @@ export class House {
                   color: 0xffffff,
                 });
 
-                // Material metálico para electrodomésticos
                 const metalMaterial = new THREE.MeshStandardMaterial({
                   color: 0xffffff,
                   metalness: 0.8,
@@ -263,7 +223,6 @@ export class House {
           },
           undefined,
           (err) => {
-            // Fallback: si la textura no carga, usar material gris y avisar en consola
             console.warn(`House: no se pudo cargar la textura ${concretePath}, usando color gris.`, err);
             const floorMaterial = new THREE.MeshStandardMaterial({
               color: 0x666666,
@@ -283,26 +242,19 @@ export class House {
           }
         );
 
-        // Crear la puerta principal con la misma textura de piedra
         this.createDoor(stoneMaterial);
       },
       undefined,
       (error) => {
         return error;
-        // Usar materiales alternativos si la textura no carga
         this.createHouseWithAlternativeMaterials();
       }
     );
   }
 
-  /**
-   * Crea un piso simple gris dentro de la casa
-   * @param {THREE.Material} floorMaterial
-   */
   createFloor(floorMaterial) {
     const { width, depth } = this.size;
 
-    // Hacemos el piso ligeramente elevado para evitar z-fighting
     const floorGeometry = new THREE.BoxGeometry(width - 0.6, 0.12, depth - 0.6);
     const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
     floorMesh.position.set(
@@ -314,21 +266,13 @@ export class House {
     floorMesh.castShadow = false;
     this.scene.add(floorMesh);
 
-    // Guardar en interiorObjects para limpieza posterior
     this.interiorObjects.push(floorMesh);
-    // Opcionalmente añadir a walls para reutilizar la lógica de dispose
     this.walls.push(floorMesh);
   }
 
-  /**
-   * Crea algunos muebles sencillos dentro de la casa (mesa y sillas)
-   * @param {THREE.Material} woodMaterial
-   * @param {THREE.Material} floorMaterial - no usado actualmente, pero disponible
-   */
   createFurniture(metalMaterial, floorMaterial) {
     const tableGroup = new THREE.Group();
 
-    // Mesa: tapa y 4 patas
     const tableTopGeom = new THREE.BoxGeometry(2.0, 0.12, 1.2);
   const tableTop = new THREE.Mesh(tableTopGeom, metalMaterial);
     tableTop.position.set(0, 0.9, 0);
@@ -351,16 +295,12 @@ export class House {
       leg.receiveShadow = true;
       tableGroup.add(leg);
     });
-
-    // Posicionar la mesa hacia el centro de la casa
     tableGroup.position.set(this.position.x, this.position.y, this.position.z - 0.5);
     this.scene.add(tableGroup);
     this.interiorObjects.push(tableGroup);
     this.walls.push(tableGroup);
-  // Colisión para la mesa
   this.addCollision(tableGroup, 'furniture');
 
-    // Crear dos sillas simples (cubos) alrededor de la mesa
     const chairGeom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
     const backGeom = new THREE.BoxGeometry(0.5, 0.6, 0.12);
 
@@ -393,12 +333,9 @@ export class House {
   this.addCollision(chair2, 'furniture');
   }
 
-  /**
-   * Crea la casa con materiales alternativos si la textura no carga
-   */
   createHouseWithAlternativeMaterials() {
     const stoneMaterial = new THREE.MeshStandardMaterial({
-      color: 0x808080, // Gris piedra
+      color: 0x808080,
       metalness: 0.05,
       roughness: 0.95,
     });
@@ -420,14 +357,10 @@ export class House {
     this.createDoor(stoneMaterial);
   }
 
-  /**
-   * Crea las paredes de la casa
-   */
   createWalls(stoneMaterial, brownMaterial) {
     const { width, height, depth } = this.size;
     const wallThickness = 0.3;
 
-    // Pared frontal (completa, sin puerta)
     const frontWall = new THREE.BoxGeometry(width, height, wallThickness);
     const frontWallMesh = new THREE.Mesh(frontWall, stoneMaterial);
     frontWallMesh.position.set(
@@ -440,7 +373,6 @@ export class House {
     this.scene.add(frontWallMesh);
     this.walls.push(frontWallMesh);
 
-    // Pared trasera
     const backWall = new THREE.BoxGeometry(width, height, wallThickness);
     const backWallMesh = new THREE.Mesh(backWall, stoneMaterial);
     backWallMesh.position.set(
@@ -453,7 +385,6 @@ export class House {
     this.scene.add(backWallMesh);
     this.walls.push(backWallMesh);
 
-    // Pared izquierda
     const leftWall = new THREE.BoxGeometry(wallThickness, height, depth);
     const leftWallMesh = new THREE.Mesh(leftWall, stoneMaterial);
     leftWallMesh.position.set(
@@ -466,11 +397,9 @@ export class House {
     this.scene.add(leftWallMesh);
     this.walls.push(leftWallMesh);
 
-    // Pared derecha (con espacio para la puerta)
-    const doorHeight = 4.0; // Altura de la puerta
-    const doorWidth = 2.5; // Ancho de la puerta
+    const doorHeight = 4.0;
+    const doorWidth = 2.5;
 
-    // Parte superior de la pared derecha
     const rightWallTop = new THREE.BoxGeometry(
       wallThickness,
       height - doorHeight,
@@ -487,7 +416,6 @@ export class House {
     this.scene.add(rightWallTopMesh);
     this.walls.push(rightWallTopMesh);
 
-    // Parte inferior izquierda de la pared derecha (antes de la puerta)
     const rightWallBottomLeft = new THREE.BoxGeometry(
       wallThickness,
       doorHeight,
@@ -507,7 +435,6 @@ export class House {
     this.scene.add(rightWallBottomLeftMesh);
     this.walls.push(rightWallBottomLeftMesh);
 
-    // Parte inferior derecha de la pared derecha (después de la puerta)
     const rightWallBottomRight = new THREE.BoxGeometry(
       wallThickness,
       doorHeight,
@@ -527,7 +454,6 @@ export class House {
     this.scene.add(rightWallBottomRightMesh);
     this.walls.push(rightWallBottomRightMesh);
 
-    // Añadir cajas de colisión para las paredes
     this.walls.forEach((wall) => {
       const collisionBox = new THREE.Box3().setFromObject(wall);
       this.collisionBoxes.push({
@@ -538,13 +464,9 @@ export class House {
     });
   }
 
-  /**
-   * Crea el techo de la casa
-   */
   createRoof(roofMaterial) {
     const { width, height, depth } = this.size;
 
-    // Techo principal (plano base) - aumentado para cubrir completamente la casa
     const roofBase = new THREE.BoxGeometry(width + 1.0, 0.2, depth + 1.0);
     const roofBaseMesh = new THREE.Mesh(roofBase, roofMaterial);
     roofBaseMesh.position.set(
@@ -556,9 +478,8 @@ export class House {
     roofBaseMesh.receiveShadow = true;
     this.scene.add(roofBaseMesh);
     this.walls.push(roofBaseMesh);
-    this.roofMeshes.push(roofBaseMesh); // Añadir a la lista de techos
+    this.roofMeshes.push(roofBaseMesh);
 
-    // Techo inclinado (forma triangular) - ajustado al nuevo tamaño del techo base
     const roofGeometry = new THREE.ConeGeometry((width + 1.0) / 1.4, 2, 4);
     const roofMesh = new THREE.Mesh(roofGeometry, roofMaterial);
     roofMesh.position.set(
@@ -566,57 +487,49 @@ export class House {
       this.position.y + height + 1.2,
       this.position.z
     );
-    roofMesh.rotation.y = Math.PI / 4; // Rotar 45 grados para alinear con la casa
+    roofMesh.rotation.y = Math.PI / 4;
     roofMesh.castShadow = true;
     roofMesh.receiveShadow = true;
     this.scene.add(roofMesh);
     this.walls.push(roofMesh);
-    this.roofMeshes.push(roofMesh); // Añadir a la lista de techos
+    this.roofMeshes.push(roofMesh);
   }
 
-  /**
-   * Crea la puerta principal de la casa
-   */
   createDoor(doorMaterial) {
     const { height } = this.size;
-    const doorWidth = 2.5; // Puerta más grande y visible
-    const doorHeight = 4.0; // Puerta más alta
-    const doorThickness = 0.2; // Puerta más gruesa para mayor visibilidad
+    const doorWidth = 2.5;
+    const doorHeight = 4.0;
+    const doorThickness = 0.2;
 
-    // Crear el marco fijo por separado
     const frameMaterial = new THREE.MeshStandardMaterial({
-      color: 0x4a4a4a, // Gris oscuro para el marco
+      color: 0x4a4a4a,
       metalness: 0.2,
       roughness: 0.7,
     });
 
     const frameGroup = new THREE.Group();
 
-    // Lado izquierdo del marco
     const leftFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, doorHeight, 0.2), // Marco más grueso
+      new THREE.BoxGeometry(0.2, doorHeight, 0.2),
       frameMaterial
     );
     leftFrame.position.set(-doorWidth / 2 - 0.1, doorHeight / 2, 0);
     frameGroup.add(leftFrame);
 
-    // Lado derecho del marco
     const rightFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, doorHeight, 0.2), // Marco más grueso
+      new THREE.BoxGeometry(0.2, doorHeight, 0.2),
       frameMaterial
     );
     rightFrame.position.set(doorWidth / 2 + 0.1, doorHeight / 2, 0);
     frameGroup.add(rightFrame);
 
-    // Parte superior del marco
     const topFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(doorWidth + 0.4, 0.2, 0.2), // Marco más grueso
+      new THREE.BoxGeometry(doorWidth + 0.4, 0.2, 0.2),
       frameMaterial
     );
     topFrame.position.set(0, doorHeight, 0);
     frameGroup.add(topFrame);
 
-    // Posicionar el marco fijo en la pared
     frameGroup.position.set(
       this.position.x + this.size.width / 2,
       this.position.y + doorHeight / 2,
@@ -624,12 +537,9 @@ export class House {
     );
     frameGroup.rotation.y = Math.PI / 2;
     this.scene.add(frameGroup);
-    this.walls.push(frameGroup); // Añadir el marco a las paredes para colisiones
+    this.walls.push(frameGroup);
 
-    // Crear la puerta móvil por separado
     const doorGroup = new THREE.Group();
-
-    // Hoja de la puerta
     const doorGeometry = new THREE.BoxGeometry(
       doorWidth,
       doorHeight,
@@ -641,33 +551,26 @@ export class House {
     doorMesh.receiveShadow = true;
     doorGroup.add(doorMesh);
 
-    // Manija de la puerta
-    const handleGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8); // Manija más grande
+    const handleGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8);
     const handleMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffd700, // Dorado para la manija
+      color: 0xffd700,
       metalness: 0.8,
       roughness: 0.2,
     });
     const handle = new THREE.Mesh(handleGeometry, handleMaterial);
-    // Posicionar la manija en el lado correcto de la puerta (considerando la rotación)
-    handle.position.set(-doorWidth / 3, 0, doorThickness / 2 + 0.1); // En el lado izquierdo de la puerta
+    handle.position.set(-doorWidth / 3, 0, doorThickness / 2 + 0.1);
     handle.rotation.z = Math.PI / 2;
     doorGroup.add(handle);
 
-    // Posicionar la puerta en la pared derecha de la casa (paralela y al ras de la pared)
     doorGroup.position.set(
-      this.position.x + this.size.width / 2 - doorThickness / 2, // Ligeramente dentro de la pared
+      this.position.x + this.size.width / 2 - doorThickness / 2,
       this.position.y + doorHeight / 2,
       this.position.z
     );
 
-    // Rotar la puerta para que quede paralela a la pared derecha
     doorGroup.rotation.y = Math.PI / 2;
 
-    // Configurar el punto de rotación (bisagras en el lado frontal para puerta rotada)
     doorGroup.userData.pivotPoint = new THREE.Vector3(0, 0, doorWidth / 2);
-
-    // Estado de la puerta
     const gateData = {
       mesh: doorGroup,
       open: false,
@@ -675,29 +578,21 @@ export class House {
       currentRotation: 0,
       side: "main",
       originalPosition: doorGroup.position.clone(),
-      baseRotation: Math.PI / 2, // Rotación base para estar paralela a la pared
+      baseRotation: Math.PI / 2,
     };
 
     this.gates.push(gateData);
     this.scene.add(doorGroup);
-    // No añadir la puerta móvil a las paredes para colisiones, ya que se maneja por separado
 
-    // Añadir caja de colisión inicial para la puerta cerrada
     this.updateSingleGateCollisionBox(gateData);
   }
 
-  /**
-   * Actualiza la caja de colisión de una puerta según su estado
-   * @param {Object} gateData - Datos de la puerta
-   */
   updateSingleGateCollisionBox(gateData) {
-    // Eliminar la caja de colisión anterior de esta puerta si existe
     this.collisionBoxes = this.collisionBoxes.filter(
       (box) => box.side !== `gate-${gateData.side}`
     );
 
     if (!gateData.open) {
-      // Añadir caja de colisión para la puerta cerrada
       const gateBox = new THREE.Box3().setFromObject(gateData.mesh);
       this.collisionBoxes.push({
         box: gateBox,
@@ -711,42 +606,29 @@ export class House {
     return distance <= this.detectionDistance;
   }
 
-  /**
-   * Abre una puerta individual
-   * @param {Object} gateData - Datos de la puerta
-   */
   openSingleGate(gateData) {
     if (gateData.open) return;
 
     gateData.open = true;
-    // Abrir 90 grados hacia afuera (hacia la izquierda)
     gateData.targetRotation = Math.PI / 2;
 
-    // Eliminar la colisión de la puerta
     this.updateSingleGateCollisionBox(gateData);
 
-    // Reproducir sonido posicional de apertura de puerta
     try {
       safePlaySfx('openDoor', { object3D: gateData.mesh });
     } catch (e) {
       // No bloquear si falla el audio
     }
 
-    // Configurar autocierre
     this.scheduleAutoClose(gateData);
   }
 
-  /**
-   * Cierra una puerta individual
-   * @param {Object} gateData - Datos de la puerta
-   */
   closeSingleGate(gateData) {
     if (!gateData.open) return;
 
     gateData.open = false;
     gateData.targetRotation = 0;
 
-    // Reproducir sonido posicional de cierre de puerta
     try {
       safePlaySfx('closeDoor', { object3D: gateData.mesh });
     } catch (e) {
@@ -754,12 +636,7 @@ export class House {
     }
   }
 
-  /**
-   * Programa el autocierre de una puerta
-   * @param {Object} gateData - Datos de la puerta
-   */
   scheduleAutoClose(gateData) {
-    // Cancelar timer existente para esta puerta
     if (this.autoCloseTimers.has(gateData.side)) {
       clearTimeout(this.autoCloseTimers.get(gateData.side));
     }
@@ -771,32 +648,17 @@ export class House {
 
     this.autoCloseTimers.set(gateData.side, timer);
   }
-
-  /**
-   * Reinicia el autocierre de una puerta
-   * @param {Object} gateData - Datos de la puerta
-   */
   resetAutoClose(gateData) {
     this.scheduleAutoClose(gateData);
   }
 
-  /**
-   * Actualiza el estado de todas las puertas (animación de apertura/cierre)
-   * @param {number} delta - Tiempo transcurrido
-   */
   updateGates(delta) {
     this.gates.forEach((gateData) => {
       this.updateSingleGate(gateData, delta);
     });
   }
 
-  /**
-   * Actualiza el estado de una puerta individual
-   * @param {Object} gateData - Datos de la puerta
-   * @param {number} delta - Tiempo transcurrido
-   */
   updateSingleGate(gateData, delta) {
-    // Animación de apertura/cierre
     if (Math.abs(gateData.currentRotation - gateData.targetRotation) > 0.01) {
       const rotationStep = this.gateSpeed * delta;
 
@@ -811,34 +673,23 @@ export class House {
           gateData.targetRotation
         );
       }
-
-      // Aplicar rotación a la puerta alrededor del punto de pivote
       this.applyGateRotation(gateData);
     } else if (gateData.currentRotation !== gateData.targetRotation) {
-      // La animación ha terminado
       gateData.currentRotation = gateData.targetRotation;
       this.applyGateRotation(gateData);
 
-      // Si la puerta se cerró, actualizar la caja de colisión
       if (!gateData.open) {
         this.updateSingleGateCollisionBox(gateData);
       }
     }
   }
 
-  /**
-   * Aplica rotación a una puerta alrededor de su punto de pivote
-   * @param {Object} gateData - Datos de la puerta
-   */
   applyGateRotation(gateData) {
     const gate = gateData.mesh;
     const pivot = gate.userData.pivotPoint;
     const baseRotation = gateData.baseRotation || 0;
-
-    // Rotar la puerta: rotación base + rotación de animación
     gate.rotation.y = baseRotation + gateData.currentRotation;
 
-    // Ajustar la posición para que gire alrededor del punto de pivote
     const rotatedPosition = pivot.clone();
     rotatedPosition.applyAxisAngle(
       new THREE.Vector3(0, 1, 0),
@@ -850,10 +701,6 @@ export class House {
     gate.position.add(rotatedPosition);
   }
 
-  /**
-   * Maneja la interacción con el farmer
-   * @param {THREE.Vector3} farmerPosition - Posición del farmer
-   */
   handleFarmerInteraction(farmerPosition) {
     if (this.gates.length === 0) {
       return;
@@ -866,18 +713,12 @@ export class House {
         if (!gateData.open) {
           this.openSingleGate(gateData);
         } else {
-          // Si el farmer está cerca y la puerta está abierta, reiniciar autocierre
           this.resetAutoClose(gateData);
         }
       }
     });
   }
 
-  /**
-   * Verifica si un objeto colisiona con la casa
-   * @param {THREE.Box3} objectBox - Caja de colisión del objeto a verificar
-   * @returns {Object} Información de la colisión o null si no hay colisión
-   */
   checkCollision(objectBox) {
     for (let collisionData of this.collisionBoxes) {
       if (objectBox.intersectsBox(collisionData.box)) {
@@ -914,9 +755,6 @@ export class House {
     return closestCollision;
   }
 
-  /**
-   * Calcula el punto de colisión con una caja específica
-   */
   getCollisionPoint(box, position, direction) {
     const ray = new THREE.Ray(position, direction);
     const intersectionPoint = new THREE.Vector3();
@@ -936,20 +774,12 @@ export class House {
     }
   }
 
-  /**
-   * Actualiza las cajas de colisión (útil si la casa se mueve)
-   */
   updateCollisionBoxes() {
     this.collisionBoxes.forEach((collisionData) => {
       collisionData.box.setFromObject(collisionData.wall);
     });
   }
 
-  /**
-   * Verifica si el jugador está dentro del área de la casa
-   * @param {THREE.Vector3} position - Posición del jugador
-   * @returns {boolean} - True si el jugador está dentro de la casa
-   */
   isPlayerInsideHouse(position) {
     return position.x >= this.houseBounds.minX && 
            position.x <= this.houseBounds.maxX &&
@@ -957,18 +787,9 @@ export class House {
            position.z <= this.houseBounds.maxZ;
   }
   
-  /**
-   * Verifica si alguna puerta está abierta
-   * @returns {boolean} - True si al menos una puerta está abierta
-   */
   isAnyDoorOpen() {
     return this.gates.some(gate => gate.isOpen);
   }
-  
-  /**
-   * Actualiza la visibilidad del techo basado en la posición del jugador
-   * @param {THREE.Vector3} playerPosition - Posición actual del jugador
-   */
   updateRoofVisibility(playerPosition) {
     if (!playerPosition) return;
     
@@ -985,10 +806,7 @@ export class House {
   }
   
   update(delta, farmerPosition = null) {
-    // Actualizar animaciones de las puertas
     this.updateGates(delta);
-
-    // Manejar interacción con el farmer y visibilidad del techo
     if (farmerPosition) {
       this.handleFarmerInteraction(farmerPosition);
       this.updateRoofVisibility(farmerPosition);
@@ -996,12 +814,11 @@ export class House {
   }
 
   dispose() {
-    // Cancelar todos los timers de autocierre
+    
     this.autoCloseTimers.forEach((timer) => {
       clearTimeout(timer);
     });
     this.autoCloseTimers.clear();
-    // Dispose de objetos interiores primero (evita duplicados si también están en walls)
     const disposed = new Set();
     this.interiorObjects.forEach((obj) => {
       try {
@@ -1010,7 +827,6 @@ export class House {
         // ignore
       }
       disposed.add(obj);
-      // Si es un Group, intentar disponer de sus hijos
       if (obj.traverse) {
         obj.traverse((child) => {
           if (child.geometry) child.geometry.dispose();
@@ -1029,7 +845,6 @@ export class House {
     });
     this.interiorObjects = [];
 
-    // Ahora dispose del resto de walls, omitiendo ya los que se limpiaron
     this.walls.forEach((wall) => {
       if (disposed.has(wall)) return;
       try {

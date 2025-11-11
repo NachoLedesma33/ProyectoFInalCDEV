@@ -20,8 +20,6 @@ export class SpaceShuttle {
       this.scene.add(this.model);
       
       window.spaceShuttle = this;
-      // start a positional ambient SFX around the shuttle (broken spaceship hum)
-      // Play only when gameplay actually starts to avoid loud audio during menu/load.
       this._brokenAudio = null;
       const _startBroken = () => {
         try {
@@ -62,7 +60,6 @@ export class SpaceShuttle {
       );
     });
   }
-
   setupModel() {
     if (!this.model) return;
 
@@ -80,7 +77,6 @@ export class SpaceShuttle {
     const minY = box.min.y;
     const shuttleHeight = -5.5;
     this.model.position.set(this.position.x, shuttleHeight - minY, this.position.z);
-    
     const lightsToRemove = [];
     this.model.traverse((child) => {
       if (child.isLight) {

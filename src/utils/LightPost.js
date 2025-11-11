@@ -69,17 +69,14 @@ export default class LightPost {
   }
 
   setEnabled(on) {
-    // Accept boolean or numeric factor 0..1
     const isNumber = typeof on === 'number' && isFinite(on);
     const factor = isNumber ? THREE.MathUtils.clamp(on, 0, 1) : (on ? 1 : 0);
     this.enabled = factor > 0;
-    const baseIntensity = 26.0; // EXTREMELY strong
-    const baseDistance = 280;   // EXTREMELY wide radius
+    const baseIntensity = 26.0;
+    const baseDistance = 280;
     this.light.intensity = baseIntensity * factor;
     this.light.distance = Math.max(0.01, baseDistance * factor);
-    // Warm yellow color when enabled
     try { this.light.color.setHex(0xffd35a); } catch (_) {}
-    // Make the bulb glow via emissive
     try {
       if (this.bulb && this.bulb.material) {
         this.bulb.material.emissive = new THREE.Color(0xffd35a);

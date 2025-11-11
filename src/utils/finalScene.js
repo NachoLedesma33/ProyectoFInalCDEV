@@ -1,7 +1,4 @@
-/**
- * Módulo para manejar la escena final y la UI asociada.
- * Exporta funciones compat en top-level pero internamente usa una clase.
- */
+
 import { safePlaySfx } from './audioHelpers.js';
 export class FinalScene {
   constructor({ shipRepair, cameraManager } = {}) {
@@ -11,13 +8,10 @@ export class FinalScene {
 
   show() {
     try {
-      // 1) Cerrar HUD si está abierto
       try {
         if (this.shipRepair && typeof this.shipRepair.closeShipHUD === "function")
           this.shipRepair.closeShipHUD();
       } catch (e) {}
-
-      // 2) Deshabilitar controles de cámara para evitar movimientos durante la transición
       try {
         const controls =
           this.cameraManager && typeof this.cameraManager.getControls === "function"
@@ -26,19 +20,16 @@ export class FinalScene {
         if (controls && typeof controls.enabled !== "undefined") controls.enabled = false;
       } catch (e) {}
 
-      // 3) Crear overlay negro que hará el fade
       let overlay = document.getElementById("final-overlay");
       if (!overlay) {
         overlay = document.createElement("div");
         overlay.id = "final-overlay";
         document.body.appendChild(overlay);
-        // Force style calc then trigger opacity transition
         requestAnimationFrame(() => {
           overlay.style.opacity = "1";
         });
       }
 
-      // 4) Cuando el overlay haya terminado su transición, mostrar la UI final
       const onOverlayEnd = (ev) => {
         if (ev.propertyName && ev.propertyName !== "opacity") return;
         overlay.removeEventListener("transitionend", onOverlayEnd);
@@ -50,7 +41,6 @@ export class FinalScene {
       };
       overlay.addEventListener("transitionend", onOverlayEnd);
 
-      // Fallback: si no hay transición por alguna razón, mostrar UI tras 2400ms
       setTimeout(() => {
         if (!document.getElementById("final-card")) this.createUI();
       }, 2400);
@@ -62,8 +52,6 @@ export class FinalScene {
   createUI() {
     // Evitar múltiples inserciones
     if (document.getElementById("final-card")) return;
-
-    // Reproducir música final y limpiar ambience/combat para evitar solapamientos
     try {
       if (window.audio && typeof window.audio.playMusic === 'function') {
         try { if (typeof window.audio.stopAmbience === 'function') window.audio.stopAmbience(); } catch (_) {}
@@ -74,14 +62,9 @@ export class FinalScene {
     } catch (e) {
       try { console.warn('No se pudo iniciar música final', e); } catch (_) {}
     }
-
-    // Disparar un sonido corto de victoria alegre
     try { safePlaySfx('victory', { volume: 0.95 }); } catch (_) {}
-
-    // Imagen de fondo (reusa la clase .background-image pero aseguramos posición y z-index)
     const bg = document.createElement("div");
     bg.className = "final-scene-bg";
-    // La ruta cumple con la convención del proyecto (archivo en src/assets)
     bg.style.backgroundImage = 'url("./src/assets/Escena Final.png")';
     bg.style.opacity = "0";
     bg.style.transition = "opacity 1200ms ease";
@@ -90,7 +73,6 @@ export class FinalScene {
       bg.style.opacity = "1";
     });
 
-    // Tarjeta central con texto y botón
     const card = document.createElement("div");
     card.id = "final-card";
 
@@ -125,7 +107,6 @@ export class FinalScene {
         if (window.audio && typeof window.audio.playSFX === "function") window.audio.playSFX("uiClick", { volume: 0.9 });
       } catch (_) {}
       try {
-        // Intenta un reinicio suave: recargar la página
         location.reload();
       } catch (e) {
         console.error(e);
@@ -136,14 +117,12 @@ export class FinalScene {
 
     document.body.appendChild(card);
 
-    // Mostrar con transición
     requestAnimationFrame(() => {
       card.classList.add("show");
     });
   }
 }
 
-// Backwards-compatible named exports
 export function showFinalScene({ shipRepair, cameraManager } = {}) {
   return new FinalScene({ shipRepair, cameraManager }).show();
 }

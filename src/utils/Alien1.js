@@ -14,88 +14,76 @@ export class Alien1 {
 		this.model = null;
 		this.mixer = null;
 		this.currentAction = null;
-		this.animations = {}; // { idle: AnimationClip, walk: AnimationClip, ... }
-		// Track the last wall hit to prevent continuous damage
-		this._lastWallHit = null; // { wall: string, time: number }
-		// AI / combat related
-		this.moveSpeed = 0.10; // velocidad un poco más baja y constante en todas las oleadas
-		this.detectionRange = 25; // how far it can see cows/player (WaveManager may override)
-		this.playerAggroRadius = 12; // preferir jugador si está dentro de este radio (WaveManager puede sobrescribir)
+		this.animations = {}; 
+		this._lastWallHit = null;
+		this.moveSpeed = 0.10; 
+		this.detectionRange = 25; 
+		this.playerAggroRadius = 12; 
 		this.attackRange = 1.4;
-		this.attackDamage = 5; // daño base inicial reducido (WaveManager puede sobrescribir)
-		this.attackCooldown = 1.0; // seconds
+		this.attackDamage = 5; 
+		this.attackCooldown = 1.0; 
 		this._lastAttackAt = -Infinity;
-		this._postAttackUntil = 0; // timestamp (ms) to hold combat_idle after attacking
-		this._currentPunchClip = null; // reference to clip currently used for punch
-		this._impactTimeoutId = null; // timeout id for scheduled hit application
+		this._postAttackUntil = 0; 
+		this._currentPunchClip = null; 
+		this._impactTimeoutId = null; 
 		this._mixerFinishedBound = this._onMixerFinished.bind(this);
-		this.target = null; // { type: 'cow'|'player', ref: object }
+		this.target = null; 
 		this.state = 'idle';
-		this.isDead = false; // se establece en onDeath
-			this.attackDamage = 5; // daño base inicial reducido (WaveManager puede sobrescribir)
-			this.attackCooldown = 1.0; // seconds
-			this._lastAttackAt = -Infinity;
-			this._postAttackUntil = 0; // timestamp (ms) to hold combat_idle after attacking
-			this._currentPunchClip = null; // reference to clip currently used for punch
-			this._impactTimeoutId = null; // timeout id for scheduled hit application
-			this._mixerFinishedBound = this._onMixerFinished.bind(this);
-			this.target = null; // { type: 'cow'|'player', ref: object }
-			this.state = 'idle';
-			this.isDead = false; // se establece en onDeath
-
-			// Simple character collider and obstacle cache
-			this.colliderRadius = 0.6; // aproximación del radio horizontal
-			this.colliderHeight = 1.8; // altura aproximada del alien para el box de colisión
-			this._obstacles = null; // cache de obstáculos estáticos
-			this._obstaclesBuilt = false;
-
-			this.combat = null; // CombatSystem reference (set externally)
-			this.entityId = null;
-			this.healthComponent = null; // health component assigned externally
-			this.getPlayer = null; // function returning player model or controller
-			this.getCows = null; // function returning array of cow objects
-			this.getCorralCenter = null; // optional function returning a { position: Vector3-like }
-			// world obstacle getters (inyectados por WaveManager)
+		this.isDead = false; 
+		this.attackDamage = 5; 
+		this.attackCooldown = 1.0; 
+		this._lastAttackAt = -Infinity;
+		this._postAttackUntil = 0; 
+		this._currentPunchClip = null; 
+		this._impactTimeoutId = null; 
+		this._mixerFinishedBound = this._onMixerFinished.bind(this);
+		this.target = null; 
+		this.state = 'idle';
+		this.isDead = false; 
+		this.colliderRadius = 0.6; 
+		this.colliderHeight = 1.8; 
+		this._obstacles = null; 
+		this._obstaclesBuilt = false;
+		this.combat = null; 
+		this.entityId = null;
+		this.healthComponent = null; 
+		this.getPlayer = null; 
+		this.getCows = null; 
+		this.getCorralCenter = null;
+		this.getStones = null;
+		this.getCorral = null;
+		this.getHouse = null;
+		this.getMarket = null;
+		this.getShip = null;
+		this._animDiagnostics = {};
 			this.getStones = null;
 			this.getCorral = null;
 			this.getHouse = null;
 			this.getMarket = null;
 			this.getShip = null;
-
-			// Diagnostics for animation compatibility/retargeting
-			this._animDiagnostics = {}; // name -> { path, loaded, retargeted, commonBones, animBones, modelBones, duration, skippedReason }
-
-			// Optional animation logging for debugging
+			this._animDiagnostics = {}; 
 			this._animLogEnabled = false;
-
-			// --- World-space health bar (above head) ---
 			this._hb = {
-				anchor: null, // THREE.Object3D attached to model above head
-				group: null,  // THREE.Group containing meshes
-				back: null,   // background mesh (dark)
-				fill: null,   // current HP mesh (green)
-				chip: null,   // damage chip mesh (yellow/orange trailing bar)
+				anchor: null, 
+				group: null, 
+				back: null,   
+				fill: null,   
+				chip: null,   
 				width: 1.4,
 				height: 0.14,
 				marginAbove: 0.35,
 				lastPct: 1,
 				chipPct: 1,
 				visible: true,
-				_damageTexts: [] // floating damage text sprites
+				_damageTexts: [] 
 			};
-
-		// Audio runtime refs
-		this._runAudio = null; // Promise or Audio instance for looping run SFX
-		this._nextVoiceAt = 0; // timestamp ms for next allowed alienVoice
+		this._runAudio = null; 
+		this._nextVoiceAt = 0; 
 	}
-
-	// Carga el modelo y las animaciones listadas en modelConfig.characters.alien1
 	async load() {
 		try {
 			const cfg = modelConfig.characters.alien1;
 			const modelPath = modelConfig.getPath(cfg.model);
-
-			// Cargar el modelo (FBX en este proyecto)
 			this.model = await new Promise((resolve, reject) => {
 				const loader = new FBXLoader();
 				loader.load(
@@ -105,16 +93,11 @@ export class Alien1 {
 					(err) => reject(err)
 				);
 			});
-
-			// Ajustes y normalización básica del modelo
-			// Normalizar skin weights para evitar artefactos si el FBX tuvo >4 influences
 			try {
 				this.normalizeSkinWeightsInModel(this.model);
 			} catch (e) {
 				// non-critical
 			}
-
-			// Escalar el modelo para que tenga la altura objetivo configurada (si existe)
 			try {
 				const box = new THREE.Box3().setFromObject(this.model);
 				const size = new THREE.Vector3();
@@ -126,8 +109,6 @@ export class Alien1 {
 				if (typeof cfg.scale === 'number') scaleFactor *= cfg.scale;
 				else if (cfg.scale && typeof cfg.scale === 'object') scaleFactor *= (cfg.scale.x || cfg.scale.y || cfg.scale.z || 1);
 				this.model.scale.set(scaleFactor, scaleFactor, scaleFactor);
-
-				// colocar X,Z en spawn; ajustar Y para que pies toquen ground
 				this.model.position.x = this.position.x;
 				this.model.position.z = this.position.z;
 				const newBox = new THREE.Box3().setFromObject(this.model);
@@ -137,34 +118,24 @@ export class Alien1 {
 				// fallback
 				this.model.position.set(this.position.x, this.position.y, this.position.z);
 			}
-
-			// allow per-config override for movement speed
 			try {
 				if (cfg && typeof cfg.moveSpeed === 'number') this.moveSpeed = cfg.moveSpeed;
 			} catch (e) {}
 
-			// Inicializar mixer
 			this.mixer = new THREE.AnimationMixer(this.model);
-
-			// añadir listener para cuando termine una acción (sincronizar punch -> combatIdle)
 			try {
 				this.mixer.addEventListener('finished', this._mixerFinishedBound);
 			} catch (e) {
 				// algunos entornos pueden lanzar si el mixer ya tiene listeners
 			}
-
-			// Cargar animaciones externas definidas en config (si existen)
 			const animCfg = cfg.animations || {};
 			const animNames = Object.keys(animCfg);
-
-			// collect model bone names and build index for name remapping
 			const buildBoneIndex = (obj) => {
 				const list = [];
 				obj.traverse((c) => {
 					if (c.isBone) list.push(c.name||'');
 					if (c.skeleton && c.skeleton.bones) c.skeleton.bones.forEach(b => list.push(b.name||''));
 				});
-				// unique
 				const uniq = Array.from(new Set(list.filter(Boolean)));
 				const index = { namesLower: new Set(), bySanitized: new Map(), all: uniq };
 				for (const n of uniq) {
@@ -180,19 +151,14 @@ export class Alien1 {
 
 			for (const name of animNames) {
 				const path = modelConfig.getPath(animCfg[name]);
-				// load animation and check compatibility
 				await this.loadAnimation(name, path, modelBoneNames);
 			}
-
-			// Si el modelo ya trae animaciones embebidas, guardarlas como respaldo
 			if (this.model.animations && this.model.animations.length > 0) {
 				this.model.animations.forEach((clip, idx) => {
 					const key = clip.name || `clip_${idx}`;
 					if (!this.animations[key]) this.animations[key] = clip;
 				});
 			}
-
-			// Ensure sensible fallbacks to avoid T-poses when clips are missing or incompatible
 			try {
 				if (!this.animations.run && this.animations.walk) {
 					this.animations.run = this.animations.walk;;
@@ -206,8 +172,6 @@ export class Alien1 {
 			} catch (e) {
 				// non-critical
 			}
-
-			// try to auto-map common names if run/walk/idle missing
 			try {
 				const keys = Object.keys(this.animations || {}).map(k => k.toLowerCase());
 				const findKey = (subs) => {
@@ -217,7 +181,6 @@ export class Alien1 {
 					}
 					return null;
 				};
-
 				if (!this.animations.idle) {
 					const candidate = findKey(['idle','rest','stand']);
 					if (candidate) { this.animations.idle = this.animations[candidate]; }
@@ -233,35 +196,21 @@ export class Alien1 {
 			} catch (e) {
 				// non-critical auto-mapping failure
 			}
-
-			// Ajustar altura para que los pies del modelo estén en el nivel del suelo (usar bounding box)
 			try {
 				const box = new THREE.Box3().setFromObject(this.model);
 				const minY = box.min.y !== undefined ? box.min.y : 0;
-				// poner la posición Y para que la parte inferior del bounding box coincida con spawn y
-				// mantener la coordenada Y proporcionada por this.position
 				this.model.position.y = this.position.y - minY;
 			} catch (e) {
-				// fallback
 				this.model.position.y = this.position.y;
 			}
-
-			// Orientar hacia lookAt
 			const target = new THREE.Vector3(this.lookAt.x, this.model.position.y, this.lookAt.z);
 			this.model.lookAt(target);
-
-			// Añadir a la escena y asegurar visibilidad
 			this.model.visible = true;
 			this.scene.add(this.model);
-
-			// Crear barra de vida world-space sobre la cabeza
 			try { this._createHealthbar(); } catch (e) { console.warn('Alien1: no se pudo crear healthbar', e); }
-
-			// Reproducir idle si está disponible
 			setTimeout(() => {
 				if (this.animations.idle) this.playAnimation('idle');
 				else {
-					// intentar una animación cualquiera
 					const first = Object.keys(this.animations)[0];
 					if (first) this.playAnimation(first);
 				}
@@ -273,8 +222,6 @@ export class Alien1 {
 			return false;
 		}
 	}
-
-	// Carga una animación FBX y la guarda en this.animations[name]
 	async loadAnimation(name, path) {
 		try {
 			const animation = await new Promise((resolve, reject) => {
@@ -289,12 +236,9 @@ export class Alien1 {
 					(err) => reject(err)
 				);
 			});
-
-			// optional third param: modelBoneNames for compatibility checks/diagnostics
 			const modelBoneNames = arguments[2] || new Set();
 			const diag = { name, path, loaded: false, retargeted: false, commonBones: 0, animBones: 0, modelBones: modelBoneNames.size, duration: 0, skippedReason: null };
 
-			// Collect anim bone names for diagnostics
 			try {
 				const animBoneNames = new Set();
 				animation.fbx.traverse((c) => {
@@ -306,11 +250,8 @@ export class Alien1 {
 				diag.commonBones = common;
 				diag.animBones = animBoneNames.size;
 			} catch (e) {}
-
-			// Always try to retarget external FBX animations to our model's skeleton first
 			let usedClip = animation.clip;
 			try {
-				// Only attempt retarget if the source FBX contains a SkinnedMesh with a skeleton
 				let hasSkeleton = false;
 				try {
 					animation.fbx.traverse((obj) => { if (!hasSkeleton && obj.isSkinnedMesh && obj.skeleton && obj.skeleton.bones) hasSkeleton = true; });
@@ -325,16 +266,10 @@ export class Alien1 {
 			} catch (retargetErr) {
 				console.warn(`Alien1: retarget failed for '${name}' from '${path}':`, retargetErr);
 			}
-
-			// If retarget not used, try to remap track node names to model bones (heuristic)
 			if (!diag.retargeted) {
 				try { usedClip = this._remapClipTracksToModel(usedClip, name); } catch (_) {}
 			}
-
-			// Sanitize root motion on locomotion clips to avoid double-move/teleports
 			const finalClip = this._sanitizeClip(usedClip, name);
-
-			// Store chosen clip
 			this.animations[name] = finalClip;
 			diag.loaded = true;
 			diag.duration = finalClip?.duration || 0;
@@ -346,16 +281,12 @@ export class Alien1 {
 			return false;
 		}
 	}
-
-	// Static helper to sanitize bone names for comparison
 	static _sanitizeBoneName(n) {
 		let s = (n||'').toLowerCase();
 		s = s.replace(/^mixamorig:/g, '').replace(/^armature\|/g, '').replace(/^armature:/g,'');
 		s = s.replace(/\s+/g, '');
 		return s;
 	}
-
-	// Try to remap animation tracks to model bone names by heuristic matching
 	_remapClipTracksToModel(clip, name) {
 		if (!clip || !clip.tracks || clip.tracks.length === 0 || !this._boneIndex) return clip;
 		const idx = this._boneIndex;
@@ -390,12 +321,9 @@ export class Alien1 {
 		cloned.tracks = remappedTracks;
 		return cloned;
 	}
-
-	// Remove root-position tracks (root motion) that can cause big jumps since we move via code
 	_sanitizeClip(clip, name) {
 		try {
 			if (!clip || !clip.tracks || clip.tracks.length === 0) return clip;
-			// Leave punches/attacks/death untouched; sanitize locomotion/idles
 			const n = (name||'').toLowerCase();
 			const shouldSanitize = (n.includes('run') || n.includes('walk') || n.includes('idle') || n.includes('combat'));
 			if (!shouldSanitize) return clip;
@@ -403,13 +331,11 @@ export class Alien1 {
 			const tracks = [];
 			for (const t of clip.tracks) {
 				const tn = (t && t.name) ? t.name : '';
-				// track name looks like 'BoneName.property' (e.g., 'Hips.position')
 				const isPos = tn.endsWith('.position');
 				let node = tn.split('.')[0] || '';
 				node = node.toLowerCase();
 				const isRoot = rootHints.some(h => node.includes(h));
 				if (isPos && isRoot) {
-					// drop this track to avoid root translation from animation
 					continue;
 				}
 				tracks.push(t);
@@ -422,8 +348,6 @@ export class Alien1 {
 			return clip;
 		} catch (_) { return clip; }
 	}
-
-	// Normalize skin weights helpers (local copy to avoid depending on ModelLoader)
 	normalizeSkinWeightsForSkinnedMesh(skinnedMesh) {
 		if (!skinnedMesh || !skinnedMesh.geometry) return;
 		const geom = skinnedMesh.geometry;
@@ -440,46 +364,32 @@ export class Alien1 {
 		}
 		sw.needsUpdate = true;
 	}
-
 	normalizeSkinWeightsInModel(root) {
 		if (!root || !root.traverse) return;
 		root.traverse(o => { if (o.isSkinnedMesh) this.normalizeSkinWeightsForSkinnedMesh(o); });
 	}
-
-	// Reproducir una animación por nombre
 	playAnimation(name, { loop = THREE.LoopRepeat, fadeIn = 0.15, timeScale = 1.0 } = {}) {
 		if (!this.mixer || !this.animations[name]) {
-			console.warn('Animación no disponible o mixer no inicializado:', name);
 			return false;
 		}
-
 		try {
 			if (this._animLogEnabled) {
 				const id = this.entityId || 'unknown';
 			}
 			const clip = this.animations[name];
 			const action = this.mixer.clipAction(clip, this.model);
-
 			if (!action) return false;
-
-			// If we're already playing this clip as current, just adjust timeScale and return
 			if (this.currentAction && this.currentAction.getClip && this.currentAction.getClip() === clip) {
 				try { this.currentAction.setEffectiveTimeScale(timeScale); } catch (_) {}
-				return true; // don't reset/restart every frame (avoids freezing on first frame / T-pose)
+				return true; 
 			}
-
-			// Fade out acción actual
 			if (this.currentAction && this.currentAction !== action) {
 				this.currentAction.fadeOut(0.08);
 			}
-
-			// For death, force a one-shot and clamp on finish
 			if (name === 'death') {
 				try { action.setLoop(THREE.LoopOnce, 0); action.clampWhenFinished = true; } catch (e) {}
 				loop = THREE.LoopOnce;
 			}
-
-			// Only reset when switching to a new action
 			action.reset();
 			action.setLoop(loop, Infinity);
 			action.setEffectiveTimeScale(timeScale);
@@ -494,13 +404,10 @@ export class Alien1 {
 			return false;
 		}
 	}
-
-	// Crossfade a otra animación
 	crossFadeTo(name, duration = 0.2, timeScale = 1.0) {
 		if (!this.mixer || !this.animations[name]) return false;
 		const next = this.mixer.clipAction(this.animations[name]);
 		if (!next) return false;
-
 		if (this.currentAction && this.currentAction !== next) {
 			next.reset();
 			next.setEffectiveTimeScale(timeScale);
@@ -517,28 +424,16 @@ export class Alien1 {
 
 		return false;
 	}
-
-	// Actualizar mixer (llamar desde el loop de render)
 	update(delta) {
-		// actualizar animaciones
 		if (this.mixer) this.mixer.update(delta);
-
-		// actualiza (y hace billboard) de la barra de vida
 		try { this._updateHealthbar(delta); } catch (e) {}
-
-		// AI: simple behavior
 		try {
-			// si está muerto, no hacer nada (pero mixer ya se actualizó arriba para permitir que death avance)
 			if (this.isDead || (this.healthComponent && !this.healthComponent.isAlive())) return;
-
 			const nowMs = performance.now();
-			// Si estamos en la ventana post-ataque (combat_idle), mantener combat idle y no mover
 			if (this._postAttackUntil && nowMs < this._postAttackUntil) {
 				if (this.animations.combatIdle) this.playAnimation('combatIdle');
 				return;
 			}
-
-			// Si el jugador está muy cerca, preferirlo como target (incluso si actualmente seguimos a una vaca)
 			try {
 				if (typeof this.getPlayer === 'function') {
 					const p = this.getPlayer();
@@ -553,14 +448,10 @@ export class Alien1 {
 					}
 				}
 			} catch (_) {}
-
-			// buscar objetivo si no hay o si el actual fue invalidado
 			if (!this.target || !this._isTargetValid(this.target)) {
 				this._acquireTarget();
 			}
-
 			if (this.target && this.target.ref && this.target.ref.position) {
-				// soportar tanto THREE.Vector3 como objetos {x,y,z}
 				let targetPos;
 				const p = this.target.ref && this.target.ref.position;
 				if (p && typeof p.clone === 'function') targetPos = p.clone();
@@ -568,11 +459,8 @@ export class Alien1 {
 				else return; // target inválido
 				const myPos = this.model.position.clone();
 				const dist = myPos.distanceTo(targetPos);
-
 				if (dist > this.attackRange) {
-					// mover hacia target
 					this.state = this.target.type === 'cow' ? 'seekCow' : 'seekPlayer';
-					// start run SFX (positional if available)
 					try {
 						if (!this._runAudio) {
 							if (window.audio && typeof window.audio.playSFX === 'function' && this.model) {
@@ -585,27 +473,21 @@ export class Alien1 {
 						}
 					} catch (e) {}
 					this._moveTowards(targetPos, delta);
-					// play a safe locomotion animation (prefer 'run', then 'walk', else 'combatIdle')
 					if (this.animations.run) this.playAnimation('run');
 					else if (this.animations.walk) this.playAnimation('walk');
 					else if (this.animations.combatIdle) this.playAnimation('combatIdle');
-
-					// Random occasional alien voice (throttle by _nextVoiceAt)
 					try {
 						const now = performance.now();
 						if (!this._nextVoiceAt || now >= this._nextVoiceAt) {
 							if (Math.random() < 0.18) {
 								try { safePlaySfx('alienVoice', { object3D: this.model, volume: 0.9 }); } catch(_) {}
 							}
-							// schedule next attempt in 5-20s
 							this._nextVoiceAt = now + (5000 + Math.floor(Math.random() * 15000));
 						}
 					} catch (e) {}
 				} else {
-					// en rango de ataque
 					this.state = this.target.type === 'cow' ? 'attackCow' : 'attackPlayer';
 					this._tryAttack();
-					// stop run SFX when attacking (we're stationary during attack)
 					try {
 						if (this._runAudio) {
 							const ra = this._runAudio;
@@ -619,9 +501,7 @@ export class Alien1 {
 					this._runAudio = null;
 				}
 				} else {
-					// sin target: idle
 					this.state = 'idle';
-					// stop run loop when idle
 					try {
 						if (this._runAudio) {
 							const ra = this._runAudio;
@@ -641,8 +521,6 @@ export class Alien1 {
 			console.warn('Alien1 AI update error:', err);
 		}
 	}
-
-	// --- Healthbar helpers ---
 	_getCamera() {
 		try { if (this.scene && this.scene.userData && this.scene.userData.camera) return this.scene.userData.camera; } catch (_) {}
 		try { if (typeof window !== 'undefined' && window.camera) return window.camera; } catch (_) {}
@@ -659,40 +537,26 @@ export class Alien1 {
 		hb.anchor = new THREE.Object3D();
 		hb.anchor.position.set(0, (topY - this.model.position.y) + hb.marginAbove, 0);
 		this.model.add(hb.anchor);
-
-		// Group to hold meshes
 		hb.group = new THREE.Group();
 		hb.group.renderOrder = 9999;
 		hb.group.frustumCulled = false;
 		hb.anchor.add(hb.group);
-
-		// Materials
 		const matBack = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.65, depthTest: false });
 		const matChip = new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.9, depthTest: false });
 		const matFill = new THREE.MeshBasicMaterial({ color: 0x2ecc71, transparent: true, opacity: 0.95, depthTest: false });
-
-		// Geometries (shared plane)
 		const geo = new THREE.PlaneGeometry(hb.width, hb.height);
-
-		// Back
 		hb.back = new THREE.Mesh(geo.clone(), matBack);
 		hb.back.position.set(0, 0, 0);
 		hb.back.renderOrder = 10000;
 		hb.group.add(hb.back);
-
-		// Chip (damage taken, trails behind fill)
 		hb.chip = new THREE.Mesh(geo.clone(), matChip);
 		hb.chip.position.set(0, 0, 0.002);
 		hb.chip.renderOrder = 10001;
 		hb.group.add(hb.chip);
-
-		// Fill (current health)
 		hb.fill = new THREE.Mesh(geo.clone(), matFill);
 		hb.fill.position.set(0, 0, 0.004);
 		hb.fill.renderOrder = 10002;
 		hb.group.add(hb.fill);
-
-		// Set initial scales based on health if available
 		const pct = this.healthComponent ? Math.max(0, Math.min(1, (this.healthComponent.current || 0) / (this.healthComponent.maxHealth || 1))) : 1;
 		hb.lastPct = pct; hb.chipPct = pct;
 		this._setBarPct(pct, true);
@@ -701,19 +565,13 @@ export class Alien1 {
 	_setBarPct(pct, instant = false) {
 		const hb = this._hb; if (!hb || !hb.fill || !hb.chip) return;
 		const p = Math.max(0, Math.min(1, pct));
-		// Fill uses left-anchored scaling: scale.x and adjust position to keep left edge fixed
 		const fullW = hb.width;
 		const leftX = -fullW / 2;
 		hb.fill.scale.x = Math.max(1e-4, p);
-		// Move so left edge stays at leftX
 		hb.fill.position.x = leftX + (fullW * p) / 2;
-
-		// Damage chip target managed separately; here just ensure its left edge fixed
 		const chipP = hb.chipPct;
 		hb.chip.scale.x = Math.max(1e-4, chipP);
 		hb.chip.position.x = leftX + (fullW * chipP) / 2;
-
-		// Change fill color by pct
 		try {
 			if (p > 0.6) hb.fill.material.color.set(0x2ecc71);
 			else if (p > 0.3) hb.fill.material.color.set(0xf39c12);
@@ -723,46 +581,30 @@ export class Alien1 {
 
 	_updateHealthbar(delta = 0.016) {
 		const hb = this._hb; if (!hb || !hb.group || !this.model) return;
-		// Billboard to camera
 		try {
 			const cam = this._getCamera();
 			if (cam) hb.group.quaternion.copy(cam.quaternion);
 		} catch (_) {}
-
-		// Ensure visible while alive
 		if (this.healthComponent && !this.healthComponent.isAlive()) {
 			hb.group.visible = false; hb.visible = false; return;
 		} else { hb.group.visible = true; hb.visible = true; }
-
-		// Create if missing (lazy) once model exists
 		if (!hb.anchor) this._createHealthbar();
-
-		// Update percentages
 		let pct = 1;
 		if (this.healthComponent) {
 			const max = Math.max(1, this.healthComponent.maxHealth || 1);
 			pct = Math.max(0, Math.min(1, (this.healthComponent.current || 0) / max));
 		}
-
-		// If took damage since last frame, update chip start
 		if (pct < hb.lastPct) {
-			// chip starts at previous value to visualize damage taken
 			hb.chipPct = Math.max(hb.chipPct, hb.lastPct);
-			// spawn floating damage text with the difference
 			const dmg = Math.max(0, Math.round((hb.lastPct - pct) * (this.healthComponent ? (this.healthComponent.maxHealth || 0) : 0)));
 			if (dmg > 0) this._spawnDamageText(`-${dmg}`);
 		}
-
-		// Ease chip towards current pct
-		const speed = 0.8; // percent per second
+		const speed = 0.8;
 		if (hb.chipPct > pct) {
 			hb.chipPct = Math.max(pct, hb.chipPct - speed * delta);
 		}
-
 		hb.lastPct = pct;
 		this._setBarPct(pct);
-
-		// Update floating damage texts (rise + fade)
 		for (let i = hb._damageTexts.length - 1; i >= 0; i--) {
 			const dt = hb._damageTexts[i];
 			dt.life -= delta;
@@ -771,13 +613,11 @@ export class Alien1 {
 				hb._damageTexts.splice(i, 1);
 				continue;
 			}
-			// animate
 			dt.obj.position.y += delta * 0.25;
 			const a = Math.max(0, Math.min(1, dt.life / dt.maxLife));
 			try { dt.obj.material.opacity = a; } catch (_) {}
 		}
 	}
-
 	_spawnDamageText(text) {
 		const hb = this._hb; if (!hb || !hb.group) return;
 		try {
@@ -799,29 +639,23 @@ export class Alien1 {
 			ctx.lineWidth = 6;
 			ctx.strokeText(text, (canvas.width/scale)/2, (canvas.height/scale)/2);
 			ctx.fillText(text, (canvas.width/scale)/2, (canvas.height/scale)/2);
-
 			const tex = new THREE.CanvasTexture(canvas);
 			tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
 			const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, opacity: 1 });
 			const spr = new THREE.Sprite(mat);
-			// size roughly matching bar width
 			const worldW = Math.min(1.6, this._hb.width * 1.2);
 			const aspect = canvas.width / canvas.height;
 			spr.scale.set(worldW, worldW / aspect, 1);
 			spr.position.set(0, 0.22, 0.01);
 			hb.group.add(spr);
-
 			const entry = { obj: spr, life: 0.9, maxLife: 0.9, dispose: () => { try { tex.dispose(); mat.dispose(); } catch (_) {} } };
 			hb._damageTexts.push(entry);
 		} catch (_) {}
 	}
-
-	// --- Obstacles and movement steering ---
 	_buildObstacleCache() {
 		if (this._obstaclesBuilt) return;
 		this._obstacles = { circles: [], boxes: [] };
 		try {
-			// Stones as circles
 			let stones = [];
 			try { if (typeof this.getStones === 'function') stones = this.getStones() || []; else if (typeof window !== 'undefined') stones = window.stones || []; } catch(_) {}
 			for (const s of stones) {
@@ -842,24 +676,18 @@ export class Alien1 {
 					this._obstacles.circles.push({ cx: mdl.position.x, cz: mdl.position.z, r: r });
 				} catch(_) {}
 			}
-
-			// Corral boxes
 			try {
 				const c = (typeof this.getCorral === 'function') ? this.getCorral() : (typeof window !== 'undefined' ? window.corral : null);
 				if (c && Array.isArray(c.collisionBoxes)) {
 					for (const cb of c.collisionBoxes) { if (cb && cb.box) this._obstacles.boxes.push(cb.box.clone()); }
 				}
 			} catch(_) {}
-
-			// House boxes
 			try {
 				const h = (typeof this.getHouse === 'function') ? this.getHouse() : (typeof window !== 'undefined' ? window.house : null);
 				if (h && Array.isArray(h.collisionBoxes)) {
 					for (const hb of h.collisionBoxes) { if (hb && hb.box) this._obstacles.boxes.push(hb.box.clone()); }
 				}
 			} catch(_) {}
-
-			// Market: use marketGroup bounds if available
 			try {
 				const m = (typeof this.getMarket === 'function') ? this.getMarket() : (typeof window !== 'undefined' ? window.market : null);
 				if (m) {
@@ -872,8 +700,6 @@ export class Alien1 {
 					}
 				}
 			} catch(_) {}
-
-			// SpaceShuttle box
 			try {
 				const sh = (typeof this.getShip === 'function') ? this.getShip() : (typeof window !== 'undefined' ? window.spaceShuttle : null);
 				if (sh && typeof sh.getBoundingBox === 'function') {
@@ -881,8 +707,6 @@ export class Alien1 {
 					if (box) this._obstacles.boxes.push(box);
 				}
 			} catch(_) {}
-
-			// Buildings -> include building colliders/boxes so Alien1 avoids decorative structures
 			try {
 				let buildings = [];
 				if (typeof this.getBuildings === 'function') buildings = this.getBuildings() || [];
@@ -898,7 +722,6 @@ export class Alien1 {
 					}
 					if (box) {
 						const cloned = box.clone();
-						// small expansion to make avoidance more robust
 						cloned.expandByScalar(0.1);
 						this._obstacles.boxes.push(cloned);
 					}
@@ -907,7 +730,6 @@ export class Alien1 {
 		} catch(_) {}
 		this._obstaclesBuilt = true;
 	}
-
 	_collidesAt(pos) {
 		try {
 			if (!this._obstaclesBuilt) this._buildObstacleCache();
@@ -916,66 +738,45 @@ export class Alien1 {
 			const size = new THREE.Vector3(halfW*2, this.colliderHeight, halfW*2);
 			const center = new THREE.Vector3(pos.x, (pos.y || 0) + halfH, pos.z);
 			const charBox = new THREE.Box3().setFromCenterAndSize(center, size);
-
-			// Check for corral collisions if we have a reference to the corral
 			if (this.getCorral && typeof this.getCorral === 'function') {
 				const corral = this.getCorral();
 				if (corral && corral.checkCollision) {
-					// Create a box for the alien's collider
 					const alienBox = new THREE.Box3().setFromCenterAndSize(
 						new THREE.Vector3(pos.x, center.y, pos.z),
 						new THREE.Vector3(halfW * 2, halfH * 2, halfW * 2)
 					);
-					
-					// Check for collision with corral walls
 					const collisionData = corral.checkCollision(alienBox);
 					if (collisionData) {
 						const currentWall = collisionData.side;
 						const currentTime = Date.now();
-						
-						// Aplicar daño constantemente mientras haya contacto
-						const DAMAGE_PER_SECOND = 0.1; // Daño total por segundo (muy bajo)
-						const UPDATE_INTERVAL = 0.00001; // Actualizar cada 0.00001 segundos (10 microsegundos)
-						
-						// Calcular el daño proporcional al tiempo transcurrido
+						const DAMAGE_PER_SECOND = 0.1;
+						const UPDATE_INTERVAL = 0.00001;
 						const timeSinceLastUpdate = this._lastWallHit ? (currentTime - this._lastWallHit.time) : 1000;
 						const damageThisFrame = (DAMAGE_PER_SECOND * timeSinceLastUpdate) / 1000;
-						
-						// Aplicar el daño
 						const damageApplied = corral.damageWall(currentWall, damageThisFrame);
-						
-						// Actualizar el último tiempo de daño
 						this._lastWallHit = {
 							wall: currentWall,
 							time: currentTime
 						};
-						
-						// Mostrar progreso cada cierto tiempo para no saturar la consola
 						if (Math.floor(corral.health) % 5 === 0 && Math.random() < 0.01) {;
 						}
-						
-						// If the corral's health is zero, we can pass through the wall
 						if (corral.health <= 0) {;
 							this._obstaclesBuilt = false;
 							return false;
 						}
 						
-						return true; // Collision with wall (not destroyed yet)
+						return true;
 					} else {
-						// No collision with corral, reset last wall hit
 						this._lastWallHit = null;
 					}
 				} else {
 					console.warn('Corral or checkCollision method not available');
 				}
 			}
-
-			// circles (stones)
 			for (const c of (this._obstacles.circles || [])) {
 				const dx = pos.x - c.cx; const dz = pos.z - c.cz;
 				if ((dx*dx + dz*dz) <= Math.pow(c.r + this.colliderRadius * 0.9, 2)) return true;
 			}
-			// boxes (structures)
 			for (const b of (this._obstacles.boxes || [])) {
 				if (b && charBox.intersectsBox(b)) return true;
 			}
@@ -984,11 +785,9 @@ export class Alien1 {
 		}
 		return false;
 	}
-
 	_findSteerDirection(dir, moveDist) {
 		const up = new THREE.Vector3(0,1,0);
 		const basePos = this.model.position.clone();
-		// sample angles +/- 15..180 degrees
 		const stepDeg = 15;
 		for (let i = 1; i <= 12; i++) {
 			const a = THREE.MathUtils.degToRad(stepDeg * i);
@@ -1001,34 +800,22 @@ export class Alien1 {
 		}
 		return null;
 	}
-
-		// Comprueba si el target sigue siendo válido (existe y está vivo)
 		_isTargetValid(target) {
 			if (!target || !target.ref) return false;
-			// si target es player/controller puede no tener healthComponent; so check position
 			if (target.ref.position === undefined) return false;
-			
-			// Check if cow is dead
 			if (target.type === 'cow') {
-				// Check userData.isDead flag
 				if (target.ref.userData && target.ref.userData.isDead) return false;
-				// Check cow controller
 				const cowController = target.ref.userData && target.ref.userData.cowController;
 				if (cowController && typeof cowController.isAlive === 'function' && !cowController.isAlive()) {
 					return false;
 				}
 			}
-			
-			// if the target has health property, ensure it's alive
 			if (target.ref.userData && target.ref.userData.controller && target.ref.userData.controller.healthComponent) {
 				return target.ref.userData.controller.healthComponent.isAlive();
 			}
 			return true;
 		}
-
-		// Intentar adquirir objetivo: priorizar jugador si está muy cerca; luego vacas; luego jugador en rango
 		_acquireTarget() {
-			// medir jugador primero
 			let playerRef = null;
 			let playerDist = Infinity;
 			try {
@@ -1040,15 +827,11 @@ export class Alien1 {
 					}
 				}
 			} catch (_) {}
-
-			// prioridad: si el jugador está dentro del radio de aggro, elegirlo
 			const aggroR = this.playerAggroRadius || 12;
 			if (playerRef && playerDist <= aggroR) {
 				this.target = { type: 'player', ref: playerRef };
 				return;
 			}
-
-			// luego buscar vacas provistas por getCows (dentro de detectionRange, más cercana)
 			try {
 				if (typeof this.getCows === 'function') {
 					const cows = this.getCows() || [];
@@ -1069,14 +852,10 @@ export class Alien1 {
 						return;
 					}
 				}
-
-				// luego intentar player si está dentro del detectionRange
 				if (playerRef && playerDist <= this.detectionRange) {
 					this.target = { type: 'player', ref: playerRef };
 					return;
 				}
-
-				// si no encuentra, intentar ir hacia el centro del corral si está disponible
 				try {
 					if (typeof this.getCorralCenter === 'function') {
 						const c = this.getCorralCenter();
@@ -1086,15 +865,12 @@ export class Alien1 {
 						}
 					}
 				} catch (_) {}
-
-				// si no hay nada, limpiar target
 				this.target = null;
 			} catch (err) {
 				console.warn('Alien1 _acquireTarget error:', err);
 				this.target = null;
 			}
 		}
-
 		_moveTowards(targetPos, delta) {
 			if (!this.model) return;
 			const dir = new THREE.Vector3().subVectors(targetPos, this.model.position);
@@ -1102,9 +878,7 @@ export class Alien1 {
 			const distance = dir.length();
 			if (distance < 1e-3) return;
 			dir.normalize();
-
-			// calcular paso propuesto y evitar obstáculos
-			const moveDistance = this.moveSpeed * delta * 60; // normalize by fps
+			const moveDistance = this.moveSpeed * delta * 60;
 			const step = Math.min(moveDistance, distance);
 			const nextPos = this.model.position.clone().add(dir.clone().multiplyScalar(step));
 			let finalDir = dir;
@@ -1112,46 +886,30 @@ export class Alien1 {
 				const steered = this._findSteerDirection(dir, step);
 				if (steered) finalDir = steered;
 				else {
-					// bloqueado: quedarse en sitio y mantener idle de combate
 					if (this.animations.combatIdle) this.playAnimation('combatIdle');
 					return;
 				}
 			}
-
-			// actualizar orientación hacia la dirección final
 			const look = this.model.position.clone().add(finalDir);
 			this.model.lookAt(look);
-
-			// aplicar movimiento
 			this.model.position.add(finalDir.multiplyScalar(step));
 		}
-
 		_tryAttack() {
 				const now = performance.now() / 1000;
 				if (now - this._lastAttackAt < this.attackCooldown) return;
 				this._lastAttackAt = now;
-
-				// elegir lado del golpe
 				const side = Math.random() < 0.5 ? 'punch_left' : 'punch_right';
-
-				// reproducir animación de punch (si existe) en modo una sola vez
 				if (this.animations[side]) {
-					// obtener clip y duración
 					const clip = this.animations[side];
 					this._currentPunchClip = clip;
 					this.playAnimation(side, { loop: THREE.LoopOnce, fadeIn: 0.06 });
-
-					// programar impacto en un punto dentro del clip (por ejemplo 40-50% del clip)
 					try {
-						const impactRatio = 0.45; // timing relativo del impacto dentro del punch
+						const impactRatio = 0.45;
 						const impactMs = Math.max(50, clip.duration * impactRatio * 1000);
 						if (this._impactTimeoutId) clearTimeout(this._impactTimeoutId);
 							this._impactTimeoutId = setTimeout(() => {
-							// aplicar hitbox justo en el momento del impacto
 							try {
-								// CUSTOM COW HIT DETECTION
 								this._applyCowDamage();
-								
 								if (this.combat && this.entityId) {
 									this.combat.applyFrontalAttack(this.entityId, {
 										damage: this.attackDamage,
@@ -1169,7 +927,6 @@ export class Alien1 {
 							} catch (err) {
 								console.warn('Alien1 impact error:', err);
 							}
-							// play punch SFX positionally at impact
 							try { safePlaySfx('punch', { object3D: this.model, volume: 0.95 }); } catch(_) {}
 							this._impactTimeoutId = null;
 						}, impactMs);
@@ -1177,10 +934,8 @@ export class Alien1 {
 						// ignore scheduling errors
 					}
 				} else if (this.animations.attack) {
-					// fallback: no punch clips, play generic attack and schedule immediate hit
 					this.playAnimation('attack', { loop: THREE.LoopOnce, fadeIn: 0.06 });
 					try { safePlaySfx('punch', { object3D: this.model, volume: 0.95 }); } catch(_) {}
-					// Apply cow damage immediately
 					this._applyCowDamage();
 					try {
 						if (this.combat && this.entityId) {
@@ -1201,8 +956,6 @@ export class Alien1 {
 						console.warn('Alien1 attack error:', err);
 					}
 				}
-
-				// usar combat system para crear hitbox si está adjunto
 				try {
 					if (this.combat && this.entityId) {
 						this.combat.applyFrontalAttack(this.entityId, {
@@ -1214,7 +967,6 @@ export class Alien1 {
 							friendlyFire: false,
 						});
 					} else {
-						// si no hay CombatSystem, intentar aplicar daño directo si target tiene healthComponent
 						if (this.target && this.target.ref && this.target.ref.userData && this.target.ref.userData.controller && this.target.ref.userData.controller.healthComponent) {
 							this.target.ref.userData.controller.healthComponent.takeDamage(this.attackDamage, { from: this.entityId });
 						}
@@ -1223,34 +975,18 @@ export class Alien1 {
 					console.warn('Alien1 attack error:', err);
 				}
 		}
-		
-		/**
-		 * Apply damage to cow if the current target is a cow
-		 * Requirement: Verify target is a cow before counting hit
-		 */
 		_applyCowDamage() {
 			if (!this.target || !this.target.ref) return;
-			
-			// Method 1: Check tag (preferred)
 			const hasTagCow = this.target.ref.userData && this.target.ref.userData.tag === "Cow";
-			
-			// Method 2: Check for Cow controller/component
 			const hasCowController = this.target.ref.userData && this.target.ref.userData.cowController;
-			
-			// Method 3: Check target type from AI system
 			const isTargetTypeCow = this.target.type === 'cow';
-			
 			if (!hasTagCow && !hasCowController && !isTargetTypeCow) {;
 				return;
 			}
-			
-			// It's a cow! Apply hit
 			let cowController = null;
-			
 			if (hasCowController) {
 				cowController = this.target.ref.userData.cowController;
 			} else if (isTargetTypeCow) {
-				// Try to find cow from getCows function
 				try {
 					if (typeof this.getCows === 'function') {
 						const cows = this.getCows() || [];
@@ -1265,40 +1001,31 @@ export class Alien1 {
 					console.warn('Error finding cow controller:', e);
 				}
 			}
-			
 			if (!cowController || typeof cowController.onAlienHit !== 'function') {
 				console.warn('[Alien1] Found cow target but no valid controller with onAlienHit method');
 				return;
 			}
-			
-			// Register the hit
 			const attackerId = this.entityId || 'alien1_unknown';
 			try {
 				const died = cowController.onAlienHit(attackerId);
 				if (died) {
-					// Cow died - clear our target
 					this.target = null;
 				}
 			} catch (err) {
 				console.error('[Alien1] Error applying cow damage:', err);
 			}
 		}
-
-		// attach combat references from WaveManager after integration
 		attachCombat(combatSystem, entityId, healthComponent, getPlayerFunc, getCowsFunc) {
 			this.combat = combatSystem;
 			this.entityId = entityId;
 			this.healthComponent = healthComponent;
 			if (typeof getPlayerFunc === 'function') this.getPlayer = getPlayerFunc;
 			if (typeof getCowsFunc === 'function') this.getCows = getCowsFunc;
-
-				// hook damage/death to update and show the health bar + damage text
 				try {
 					const prevOnDamage = this.healthComponent && this.healthComponent.onDamage ? this.healthComponent.onDamage.bind(this.healthComponent) : null;
 					this.healthComponent.onDamage = (amount, source) => {
 						try { if (prevOnDamage) prevOnDamage(amount, source); } catch (_) {}
 						try { this._spawnDamageText(`-${Math.round(amount)}`); } catch (_) {}
-						// play hit SFX (positional)
 						try { safePlaySfx('hit', { object3D: this.model, volume: 0.9 }); } catch(_) {}
 					};
 				} catch (_) {}
@@ -1306,12 +1033,10 @@ export class Alien1 {
 					const prevOnDeath = this.healthComponent && this.healthComponent.onDeath ? this.healthComponent.onDeath.bind(this.healthComponent) : null;
 					this.healthComponent.onDeath = (source) => {
 						try { if (prevOnDeath) prevOnDeath(source); } catch (_) {}
-						// marcar como muerto y asegurar que no se superpongan animaciones
 						this.isDead = true;
 						try { if (this._impactTimeoutId) { clearTimeout(this._impactTimeoutId); this._impactTimeoutId = null; } } catch (_) {}
 						this._currentPunchClip = null;
 						this._postAttackUntil = 0;
-						// stop run loop audio if playing
 						try {
 							if (this._runAudio) {
 								const ra = this._runAudio;
@@ -1323,33 +1048,23 @@ export class Alien1 {
 							}
 						} catch (_) {}
 						try { if (this.animations.death) this.playAnimation('death', { loop: THREE.LoopOnce, fadeIn: 0.06, timeScale: 1.0 }); } catch (_) {}
-						// play death scream SFX (positional)
 						try { safePlaySfx('alienScream', { object3D: this.model, volume: 1.0 }); } catch(_) {}
-						// ocultar barra de vida
 						try { if (this._hb && this._hb.group) this._hb.group.visible = false; } catch (_) {}
-						// limpiar target para evitar lógica de IA posterior
 						try { this.target = null; } catch (_) {}
 					};
 				} catch (_) {}
-
-				// ensure bar exists/reflects starting health
 				try { this._createHealthbar(); this._updateHealthbar(0); } catch (_) {}
 		}
-
-		// mixer finished handler: sync punch end -> combatIdle
 		_onMixerFinished(event) {
 			try {
-				// si está muerto, no cambiar de animación (evita volver a combatIdle)
 				if (this.isDead || (this.healthComponent && !this.healthComponent.isAlive())) return;
 				if (!event || !event.action) return;
 				const clip = event.action.getClip();
-				// si el clip correspondía al punch actual, reproducir combatIdle y mantener 1s
 				if (this._currentPunchClip && clip === this._currentPunchClip) {
 					try {
 						if (this.animations.combatIdle) this.playAnimation('combatIdle');
-						this._postAttackUntil = performance.now() + 1000; // 1s
+						this._postAttackUntil = performance.now() + 1000;
 					} catch (e) {}
-					// limpiar referencia y cancelar cualquier impact timeout pendiente
 					this._currentPunchClip = null;
 					if (this._impactTimeoutId) {
 						clearTimeout(this._impactTimeoutId);
@@ -1360,20 +1075,14 @@ export class Alien1 {
 				console.warn('Alien1 mixer finished handler error:', e);
 			}
 		}
-
-	// Ajustar velocidad global de las acciones actuales
 	setSpeed(speed) {
 		if (this.currentAction) this.currentAction.setEffectiveTimeScale(speed);
 		if (this.mixer) this.mixer.timeScale = speed;
 	}
-
-	// Diagnostics getter
 	getAnimationDiagnostics() { return this._animDiagnostics; }
 
 	setAnimationLogging(enabled) { this._animLogEnabled = !!enabled; }
 }
-
-// Debug helpers globales
 window.debugAlien1 = function () {
 	if (window.alien1) {
 		if (window.alien1.currentAction);
@@ -1381,14 +1090,11 @@ window.debugAlien1 = function () {
 		console.warn('Alien1 no definido en window.alien1');
 	}
 };
-
 window.forceAlien1Animation = function (name) {
 	if (window.alien1) {
 		window.alien1.playAnimation(name);
 	} else console.warn('Alien1 no definido en window.alien1');
 };
-
-// Enable/disable logging of animation plays for all aliens
 window.setAlienAnimLog = function (enabled) {
 	if (!window.aliens || window.aliens.length === 0) {
 		console.warn('No hay aliens aún');
@@ -1396,8 +1102,6 @@ window.setAlienAnimLog = function (enabled) {
 	}
 	window.aliens.forEach(a => a.setAnimationLogging && a.setAnimationLogging(enabled));
 };
-
-// Print a detailed diagnosis of animation compatibility/retarget
 window.printAlien1AnimDiag = function () {
 	if (window.alien1) {
 		const diag = window.alien1.getAnimationDiagnostics ? window.alien1.getAnimationDiagnostics() : null;

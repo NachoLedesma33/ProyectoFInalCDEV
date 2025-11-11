@@ -1,6 +1,3 @@
-// Simple death screen overlay that restarts the game back to the menu
-// Converted to a class while keeping the original named/default function
-// for compatibility with existing imports.
 
 export class DeathScreen {
   constructor(options = {}) {
@@ -9,7 +6,6 @@ export class DeathScreen {
 
   show(options = {}) {
     const opts = Object.assign({}, this.options, options || {});
-    // avoid multiple overlays
     if (document.getElementById('death-screen-overlay')) return;
 
     const overlay = document.createElement('div');
@@ -71,11 +67,9 @@ export class DeathScreen {
           window.audio.playSFX('uiClick', { volume: 0.9 });
         }
       } catch (_) {}
-      // simplest and most reliable way to reset back to the start/menu
       try {
         window.location.reload();
       } catch (e) {
-        // fallback: remove overlay
         if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
       }
     });
@@ -91,7 +85,6 @@ export class DeathScreen {
   }
 }
 
-// Convenience attach for backward compatibility
 export function showDeathScreen(options = {}) {
   return DeathScreen.show(options);
 }
