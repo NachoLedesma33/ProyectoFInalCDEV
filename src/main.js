@@ -37,17 +37,13 @@ import { safePlaySfx } from "./utils/audioHelpers.js";
 import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/loaders/FBXLoader.js";
 import LightPost from "./utils/LightPost.js";
 
-// Inicialización del menú principal
 document.addEventListener("DOMContentLoaded", () => {
-  // Configurar los botones del menú principal
   const playButton = document.getElementById("play-button");
   const tutorialButton = document.getElementById("tutorial-button");
   const controlsButton = document.getElementById("controls-button");
   let soundButton = document.getElementById("sound-button");
 
-  // Usamos el manager del carrusel/historia modular
   const storyManager = createStoryManager(storySlides, () => {
-    // Este callback se ejecuta una sola vez para iniciar la carga en background
     if (!window.__gameInitPromise) {
       window.__gameInitPromise = new Promise((resolve) => {
         setTimeout(() => {
@@ -61,15 +57,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // (moved to global scope below)
-
-    // Clonar el Alien2 del mercado y colocarlo en posiciones fijas (solo visual)
     function createAlien2Clones() {
       try {
         try {
           if (!window.alien2Clones) window.alien2Clones = [];
         } catch (_) {}
-        // Remove any existing clones from the scene to avoid stacking
         try {
           if (Array.isArray(window.alien2Clones)) {
             for (let i = 0; i < window.alien2Clones.length; i++) {
@@ -81,7 +73,6 @@ document.addEventListener("DOMContentLoaded", () => {
             window.alien2Clones.length = 0;
           }
         } catch (_) {}
-        // Also remove any previous static Alien2 instances (first ones) so only the last ones remain
         try {
           if (Array.isArray(window.alien2Statics)) {
             for (let i = 0; i < window.alien2Statics.length; i++) {
@@ -94,7 +85,6 @@ document.addEventListener("DOMContentLoaded", () => {
             window.alien2Statics.length = 0;
           }
         } catch (_) {}
-        // reset mixers each time we recreate clones
         try {
           alien2CloneMixers.length = 0;
         } catch (_) {}
@@ -147,7 +137,6 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (_) {}
             scene.add(clone);
 
-            // Create an AnimationMixer for the clone and load Idle animation
             try {
               const mixer = new THREE.AnimationMixer(clone);
               alien2CloneMixers.push(mixer);
@@ -187,9 +176,6 @@ document.addEventListener("DOMContentLoaded", () => {
       window.createAlien2Clones = createAlien2Clones;
     } catch (_) {}
 
-    /**
-     * Crear Alien2 estáticos (idle) en posiciones fijas mirando a un objetivo
-     */
     async function createAlien2Statics() {
       const entries = [
         {
@@ -218,14 +204,12 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           const a = new Alien2(scene, modelLoader, e.pos, e.look);
           await a.load();
-          // Asegurar idle y sin movimiento
           try {
             a.forceIdleAnimation && a.forceIdleAnimation();
           } catch (_) {}
           try {
             a.movementSystem && (a.movementSystem.isActive = false);
           } catch (_) {}
-          // Nudge Y up slightly and ensure orientation after load
           try {
             if (a.model) {
               a.model.position.set(e.pos.x, (e.pos.y || 0) + 0.2, e.pos.z);
@@ -255,9 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return false;
           } catch (_) {}
           alien2Statics.push(a);
-        } catch (err) {
-          /* non-fatal */
-        }
+        } catch (err) {}
       }
 
       try {
@@ -274,12 +256,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return window.__gameInitPromise;
   });
 
-  // Conectar el play button al manager
   storyManager.attachToPlayButton(playButton);
 
-  // Ensure there's a visible sound button under the Play button. If the
-  // element is missing in the HTML, create it dynamically so the HUD can
-  // be toggled and the UI SFX play.
   try {
     if (!soundButton && playButton && playButton.parentNode) {
       soundButton = document.createElement("button");
@@ -289,7 +267,6 @@ document.addEventListener("DOMContentLoaded", () => {
       soundButton.innerText = "Sonido";
       playButton.parentNode.insertBefore(soundButton, playButton.nextSibling);
     } else if (playButton && soundButton && playButton.parentNode) {
-      // If the button exists in the DOM, ensure it's right after the Play button
       try {
         playButton.parentNode.insertBefore(soundButton, playButton.nextSibling);
       } catch (_) {}
@@ -298,13 +275,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return e;
   }
 
-  // Inicializar AudioManager lo antes posible (sin cámara) para que la música del menú pueda reproducirse
   try {
     if (!window.audio) {
       const earlyAudio = new AudioManager(null);
       window.audio = earlyAudio;
-      // Intentar reproducir la música del menú. Si el autoplay es bloqueado,
-      // reproduciremos tras el primer gesto del usuario.
       earlyAudio.playMusic("main", { loop: true }).catch(() => {
         const startMenuMusic = () => {
           try {
@@ -321,9 +295,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return e;
   }
 
-  // Por ahora, los otros botones no tienen funcionalidad. Guardamos las
-  // comprobaciones por si no existen en el markup (evita que el script se
-  // detenga con un TypeError y deje sin listeners al botón de sonido).
   if (tutorialButton && typeof tutorialButton.addEventListener === "function") {
     tutorialButton.addEventListener("click", () => {
       try {
@@ -340,7 +311,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Mostrar/ocultar HUD de sonido al pulsar el botón
   const soundHud =
     typeof createSoundHUD === "function"
       ? createSoundHUD({ container: document.body })
@@ -349,12 +319,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (soundHud) soundHud.style.display = "none";
   } catch (_) {}
 
-  // Crear el menú de pausa (overlay) y mantenerlo oculto por defecto
   let pauseMenu = null;
   try {
     if (typeof PauseMenu === "function") {
       pauseMenu = new PauseMenu({ container: document.body });
-      // hide immediately in case constructor left it visible
       try {
         if (pauseMenu && typeof pauseMenu.hide === "function") pauseMenu.hide();
       } catch (_) {}
@@ -362,7 +330,6 @@ document.addEventListener("DOMContentLoaded", () => {
   } catch (e) {
     return e;
   }
-  // expose for debugging from console
   try {
     window.pauseMenu = pauseMenu;
   } catch (_) {}
@@ -371,22 +338,18 @@ document.addEventListener("DOMContentLoaded", () => {
   } catch (_) {}
 
   if (soundButton) {
-    // Play hover SFX when the user moves the pointer over the button
     try {
       soundButton.addEventListener("pointerenter", () => {
         try {
           safePlaySfx("uiHover", { volume: 0.6 });
         } catch (_) {}
       });
-      // fallback for older browsers
       soundButton.addEventListener("mouseenter", () => {
         try {
           safePlaySfx("uiHover", { volume: 0.6 });
         } catch (_) {}
       });
-    } catch (e) {
-      // non-fatal
-    }
+    } catch (e) {}
 
     soundButton.addEventListener("click", () => {
       try {
@@ -394,12 +357,10 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (_) {}
 
       try {
-        // Only allow the sound HUD to be opened while the main menu is visible.
         const mainMenu = document.getElementById("main-menu");
         const menuVisible =
           mainMenu && window.getComputedStyle(mainMenu).display !== "none";
         if (!menuVisible) {
-          // do not open HUD outside of the start screen
           return;
         }
 
@@ -415,16 +376,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return "sound-button not found and could not be created; sound HUD will not be toggleable via button";
   }
 
-  // Toggle pause menu with Escape while gameplay is active
   try {
     window.addEventListener("keydown", (ev) => {
       if (!ev || !ev.key) return;
       if (ev.key === "Escape" || ev.key === "Esc") {
-        // Toggle pause when the game container is visible (allow flows that didn't set __gameplayStarted)
         try {
           const tag =
             (document.activeElement && document.activeElement.tagName) || "";
-          if (tag === "INPUT" || tag === "TEXTAREA") return; // don't toggle while typing
+          if (tag === "INPUT" || tag === "TEXTAREA") return;
           const gameCont = document.getElementById("game-container");
           if (!gameCont) return;
           const visible = window.getComputedStyle
@@ -432,13 +391,11 @@ document.addEventListener("DOMContentLoaded", () => {
             : gameCont.style.display !== "none";
           if (!visible) return;
 
-          // debug log to help trace if handler runs (no early return)
           try {
             console.debug &&
               console.debug("[pause] Escape pressed, toggling pause");
           } catch (_) {}
 
-          // Prefer using the created pauseMenu object's API if present
           try {
             if (
               pauseMenu &&
@@ -446,7 +403,6 @@ document.addEventListener("DOMContentLoaded", () => {
               typeof pauseMenu.hide === "function" &&
               typeof pauseMenu.isShown === "function"
             ) {
-              // use PauseMenu instance API
               const isShown = pauseMenu.isShown();
               if (isShown) pauseMenu.hide();
               else pauseMenu.show();
@@ -478,24 +434,20 @@ document.addEventListener("DOMContentLoaded", () => {
     return e;
   }
 
-  // Iniciar música cuando arranca el gameplay (tras controles)
   try {
     window.addEventListener("gameplaystart", () => {
       try {
         if (window.audio && typeof window.audio.stopMusic === "function")
           window.audio.stopMusic();
       } catch (_) {}
-      // start background ambience when gameplay begins
       try {
         if (window.audio && typeof window.audio.playAmbience === "function") {
           window.audio.playAmbience("noise", { loop: true, volume: 0.6 });
         }
-        // Start occasional ambient music cues (randomly play ambient1 or ambient2 every so often)
         if (
           window.audio &&
           typeof window.audio.startRandomAmbient === "function"
         ) {
-          // casual: between 30s and 180s, ~60% chance each window, moderate volume
           window.audio.startRandomAmbient({
             minDelay: 30,
             maxDelay: 180,
@@ -587,47 +539,29 @@ document.addEventListener("DOMContentLoaded", () => {
           objHud.classList.add("objectives-collapsed");
         });
     }
-  } catch (e) {
-    /* non-fatal */
-  }
+  } catch (e) {}
 });
 
-// Variables globales principales de Three.js
-let scene; // Escena 3D que contiene todos los objetos
-let renderer; // Motor de renderizado WebGL
-let cameraManager; // Gestor de cámara
-let camera; // Cámara que define la vista del usuario (accesible a través de cameraManager)
-let controls; // Controles de la cámara (accesibles a través de cameraManager)
-let smokeEffect; // Efecto de humo
-// Audio
-let audioManager; // Gestor de audio
-
-// Componentes personalizados
-let terrain, // Gestor del terreno
-  lighting, // Sistema de iluminación
-  clock, // Reloj para animaciones
-  skybox; // Fondo 360°
-
-// Variables para el minimap
+let scene;
+let renderer;
+let cameraManager;
+let camera;
+let controls;
+let smokeEffect;
+let audioManager;
+let terrain,
+  lighting,
+  clock,
+  skybox;
 let minimapWidth = 340,
   minimapHeight = 249;
-let worldBounds = { minX: -250, maxX: 100, minZ: -250, maxZ: 300 }; // Límites del mundo ajustados para todas las piedras
-
-// Minimapa modular - Solo creamos la instancia aquí, la inicialización se hará más tarde
+let worldBounds = { minX: -250, maxX: 100, minZ: -250, maxZ: 300 };
 let minimapManager = null;
-
-// Cargador de modelos
-let modelLoader; // Maneja la carga y animación de modelos 3D
-
-// Instancia del controlador del granjero
+let modelLoader;
 let farmerController;
-
-// Sistema de combate y gestor de oleadas
 let combatSystem;
 let waveManager;
-// Contador de tiempo para la primera oleada (timestamp en ms)
 let waveStartAt = null;
-// helper to pause/resume absolute timestamps (avoid countdowns advancing while paused)
 let __globalPauseAt = null;
 try {
   window.addEventListener("gamepause", () => {
@@ -643,85 +577,49 @@ try {
     __globalPauseAt = null;
   });
 } catch (_) {}
-// Elemento DOM del contador
 let waveCountdownEl = null;
-// Elemento DOM de advertencia previa a la oleada
 let waveWarningEl = null;
-// Flag para etiquetar el contador como 'Primera oleada'
 let isFirstWaveCountdown = false;
-
-// Instancia del corral
 let corral;
-
-// Instancia del Space Shuttle Orbiter
 let spaceShuttle;
 let shipRepair;
-
-// Array de vacas en el corral
 let cows = [];
-
-// Array de piedras en el terreno
 let stones = [];
-
-// Array de cristales en el terreno
 let crystals = [];
-
-// Aliens estáticos (solo idle)
 let alien2Statics = [];
 try {
   window.alien2Statics = alien2Statics;
 } catch (_) {}
-
-// Mixers para clones de Alien2 (para reproducir IdleAlien2.fbx en los clones)
 let alien2CloneMixers = [];
 try {
   window.alien2CloneMixers = alien2CloneMixers;
 } catch (_) {}
-
-// Postes de luz
 let lightPosts = [];
 try {
   window.lightPosts = lightPosts;
 } catch (_) {}
-
-// Instancia de la casa
 let house;
-
-// Configuración de la cámara isométrica
-// La cámara ahora es manejada por el CameraManager en modo isométrico
-
-// Configuración de controles de movimiento
-const moveSpeed = 0.1; // Velocidad de movimiento base
-const rotationSpeed = 0.05; // Velocidad de rotación
-
-// Estado de las teclas (para controles WASD)
+const moveSpeed = 0.1;
+const rotationSpeed = 0.05;
 const keys = {
-  w: false, // Avanzar
-  a: false, // Izquierda
-  s: false, // Retroceder
-  d: false, // Derecha
+  w: false,
+  a: false,
+  s: false,
+  d: false,
 };
 
-// La inicialización del juego ahora se maneja a través del botón Jugar
-// init().catch(console.error);
-
-/**
- * Función para verificar si todas las vacas están muertas
- */
 function checkAllCowsDead() {
   if (!cows || cows.length === 0) return false;
 
   const allDead = cows.every((cow) => cow.isDead);
 
   if (allDead) {
-    // Mostrar pantalla de derrota
     showDeathScreen({
       title: "¡Todas las vacas han muerto!",
       subtitle: "Tu rebaño ha sido eliminado",
       buttonText: "Reiniciar",
     });
 
-    // Pausar el juego
     if (window.pauseMenu) {
       window.pauseMenu.togglePause(true);
     }
@@ -732,42 +630,32 @@ function checkAllCowsDead() {
   return false;
 }
 
-// Hacer la función accesible globalmente
 window.checkAllCowsDead = checkAllCowsDead;
 
-/**
- * Crear 6 vacas dentro del corral
- */
 function createCows() {
-  // Asegurarse de que la función de verificación esté disponible
   window.checkAllCowsDead = checkAllCowsDead;
 
-  // Posiciones específicas para las 6 vacas dentro del corral
   const cowPositions = [
-    { x: 21.6, y: 0.0, z: 22.6 }, // Vaca 1
-    { x: 21.6, y: 0.0, z: 17.2 }, // Vaca 2
-    { x: 20.9, y: 0.0, z: 11.4 }, // Vaca 3
-    { x: 9.6, y: 0.0, z: 21.9 }, // Vaca 4 (corregida posición duplicada)
-    { x: 9.6, y: 0.0, z: 16.7 }, // Vaca 5 (posición adicional)
-    { x: 9.6, y: 0.0, z: 12.6 }, // Vaca 6
+    { x: 21.6, y: 0.0, z: 22.6 },
+    { x: 21.6, y: 0.0, z: 17.2 },
+    { x: 20.9, y: 0.0, z: 11.4 },
+    { x: 9.6, y: 0.0, z: 21.9 },
+    { x: 9.6, y: 0.0, z: 16.7 },
+    { x: 9.6, y: 0.0, z: 12.6 },
   ];
 
-  // Línea central del corral (desde z: 24.4 hasta z: 5.6 en x: 15.3)
   const centerLineStart = { x: 15.3, y: 0.0, z: 24.4 };
   const centerLineEnd = { x: 15.3, y: 0.0, z: 5.6 };
 
-  // Crear cada vaca
   cowPositions.forEach((position, index) => {
-    const cow = new Cow(scene, position); // La escala se calcula automáticamente para coincidir con el farmer
+    const cow = new Cow(scene, position);
 
-    // Calcular el punto más cercano en la línea central para que la vaca mire hacia adentro
     const targetZ = Math.max(
       centerLineEnd.z,
       Math.min(centerLineStart.z, position.z)
     );
     const lookAtPoint = { x: centerLineStart.x, y: position.y, z: targetZ };
 
-    // Orientar la vaca hacia el punto de la línea central
     const orientCow = () => {
       if (cow.model) {
         const targetVector = new THREE.Vector3(
@@ -779,7 +667,6 @@ function createCows() {
       }
     };
 
-    // Intentar orientar inmediatamente y luego varios reintentos
     setTimeout(orientCow, 500);
     setTimeout(orientCow, 1000);
     setTimeout(orientCow, 2000);
@@ -788,15 +675,10 @@ function createCows() {
     cows.push(cow);
   });
 
-  // Hacer las vacas accesibles para depuración
   window.cows = cows;
 }
 
-/**
- * Inicializar el minimap HUD
- */
 function initMinimap() {
-  // Solo inicializar si no se ha hecho ya
   if (!minimapManager) {
     minimapManager = makeMinimap({
       width: minimapWidth,
@@ -804,10 +686,8 @@ function initMinimap() {
       worldBounds,
     });
 
-    // Inicialización del manager
     try {
       minimapManager.init("minimap-canvas");
-      // If building refs were created before minimap initialization, attach them now
       if (window._pendingBuildingsForMinimap) {
         try {
           minimapManager.setReferences({
@@ -822,13 +702,8 @@ function initMinimap() {
   }
 }
 
-/**
- * Actualizar el minimap con todos los objetos
- */
 function updateMinimap() {
-  // Delegado al manager
   try {
-    // collect active enemy models from waveManager (if present)
     const enemyModels = [];
     try {
       const wm = window.waveManager || waveManager;
@@ -840,9 +715,7 @@ function updateMinimap() {
           else if (entry.model) enemyModels.push(entry.model);
         }
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
 
     minimapManager.setReferences({
       stones,
@@ -855,18 +728,11 @@ function updateMinimap() {
       enemies: enemyModels,
     });
     minimapManager.update();
-  } catch (e) {
-    // No crítico
-  }
+  } catch (e) {}
 }
 
-/**
- * Crear 30 piedras con posiciones y modelos fijos
- */
 function createStones() {
-  // Array con posiciones y modelos fijos para las 30 piedras
   const stonePositions = [
-    // Zona izquierda (lejos del corral)
     { x: -150, y: 0.2, z: 150, scale: 0.3, modelType: 1 },
     { x: -120, y: 0.2, z: 180, scale: 0.4, modelType: 2 },
     { x: -170, y: 0.2, z: 200, scale: 0.25, modelType: 1 },
@@ -875,18 +741,12 @@ function createStones() {
     { x: -130, y: 0.2, z: 140, scale: 0.3, modelType: 2 },
     { x: -180, y: 0.2, z: 160, scale: 0.4, modelType: 1 },
     { x: -110, y: 0.2, z: 190, scale: 0.35, modelType: 2 },
-
-    // Piedra adicional solicitada
     { x: -112.0, y: 0.0, z: 14.3, scale: 0.35, modelType: 1 },
     { x: -164.1, y: 0.0, z: -29.7, scale: 0.3, modelType: 1 },
     { x: -231.6, y: 0.0, z: 237.8, scale: 0.2, modelType: 1 },
     { x: -210, y: 0.0, z: 80.2, scale: 0.35, modelType: 2 },
     { x: -225.0, y: 0.0, z: -61.1, scale: 0.35, modelType: 1 },
-
-    // Piedra adicional 3 solicitada
     { x: -101.3, y: 0.0, z: -192.5, scale: 0.35, modelType: 1 },
-
-    // Zona centro (evitando área del corral) - mitad superior
     { x: -20, y: 0.2, z: 120, scale: 0.3, modelType: 1 },
     { x: 10, y: 0.2, z: 140, scale: 0.4, modelType: 2 },
     { x: -30, y: 0.2, z: 160, scale: 0.25, modelType: 1 },
@@ -895,8 +755,6 @@ function createStones() {
     { x: -10, y: 0.2, z: 150, scale: 0.3, modelType: 2 },
     { x: 30, y: 0.2, z: 110, scale: 0.4, modelType: 1 },
     { x: -40, y: 0.2, z: 170, scale: 0.35, modelType: 2 },
-
-    // Zona centro - mitad inferior (más lejos de la nave)
     { x: -20, y: 0.2, z: -150, scale: 0.3, modelType: 1 },
     { x: 10, y: 0.2, z: -170, scale: 0.4, modelType: 2 },
     { x: -30, y: 0.2, z: -130, scale: 0.25, modelType: 1 },
@@ -905,8 +763,6 @@ function createStones() {
     { x: -10, y: 0.2, z: -180, scale: 0.3, modelType: 2 },
     { x: 30, y: 0.2, z: -120, scale: 0.4, modelType: 1 },
     { x: -40, y: 0.2, z: -190, scale: 0.35, modelType: 2 },
-
-    // Zona derecha (lejos del corral)
     { x: 100, y: 0.2, z: 150, scale: 0.3, modelType: 1 },
     { x: 130, y: 0.2, z: 180, scale: 0.4, modelType: 2 },
     { x: 80, y: 0.2, z: 200, scale: 0.25, modelType: 1 },
@@ -915,7 +771,6 @@ function createStones() {
     { x: 120, y: 0.2, z: 140, scale: 0.3, modelType: 2 },
   ];
 
-  // Crear cada piedra con sus posiciones y modelos fijos
   stonePositions.forEach((stoneData, index) => {
     const stone = new Stone(
       scene,
@@ -979,32 +834,21 @@ function createCrystals() {
     crystals.push(crystal);
   });
 
-  // Exponer para depuración
   try {
     window.crystals = crystals;
   } catch (_) {}
 }
 
-/**
- * Crear la casa con textura de piedra y puerta interactiva
- */
 function createHouse() {
-  // Crear la casa en las coordenadas especificadas
   house = new House(
     scene,
-    { x: -23.5, y: 0.0, z: -5.0 }, // Posición ajustada para mejor orientación de la puerta
-    { width: 20, height: 8, depth: 15 } // Tamaño rectangular más ancho y profundo
+    { x: -23.5, y: 0.0, z: -5.0 },
+    { width: 20, height: 8, depth: 15 }
   );
 
-  // La conexión con el farmerController se hará después de que se cree el controlador
-
-  // Hacer la casa accesible desde la consola para depuración
   window.house = house;
 }
 
-/**
- * Crear postes de luz en coordenadas especificadas (global)
- */
 function createLightPosts() {
   const positions = [
     { x: -12.7, y: 0.0, z: 4.4 },
@@ -1018,7 +862,6 @@ function createLightPosts() {
     { x: -133.0, y: 0.0, z: 34.9 },
   ];
 
-  // Altura ≈ 3x altura del farmer (fallback 6.0)
   let poleHeight = 6.0;
   try {
     const fm = window.farmerController?.model;
@@ -1042,105 +885,71 @@ function createLightPosts() {
   } catch (_) {}
 }
 
-/**
- * Crear el mercado con textura de piedra y ventana frontal
- */
 function createMarket() {
-  // Crear efecto de humo en las coordenadas especificadas
   smokeEffect = new SmokeEffect(scene, { x: 52.4, y: 0.0, z: -30.2 });
 
-  // Crear el mercado en las coordenadas especificadas
   const market = new Market(
     scene,
-    { x: -155.8, y: 0.0, z: 53.3 }, // Posición especificada
-    { width: 12, height: 6, depth: 8 } // Tamaño rectangular con el lado más ancho al frente
+    { x: -155.8, y: 0.0, z: 53.3 },
+    { width: 12, height: 6, depth: 8 }
   );
 
-  // Hacer el mercado accesible desde la consola para depuración
   window.market = market;
   return market;
 }
 
-/**
- * Crear la interacción de reparación de la nave (círculo y HUD)
- */
 function createShipRepair() {
   shipRepair = new ShipRepair(scene, { x: 39.9, y: 0.0, z: -21.1 }, 1.5);
   window.shipRepair = shipRepair;
 }
-/**
- * Crear y configurar el alien2 en la escena
- */
 async function createAlien2() {
   const alien2 = new Alien2(
     scene,
     modelLoader,
-    { x: -52.5, y: 0.0, z: -159.7 }, // Posición inicial correcta
-    { x: -51.5, y: 0.0, z: -158.7 } // Punto de mira inicial
+    { x: -52.5, y: 0.0, z: -159.7 },
+    { x: -51.5, y: 0.0, z: -158.7 }
   );
 
   await alien2.load();
   window.alien2 = alien2;
   return alien2;
 }
-/**
- * Función de inicialización principal
- * Configura la escena, cámara, renderizador y carga los recursos
- */
 async function init() {
-  // Crear y configurar la escena 3D
   scene = new THREE.Scene();
-
-  // Fondo temporal hasta cargar el skybox
   scene.background = new THREE.Color(0x000000);
-
-  // Configurar niebla para dar profundidad (color, near, far)
   scene.fog = new THREE.Fog(0x5e5d5d, 100, 500);
-
-  // Habilitar caché para mejor rendimiento
   THREE.Cache.enabled = true;
-
-  // Configuración avanzada del renderizador WebGL
   renderer = new THREE.WebGLRenderer({
-    antialias: true, // Suavizado de bordes
-    alpha: true, // Permitir transparencia
-    powerPreference: "high-performance", // Optimización de rendimiento
-    stencil: false, // No se usa búfer de stencil
-    depth: true, // Habilitar búfer de profundidad
+    antialias: true,
+    alpha: true,
+    powerPreference: "high-performance",
+    stencil: false,
+    depth: true,
   });
-  // Configuración del renderizador
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25)); // Cap pixel ratio para rendimiento
-  renderer.setSize(window.innerWidth, window.innerHeight); // Tamaño completo de la ventana
-  renderer.shadowMap.enabled = true; // Habilitar sombras
-  renderer.shadowMap.type = THREE.PCFShadowMap; // Sombras más baratas
-  renderer.physicallyCorrectLights = true; // Iluminación realista
-  renderer.outputEncoding = THREE.sRGBEncoding; // Mejor representación de colores
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; // Mapeo de tonos cinematográfico
-  renderer.toneMappingExposure = 1.0; // Exposición del mapeo de tonos
-  document.getElementById("container").appendChild(renderer.domElement); // Añadir al DOM
-
-  // Inicializar el gestor de cámara
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.physicallyCorrectLights = true;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  document.getElementById("container").appendChild(renderer.domElement);
   cameraManager = new CameraManager(scene, {
     fov: 75,
     near: 0.5,
     far: 1400,
   });
-
-  // Obtener la cámara para compatibilidad con el código existente
   camera = cameraManager.getCamera();
-  // Exponer cámara también en la escena para utilidades que hacen billboard (healthbars, etc.)
   try {
     scene.userData = scene.userData || {};
     scene.userData.camera = camera;
   } catch (e) {}
-
-  // Inicializar audio manager (ligado a la cámara para audio 3D)
   try {
     if (!window.audio) {
       audioManager = new AudioManager(camera);
       window.audio = audioManager;
     } else {
-      // Reusar la instancia creada previamente en DOMContentLoaded. Adjuntar listener a la cámara si es necesario.
       audioManager = window.audio;
       try {
         if (camera && typeof camera.add === "function")
@@ -1150,63 +959,42 @@ async function init() {
   } catch (e) {
     return e;
   }
-
-  // Inicializar reloj para animaciones
   clock = new THREE.Clock();
-
-  // Cargar skybox (fondo 360°)
   (async () => {
     try {
-      // Rutas alternativas para cargar el skybox
       const skyboxPaths = [
-        "src/assets/FondoDiaEstrellado3.png", // Ruta relativa desde la raíz del proyecto
-        "./src/assets/FondoDiaEstrellado3.png", // Ruta relativa al directorio actual
-        "/src/assets/FondoDiaEstrellado3.png", // Ruta absoluta desde la raíz del servidor
-        "assets/FondoDiaEstrellado3.png", // Ruta alternativa 1
-        "./assets/FondoDiaEstrellado3.png", // Ruta alternativa 2
+        "src/assets/FondoDiaEstrellado3.png",
+        "./src/assets/FondoDiaEstrellado3.png",
+        "/src/assets/FondoDiaEstrellado3.png",
+        "assets/FondoDiaEstrellado3.png",
+        "./assets/FondoDiaEstrellado3.png",
       ];
 
-      // Intentar cargar el skybox desde diferentes rutas
       for (const path of skyboxPaths) {
         try {
           skybox = new Skybox(scene, path);
-          break; // Salir del bucle si la carga es exitosa
+          break;
         } catch (err) {
           return e;
-          // Continuar con la siguiente ruta en caso de error
         }
       }
 
-      // Si no se pudo cargar ningún skybox
       if (!skybox) {
         throw new Error("No se pudo cargar ninguna textura de skybox");
       }
 
-      // Configuración adicional del renderizado
-      renderer.setClearColor(0x000000, 1); // Color de fondo negro
-      renderer.outputEncoding = THREE.sRGBEncoding; // Codificación de color sRGB
+      renderer.setClearColor(0x000000, 1);
+      renderer.outputEncoding = THREE.sRGBEncoding;
     } catch (error) {
-      // Configurar un color de fondo celeste como respaldo
       scene.background = new THREE.Color(0x87ceeb);
     }
   })();
-
-  // Inicializar el sistema de iluminación
   lighting = new Lighting(scene);
-
-  // Expose DeathScreen helper globally (redundant but explicit)
   try {
     window.showDeathScreen = showDeathScreen;
   } catch (e) {}
-
-  // Crear y configurar el terreno
   terrain = new Terrain(scene, renderer);
-
-  // Inicializar el cargador de modelos 3D
   modelLoader = new ModelLoader(scene);
-
-  // Crear un CombatSystem global temprano para que FarmerController y WaveManager
-  // se registren en la misma instancia (evita tener múltiples instancias aisladas)
   if (!window.combatSystem) {
     try {
       window.combatSystem = new CombatSystem();
@@ -1214,23 +1002,16 @@ async function init() {
       return e;
     }
   }
-  // asignar a la variable local también (se reasignará más tarde si es necesario)
   combatSystem = window.combatSystem;
-
-  // Crear el corral para vacas
   corral = new Corral(
     scene,
     { x: 15, y: 0, z: 15 },
     { width: 20, height: 2, depth: 20 }
   );
-
-  // Registrar el corral en el CombatSystem y crear su barra de vida HUD (debajo de la del jugador)
   try {
-    // Asegurar instancia global del sistema de combate
     combatSystem = window.combatSystem || new CombatSystem();
     window.combatSystem = combatSystem;
 
-    // Crear un ancla simple en el centro del corral para registrar vida/daño
     const corralAnchor = new THREE.Object3D();
     corralAnchor.position.set(
       corral.position.x,
@@ -1240,7 +1021,6 @@ async function init() {
     scene.add(corralAnchor);
     window.corralAnchor = corralAnchor;
 
-    // Integrar con vida propia (p.ej. 300 de vida), equipo aliado para evitar Fuego Amigo si aplica
     const corralHealth = integrateEntityWithCombat(
       combatSystem,
       "corral",
@@ -1250,14 +1030,12 @@ async function init() {
     );
     window.corralHealth = corralHealth;
 
-    // Connect the corral's health component to the corral instance
     if (corral) {
       corral.healthComponent = corralHealth;
-      corral.maxHealth = 500; // Match the health set in integrateEntityWithCombat
+      corral.maxHealth = 500;
       corral.health = 500;
     }
 
-    // Crear HUD del corral cuando comience el gameplay, una sola vez
     const spawnCorralHealthbar = () => {
       try {
         if (window.corralHealthBar) return;
@@ -1291,63 +1069,33 @@ async function init() {
     } catch (_) {
       spawnCorralHealthbar();
     }
-  } catch (e) {
-    /* no fatal */
-  }
-
-  // Crear el Space Shuttle Orbiter
+  } catch (e) {}
   spaceShuttle = new SpaceShuttle(
     scene,
-    { x: 50, y: 0, z: -30 }, // Posición: a un lado, sobre la superficie del terreno
-    0.1 // Escala mucho más reducida para que no sea tan grande
+    { x: 50, y: 0, z: -30 },
+    0.1
   );
-
-  // Crear 4 vacas dentro del corral
   createCows();
-
-  // Crear 30 piedras aleatorias en el terreno
   createStones();
-
-  // Crear cristales en coordenadas dadas
   createCrystals();
-
-  // Crear la casa con puerta interactiva
   createHouse();
-  // Crear postes de luz en posiciones dadas
   try {
     createLightPosts();
   } catch (_) {}
-  // Crear el alien2
   const alien2 = await createAlien2();
   window.alien2 = alien2;
-
-  // No crear aliens estáticos (para evitar duplicación/stack). Dejamos solo los últimos (clones)
   try {
-    /* static Alien2 disabled */
   } catch (_) {}
-
-  // Clonar el alien2 del mercado para garantizar que se vean igual en las coordenadas pedidas
   try {
     createAlien2Clones();
   } catch (_) {}
-
-  // Iniciar la secuencia de movimiento automático (5 minutos de delay)
   alien2.startMovementSequence();
-
-  // Crear el mercado con ventana frontal
   const market = createMarket();
-
-  // Actualizar minimap inmediatamente con la referencia del mercado
   try {
     minimapManager.setReferences({ market });
   } catch (e) {}
-
-  // Hacer el mercado accesible desde la consola para depuración
   window.market = market;
-
-  // Crear interacción de reparación de la nave (círculo y HUD)
   createShipRepair();
-  // Hook: mostrar escena final cuando la reparación esté completa
   if (shipRepair) {
     try {
       shipRepair.onRepairComplete = (info) => {
@@ -1361,22 +1109,18 @@ async function init() {
       return e;
     }
   }
-
-  // --- Preload and place decorative buildings in free positions ---
   try {
     const buildingMgr = new BuildingManager(scene, {
       basePath: "src/models/characters/building/",
       terrain,
     });
     window.buildingMgr = buildingMgr;
-    // Preload prototypes (FBX) once
     try {
       await buildingMgr.preloadDefaults();
     } catch (e) {
       return e;
     }
 
-    // Build avoid list: stones' models, house, market, corral, spaceShuttle
     const avoidObjects = [];
     try {
       if (stones && stones.length) {
@@ -1395,9 +1139,7 @@ async function init() {
       return e;
     }
 
-    // Place exactly one of each structure (avoid clustering)
     try {
-      // Preferred fixed positions (explicit y provided; BuildingManager will snap to terrain if available)
       const preferredPositions = {
         alienPyramid: { x: 23.4, y: 0.0, z: 198.5 },
         alienLab: { x: -137.3, y: 0.0, z: -145.4 },
@@ -1415,13 +1157,11 @@ async function init() {
         }
       );
       window.placedBuildings = placed;
-      // Provide placed buildings to the minimap manager if initialized; otherwise stash for later
       try {
         const buildingRefs = buildingMgr.getAllStructures();
         if (minimapManager) {
           minimapManager.setReferences({ buildings: buildingRefs });
         } else {
-          // store globally so initMinimap can pick it up
           window._pendingBuildingsForMinimap = buildingRefs;
         }
       } catch (e) {
@@ -1434,43 +1174,29 @@ async function init() {
     return e;
   }
 
-  // Configurar los controles de la cámara
   cameraManager.setupControls(renderer.domElement);
   controls = cameraManager.getControls();
 
-  // Configuración de sombras
   if (renderer.shadowMap) {
-    renderer.shadowMap.autoUpdate = true; // Actualización automática de sombras
-    renderer.shadowMap.needsUpdate = true; // Forzar actualización inicial
+    renderer.shadowMap.autoUpdate = true;
+    renderer.shadowMap.needsUpdate = true;
   }
 
-  // Obtener la configuración del personaje granjero2
   const farmerConfig = modelConfig.characters.farmer2;
 
-  // Preparar las rutas de las animaciones
-  // Creamos un objeto que mapea nombres de animación a sus rutas completas
   const animationPaths = {};
   for (const [animName, animPath] of Object.entries(farmerConfig.animations)) {
-    // Usar el método getPath para obtener la ruta completa del archivo
     animationPaths[animName] = modelConfig.getPath(animPath);
   }
 
-  // Cargar el modelo 3D con sus animaciones
   try {
-    // Cargar el modelo principal con sus animaciones
     await modelLoader.load(
-      modelConfig.getPath(farmerConfig.model), // Ruta al archivo del modelo
-      animationPaths, // Diccionario de animaciones
+      modelConfig.getPath(farmerConfig.model),
+      animationPaths,
       (instance) => {
-        // Configurar la cámara isométrica para seguir al modelo
         if (instance.model) {
-          // Configurar el objetivo de la cámara para seguir al modelo en modo isométrico
           cameraManager.setTarget(instance.model);
-
-          // Obtener la cámara actualizada
           camera = cameraManager.getCamera();
-
-          // Inicializar el controlador del granjero
           farmerController = new FarmerController(
             instance.model,
             modelLoader,
@@ -1482,12 +1208,9 @@ async function init() {
             }
           );
 
-          // Crear inventario del personaje (precio por litro configurable)
           try {
             const inventory = new Inventory({ pricePerLiter: 5 });
-            // Exponer para depuración y uso desde otros módulos
             window.inventory = inventory;
-            // Si FarmerController soporta setInventory, conéctalo
             if (typeof farmerController.setInventory === "function") {
               farmerController.setInventory(inventory);
             }
@@ -1495,28 +1218,22 @@ async function init() {
             return e;
           }
 
-          // Conectar el corral con el controlador del granjero
           if (corral) {
             farmerController.setCorral(corral);
           }
 
-          // Conectar el Space Shuttle con el controlador del granjero
           if (spaceShuttle) {
             farmerController.setSpaceShuttle(spaceShuttle);
           }
 
-          // Hacer el modelo accesible desde la consola para depuración
           window.farmer = instance;
-          window.farmerController = farmerController; // Para depuración
-          window.corral = corral; // Para depuración del corral
+          window.farmerController = farmerController;
+          window.corral = corral;
 
-          // Inicializar CombatSystem y WaveManager usando SIEMPRE la instancia global existente
-          // Esto evita que el farmer y los enemigos queden registrados en instancias distintas
           try {
             combatSystem = window.combatSystem || new CombatSystem();
             window.combatSystem = combatSystem;
 
-            // Crear wave manager con helpers para localizar jugador y vacas
             waveManager = new WaveManager(
               scene,
               modelLoader,
@@ -1536,25 +1253,22 @@ async function init() {
                   typeof window !== "undefined" && window.selectedDifficulty
                     ? window.selectedDifficulty
                     : "easy",
-                // Generar spawns alrededor del corral (alrededores), evitando piedras
-                spawnPoints: [], // fallback vacío: el WaveManager generará alrededor del corral
-                // Spawns todavía más alejados del corral
-                spawnRingMin: 100, // mucho más lejos del corral
-                spawnRingMax: 200, // anillo amplio
-                alienDetectionRange: 220, // ampliar para detectar antes al acercarse
-                playerAggroRadius: 14, // si el jugador está muy cerca, priorizarlo sobre vacas
+                spawnPoints: [],
+                spawnRingMin: 100,
+                spawnRingMax: 200,
+                alienDetectionRange: 220,
+                playerAggroRadius: 14,
                 baseCount: 3,
                 waveCount: 6,
               }
             );
 
             window.waveManager = waveManager;
-            // Programar oleadas solo cuando el jugador empiece el gameplay (tras pantalla de controles)
+            
             const scheduleWavesAfterStart = () => {
               try {
-                // Evitar reprogramar si ya existe una cuenta regresiva activa
+                
                 if (waveStartAt) return;
-                // Mostrar advertencia previa a la primera oleada
                 try {
                   createWaveWarningElement();
                 } catch (e) {}
@@ -1563,7 +1277,6 @@ async function init() {
                 try {
                   createWaveCountdownElement();
                 } catch (e) {}
-                // waveManager will be started from the main loop when waveStartAt elapses
               } catch (e) {
                 return e;
               }
@@ -1586,15 +1299,12 @@ async function init() {
             return e;
           }
 
-          // Conectar el farmerController con las piedras para detección de colisiones
           if (farmerController && stones && stones.length > 0) {
             farmerController.setStones(stones);
           }
-          // Conectar el farmerController con la casa para detección de colisiones
           if (farmerController && house) {
             farmerController.setHouse(house);
-          }
-          // Conectar el farmerController con los edificios (si el buildingMgr existe)
+              }
           try {
             if (
               farmerController &&
@@ -1604,48 +1314,32 @@ async function init() {
               const buildingColliders = window.buildingMgr.getColliders();
               farmerController.setBuildings(buildingColliders);
             }
-          } catch (e) {
-            /* non-fatal */
-          }
-
-          // Conectar el farmerController con las vacas para detección de colisiones
+          } catch (e) {}
           if (farmerController && cows && cows.length > 0) {
             farmerController.setCows(cows);
           }
-          // Conectar el farmerController con el mercado para detección de colisiones
           if (farmerController && market) {
             farmerController.setMarket(market);
           }
-
-          // Conectar el farmerController con los cristales para detección de colisiones
           if (farmerController && crystals && crystals.length > 0) {
             farmerController.setCrystals(crystals);
           }
-
-          // Mostrar las animaciones disponibles en consola
           const availableAnims = Object.keys(instance.actions);
         }
       },
-      farmerConfig // Pasar la configuración completa del modelo
+      farmerConfig
     );
   } catch (error) {
     return e;
   }
-
-  // Configurar eventos
   setupEventListeners();
-
-  // Conectar cambio de selección del inventario (sin equipar herramientas)
   if (window.inventory && farmerController) {
     window.inventory.onEquipChange = (slotIndex, toolName) => {
       try {
-        // Mostrar mensaje de herramienta seleccionada
         if (toolName) {
           console.log(
             `Herramienta seleccionada: ${toolName} (slot ${slotIndex + 1})`
           );
-          // Aquí puedes agregar lógica adicional cuando se selecciona una herramienta
-          // sin necesidad de equiparla visualmente en el personaje
         } else {
         }
       } catch (e) {
@@ -1653,33 +1347,16 @@ async function init() {
       }
     };
   }
-
-  // Inicializar el minimap
   initMinimap();
-
-  // Inicializar el sistema de objetivos
   initObjectives();
-
-  // Iniciar bucle de animación
   animate();
 }
 
-/**
- * Configura los listeners de eventos de la ventana
- */
 function setupEventListeners() {
-  // Escuchar cambios en el tamaño de la ventana
   window.addEventListener("resize", onWindowResize);
-
-  // Tecla 'i' para mostrar/ocultar el inventario
   window.addEventListener("keydown", (ev) => {
-    // Ignorar si el usuario está escribiendo en un input/textarea
-    // Se eliminó el manejo de la tecla 'i' para abrir/cerrar el inventario
-    // Ahora solo se puede interactuar con el botón del inventario
   });
 }
-
-// --- Wave countdown HUD helpers ---
 function createWaveCountdownElement() {
   if (waveCountdownEl) return waveCountdownEl;
   const el = document.createElement("div");
@@ -1702,8 +1379,6 @@ function createWaveCountdownElement() {
   waveCountdownEl = el;
   return el;
 }
-
-// Advertencia previa a la primera oleada
 function createWaveWarningElement() {
   if (waveWarningEl) return waveWarningEl;
   const el = document.createElement("div");
@@ -1728,8 +1403,6 @@ function createWaveWarningElement() {
   el.textContent =
     "Cuidado: los aliens comenzarán a atacar al rebaño. Debes defenderlas y escapar";
   document.body.appendChild(el);
-
-  // Auto-ocultar luego de unos segundos
   setTimeout(() => {
     try {
       if (el && el.parentElement) el.parentElement.removeChild(el);
@@ -1746,71 +1419,46 @@ function formatTimeMMSS(totalSeconds) {
   const secs = totalSeconds % 60;
   return `${mins}:${String(secs).padStart(2, "0")}`;
 }
-
-// Referencia global para debug: invoca la función modular importada con las dependencias actuales
 window.showFinalScene = () => showFinalScene({ shipRepair, cameraManager });
 
-/**
- * Maneja el redimensionamiento de la ventana
- * Ajusta la cámara y el renderizador al nuevo tamaño de la ventana
- */
 function onWindowResize() {
-  // Actualizar la cámara a través del gestor
   if (cameraManager) {
     cameraManager.onWindowResize();
   }
-
-  // Ajustar el tamaño del renderizador
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-/**
- * @deprecated Usar FarmerController en su lugar
- * Esta función ya no es necesaria ya que el control del personaje
- * ahora se maneja en la clase FarmerController
- */
-// updateAnimationState and handleMovement removed: use FarmerController instead
-
-// Variables para el control de FPS
 let lastTime = 0;
 const targetFPS = 60;
 const frameTime = 1000 / targetFPS;
-
-// Variables para optimización de actualizaciones
 let minimapUpdateCounter = 0;
-const minimapUpdateInterval = 20; // Actualizar minimap cada 20 frames
+const minimapUpdateInterval = 20; 
 let terrainUpdateCounter = 0;
-const terrainUpdateInterval = 8; // Actualizar terreno cada 8 frames
+const terrainUpdateInterval = 8; 
 let skyboxUpdateCounter = 0;
-const skyboxUpdateInterval = 6; // Actualizar skybox cada 6 frames
-let frameCounter = 0; // para escalonar actualizaciones
-
-// Escalador de rendimiento dinámico
+const skyboxUpdateInterval = 6; 
+let frameCounter = 0; 
 let __perfFrames = 0;
 let __perfAccumTime = 0;
 let __currentFps = 60;
 let __targetPixelRatio = 1.0;
-let __maxShadowPosts = 3; // presupuesto de sombras para postes
+let __maxShadowPosts = 3; 
 
 function animate(currentTime = 0) {
   requestAnimationFrame(animate);
 
-  // Control de FPS mejorado
   const deltaTime = currentTime - lastTime;
   if (deltaTime < frameTime) return;
   lastTime = currentTime - (deltaTime % frameTime);
 
-  const delta = Math.min(0.05, clock.getDelta()); // Reducir el delta máximo para mayor suavidad
+  const delta = Math.min(0.05, clock.getDelta()); 
   frameCounter++;
-
-  // Medición simple de FPS y ajuste de presupuesto
   __perfFrames++;
   __perfAccumTime += delta;
   if (__perfAccumTime >= 1.0) {
     __currentFps = __perfFrames / __perfAccumTime;
     __perfFrames = 0;
     __perfAccumTime = 0;
-    // Ajustar pixel ratio dinamicamente entre 0.85 y 1.25
     if (__currentFps < 42) {
       __targetPixelRatio = Math.max(0.85, __targetPixelRatio - 0.1);
     } else if (__currentFps > 58) {
@@ -1819,14 +1467,10 @@ function animate(currentTime = 0) {
     try {
       renderer.setPixelRatio(__targetPixelRatio);
     } catch (_) {}
-
-    // Ajustar presupuesto de sombras según FPS
     if (__currentFps < 45) __maxShadowPosts = 2;
     else if (__currentFps < 55) __maxShadowPosts = 3;
     else __maxShadowPosts = 4;
   }
-
-  // If the game is paused via the pause menu, skip updates but keep rendering the current frame
   try {
     if (window.__gamePaused) {
       if (renderer && scene && camera) {
@@ -1839,24 +1483,18 @@ function animate(currentTime = 0) {
   } catch (_) {}
 
   try {
-    // 1. Actualización de cámara (prioridad alta)
     if (cameraManager) {
       cameraManager.update(delta);
     }
-
-    // 2. Actualización del jugador (prioridad alta)
     if (farmerController) {
       farmerController.update(delta);
     }
-
-    // 3. Actualización de animaciones principales (prioridad media)
     if (modelLoader) {
       modelLoader.update(delta);
     }
     if (window.alien2 && window.alien2.update) {
       window.alien2.update(delta);
     }
-    // Update all static Alien2 instances so their idle AnimationMixers advance
     try {
       if (window.alien2Statics && Array.isArray(window.alien2Statics)) {
         for (let i = 0; i < window.alien2Statics.length; i++) {
@@ -1865,7 +1503,6 @@ function animate(currentTime = 0) {
         }
       }
     } catch (_) {}
-    // Update all Alien2 clone mixers (IdleAlien2.fbx on clones)
     try {
       if (
         window.alien2CloneMixers &&
@@ -1878,22 +1515,18 @@ function animate(currentTime = 0) {
         }
       }
     } catch (_) {}
-
-    // actualizar y mostrar contador de la primera oleada si está programado
     try {
       if (waveStartAt && waveStartAt > 0) {
         const now = performance.now();
         const remainingMs = Math.max(0, waveStartAt - now);
         if (remainingMs > 0) {
           const remainingSec = Math.ceil(remainingMs / 1000);
-          // crear elemento si no existe
           if (!waveCountdownEl) createWaveCountdownElement();
           if (waveCountdownEl)
             waveCountdownEl.textContent = `${
               isFirstWaveCountdown ? "Primera oleada" : "Siguiente oleada"
             }: ${formatTimeMMSS(remainingSec)}`;
         } else {
-          // oculta cuando llegue la hora
           try {
             if (
               waveManager &&
@@ -1910,15 +1543,11 @@ function animate(currentTime = 0) {
           if (waveCountdownEl && waveCountdownEl.parentElement)
             waveCountdownEl.parentElement.removeChild(waveCountdownEl);
           waveCountdownEl = null;
-          waveStartAt = null; // no necesitamos más el timestamp
+          waveStartAt = null;
           isFirstWaveCountdown = false;
         }
       }
-    } catch (e) {
-      // no crítico
-    }
-
-    // actualizar sistema de combate (procesa hitboxes)
+    } catch (e) {}
     if (combatSystem && typeof combatSystem.update === "function") {
       try {
         combatSystem.update(delta);
@@ -1926,8 +1555,6 @@ function animate(currentTime = 0) {
         return e;
       }
     }
-
-    // actualizar wave manager (spawns + actualiza enemigos)
     if (waveManager && typeof waveManager.update === "function") {
       try {
         waveManager.update(delta);
@@ -1935,8 +1562,6 @@ function animate(currentTime = 0) {
         return e;
       }
     }
-
-    // Actualizar el corral y la casa cada frame para animaciones suaves
     if (corral && farmerController?.model) {
       corral.update(delta, farmerController.model.position);
     }
@@ -1944,20 +1569,13 @@ function animate(currentTime = 0) {
     if (house && farmerController?.model) {
       house.update(delta, farmerController.model.position);
     }
-
-    // 4. Actualización de objetos del juego (prioridad media-baja)
-    // Usar requestIdleCallback para tareas menos críticas
     if (typeof requestIdleCallback === "function") {
       requestIdleCallback(() => {
-        // Actualizar el Space Shuttle
         if (spaceShuttle) {
           spaceShuttle.update(delta);
         }
       });
     }
-
-    // 5. Actualización de múltiples instancias (optimizado y escalonado)
-    // Actualizar vacas en frames pares y piedras en frames impares para repartir carga
     if ((frameCounter & 1) === 0) {
       for (let i = 0; i < cows.length; i++) {
         cows[i].update(delta);
@@ -1967,17 +1585,12 @@ function animate(currentTime = 0) {
         stones[i].update(delta);
       }
     }
-
-    // Actualizar el mercado con la posición del jugador
     if (window.market && farmerController?.model) {
       window.market.update(farmerController.model.position);
     }
-
-    // Actualizar el sistema de reparación de la nave
     if (shipRepair && farmerController?.model) {
       shipRepair.update(farmerController.model.position);
     }
-    // 6. Actualizaciones menos frecuentes (optimizadas)
     if (terrainUpdateCounter++ >= terrainUpdateInterval) {
       terrain?.update(camera.position);
       terrainUpdateCounter = 0;
@@ -1987,27 +1600,18 @@ function animate(currentTime = 0) {
       skybox.update(camera.position);
       skyboxUpdateCounter = 0;
     }
-
-    // 7. Efectos visuales (baja prioridad)
     if (terrain?.animateFires) {
       terrain.animateFires();
     }
-
-    // 8. Iluminación
     lighting?.update(delta);
-    // Ajustar postes según la noche (más realista: que la iluminación principal provenga de los postes)
     try {
       if (lighting && Array.isArray(lightPosts)) {
-        // Suavizado del factor nocturno para transición
         const nf = Math.max(0, Math.min(1, lighting.nightFactor || 0));
-        // Curva para reforzar más brillo en plena noche
         const factor = nf * nf;
         for (let i = 0; i < lightPosts.length; i++) {
           const lp = lightPosts[i];
           if (lp && typeof lp.setEnabled === "function") lp.setEnabled(factor);
         }
-
-        // Presupuesto de sombras: activar sombras solo en los postes más cercanos al jugador por la noche
         if (factor > 0.1 && farmerController && farmerController.model) {
           const playerPos = farmerController.model.position;
           const entries = [];
@@ -2020,18 +1624,15 @@ function animate(currentTime = 0) {
             const d2 = dx * dx + dz * dz;
             entries.push({ i, d2, lp });
           }
-          // ordenar por distancia
           entries.sort((a, b) => a.d2 - b.d2);
-          const maxShadowLights = __maxShadowPosts; // presupuesto dinámico
+          const maxShadowLights = __maxShadowPosts; 
           for (let idx = 0; idx < entries.length; idx++) {
             const { lp } = entries[idx];
             if (!lp || !lp.light) continue;
             const enableShadow = idx < maxShadowLights;
-            // Activar/desactivar castShadow dinámicamente
             try {
               lp.light.castShadow = enableShadow;
             } catch (_) {}
-            // Ajustar resolución de sombras si es necesario
             try {
               const size = enableShadow ? 1024 : 256;
               lp.light.shadow.mapSize.width = size;
@@ -2039,7 +1640,6 @@ function animate(currentTime = 0) {
             } catch (_) {}
           }
         } else {
-          // De día o sin jugador: desactivar sombras en postes
           for (let i = 0; i < lightPosts.length; i++) {
             const lp = lightPosts[i];
             if (lp && lp.light) {
@@ -2051,27 +1651,18 @@ function animate(currentTime = 0) {
         }
       }
     } catch (_) {}
-
-    // 8.1 Actualizar efecto de humo (menos frecuente)
     if (smokeEffect && frameCounter % 3 === 0) {
       smokeEffect.update(delta);
     }
-
-    // 9. Minimap (actualizar con menos frecuencia)
     if (minimapUpdateCounter++ >= minimapUpdateInterval * 2) {
-      // Reducir frecuencia
       updateMinimap();
       minimapUpdateCounter = 0;
     }
-
-    // 10. Renderizado final
     renderer.render(scene, camera);
   } catch (error) {
     return error;
   }
 }
-
-// Función global para forzar la apertura del HUD del mercado
 window.forceOpenMarketHUD = function () {
   if (window.market) {
     window.market.showMarketUI();
@@ -2080,8 +1671,6 @@ window.forceOpenMarketHUD = function () {
     return "Error: No se encontró la instancia del mercado";
   }
 };
-
-// Función global para mostrar la posición actual del jugador
 window.showPlayerPosition = function () {
   if (farmerController && farmerController.model) {
     const pos = farmerController.model.position;
@@ -2092,12 +1681,7 @@ window.showPlayerPosition = function () {
     return "Error: No se encontró el modelo del jugador";
   }
 };
-
-/**
- * Hacer disponibles las variables globales para depuración en la consola del navegador
- * Permite acceder a estas variables directamente desde la consola para pruebas
- */
-window.THREE = THREE; /* Biblioteca Three.js completa*/
-window.scene = scene; /*Escena 3D*/
-window.camera = camera; /* Cámara activa*/
-window.renderer = renderer; /* Renderizador WebG*/
+window.THREE = THREE; 
+window.scene = scene; 
+window.camera = camera;
+window.renderer = renderer;
