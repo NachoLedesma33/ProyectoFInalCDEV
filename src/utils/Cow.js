@@ -116,6 +116,12 @@ export class Cow {
         }
       });
     }
+    try {
+      const box = new THREE.Box3().setFromObject(this.model);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      this._collisionRadius = Math.max(size.x, size.z) * 0.45;
+    } catch (_) { this._collisionRadius = 1.2; }
   }
   startRandomMovement() {
     this.isMoving = true;
@@ -180,22 +186,14 @@ export class Cow {
   getModel() {
     return this.model;
   }
-  getBoundingBox() {
-    if (!this.model) return null;
-
-    const box = new THREE.Box3().setFromObject(this.model);
-    return box;
-  }
   checkCollision(position, characterSize = new THREE.Vector3(1, -2, 1)) {
     if (!this.model) return false;
-
-    const cowBox = this.getBoundingBox();
-    const characterBox = new THREE.Box3().setFromCenterAndSize(
-      position,
-      characterSize
-    );
-
-    return cowBox.intersectsBox(characterBox);
+    const dx = position.x - this.model.position.x;
+    const dz = position.z - this.model.position.z;
+    const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+    const characterRadius = Math.max(Math.abs(characterSize.x), Math.abs(characterSize.z)) * 0.5;
+    const cowRadius = this._collisionRadius || 1.2;
+    return horizontalDistance < (cowRadius + characterRadius);
   }
   updateProgressBar() {
     if (this.progressBar) {

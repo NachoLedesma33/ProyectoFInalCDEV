@@ -6,7 +6,7 @@ export class ControlsManager {
     this.camera = camera;
     this.target = null;
     this.controls = null;
-    this.isometric = options.isometric || true; 
+    this.isometric = options.isometric !== undefined ? options.isometric : true; 
     this.domElement = options.domElement;
 
     if (this.isometric) {
@@ -22,11 +22,15 @@ export class ControlsManager {
       this.autoZoomEnabled = false; 
       this.lastTargetPosition = new THREE.Vector3();
       this.targetVelocity = new THREE.Vector3();
+      this._targetCameraPosition = new THREE.Vector3();
+      this._lookAtPosition = new THREE.Vector3();
     } else {
       this.offset = new THREE.Vector3(0, 2, 5);
       this.currentLookAt = new THREE.Vector3();
       this.cameraOffset = new THREE.Vector3(0, 2.5, -5);
       this.smoothness = 0.1;
+      this._targetCameraPosition = new THREE.Vector3();
+      this._lookAtPosition = new THREE.Vector3();
     }
 
     this.init();
@@ -62,7 +66,7 @@ export class ControlsManager {
     }
   }
 
-  updateCameraPosition() {
+  updateCameraPosition(tFactor = this.smoothness) {
     if (!this.target) return;
     const bounds = {
       minX: -250,
@@ -102,19 +106,18 @@ export class ControlsManager {
     targetPosition.x += rotatedX;
     targetPosition.z += rotatedZ;
     targetPosition.y += offset.y;
-    this.camera.position.lerp(targetPosition, this.smoothness);
-    const lookAtPosition = new THREE.Vector3();
-    lookAtPosition.copy(this.target.position);
-    lookAtPosition.y += 1.2;
-    lookAtPosition.x = Math.max(
+    this.camera.position.lerp(targetPosition, tFactor);
+    this._lookAtPosition.copy(this.target.position);
+    this._lookAtPosition.y += 1.2;
+    this._lookAtPosition.x = Math.max(
       bounds.minX + 1,
-      Math.min(bounds.maxX - 1, lookAtPosition.x)
+      Math.min(bounds.maxX - 1, this._lookAtPosition.x)
     );
-    lookAtPosition.z = Math.max(
+    this._lookAtPosition.z = Math.max(
       bounds.minZ + 1,
-      Math.min(bounds.maxZ - 1, lookAtPosition.z)
+      Math.min(bounds.maxZ - 1, this._lookAtPosition.z)
     );
-    this.currentLookAt.lerp(lookAtPosition, this.smoothness);
+    this.currentLookAt.lerp(this._lookAtPosition, tFactor);
     this.camera.lookAt(this.currentLookAt);
     if (this.controls) {
       this.controls.target.copy(this.currentLookAt);
@@ -144,7 +147,7 @@ export class ControlsManager {
       { passive: false }
     );
   }
-  updateIsometricPosition() {
+  updateIsometricPosition(tFactor = this.smoothness) {
     if (!this.target) return;
     this.currentDistance = this.baseDistance;
     const angle = Math.PI / 4;
@@ -152,26 +155,30 @@ export class ControlsManager {
     const offsetX = this.currentDistance * Math.cos(angle);
     const offsetZ = this.currentDistance * Math.cos(angle);
     const targetPosition = this.target.position;
-    const cameraX = targetPosition.x + offsetX;
-    const cameraY = targetPosition.y + height;
-    const cameraZ = targetPosition.z + offsetZ;
-    const targetCameraPosition = new THREE.Vector3(cameraX, cameraY, cameraZ);
-    this.camera.position.lerp(targetCameraPosition, this.smoothness);
-    const lookAtPosition = new THREE.Vector3(
+    this._targetCameraPosition.set(
+      targetPosition.x + offsetX,
+      targetPosition.y + height,
+      targetPosition.z + offsetZ
+    );
+    this.camera.position.lerp(this._targetCameraPosition, tFactor);
+    this._lookAtPosition.set(
       targetPosition.x,
       targetPosition.y + 1.5,
       targetPosition.z
     );
-    this.currentLookAt.lerp(lookAtPosition, this.smoothness);
+    this.currentLookAt.lerp(this._lookAtPosition, tFactor);
     this.camera.lookAt(this.currentLookAt);
   }
 
-  update() {
+  update(delta) {
+    const steps = delta ? delta * 60 : 1;
+    const base = Math.max(0, Math.min(1, this.smoothness));
+    const t = 1 - Math.pow(1 - base, steps);
     if (this.target) {
       if (this.isometric) {
-        this.updateIsometricPosition();
+        this.updateIsometricPosition(t);
       } else {
-        this.updateCameraPosition();
+        this.updateCameraPosition(t);
       }
     }
     if (this.controls) {

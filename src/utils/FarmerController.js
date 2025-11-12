@@ -264,6 +264,8 @@ export class FarmerController {
 
     this._tmpVec = new THREE.Vector3();
     this._tmpQuat = new THREE.Quaternion();
+    this._tmpMovementVec = new THREE.Vector3();
+    this._tmpFinalPos = new THREE.Vector3();
 
   this._autoExitActive = false;
   this._autoExitTarget = new THREE.Vector3();
@@ -1790,10 +1792,10 @@ export class FarmerController {
         moveX = (moveX / length) * currentMoveSpeed;
         moveZ = (moveZ / length) * currentMoveSpeed;
       }
-      const movementVector = new THREE.Vector3(moveX, 0, moveZ);
+      this._tmpMovementVec.set(moveX, 0, moveZ);
       const adjustedMovement = this.getAdjustedMovement(
         this.model.position,
-        movementVector
+        this._tmpMovementVec
       );
       let newX = this.model.position.x + adjustedMovement.x;
       let newZ = this.model.position.z + adjustedMovement.z;
@@ -1805,16 +1807,12 @@ export class FarmerController {
         this.config.bounds.minZ,
         Math.min(newZ, this.config.bounds.maxZ)
       );
-      const finalPosition = new THREE.Vector3(
-        newX,
-        this.model.position.y,
-        newZ
-      );
-      if (!this.checkCorralCollision(finalPosition)) {
+      this._tmpFinalPos.set(newX, this.model.position.y, newZ);
+      if (!this.checkCorralCollision(this._tmpFinalPos)) {
         this.model.position.setX(newX);
         this.model.position.setZ(newZ);
       }
-      if (this.checkCorralCollision(finalPosition)) {
+      if (this.checkCorralCollision(this._tmpFinalPos)) {
         this.modelLoader.play("idle", 0.15);
       }
     }

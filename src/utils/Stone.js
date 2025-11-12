@@ -96,6 +96,10 @@ export class Stone {
         );
 
         this.scene.add(this.model);
+
+        try {
+          this.bbox = new THREE.Box3().setFromObject(this.model);
+        } catch (_) { this.bbox = null; }
       },
       undefined,
       (error) => {}
@@ -115,32 +119,24 @@ export class Stone {
     return this.checkRobustCollision(position, characterSize);
   }
   checkRobustCollision(position, characterSize) {
-    const stoneBox = this.getBoundingBox();
+    const stoneBox = (this.bbox ? this.bbox.clone() : this.getBoundingBox());
 
-    const characterBox = new THREE.Box3();
-    const characterMin = position
-      .clone()
-      .sub(characterSize.clone().multiplyScalar(0.5));
-    const characterMax = position
-      .clone()
-      .add(characterSize.clone().multiplyScalar(0.5));
-    characterBox.setFromPoints([characterMin, characterMax]);
+    const characterBox = new THREE.Box3().setFromCenterAndSize(position, characterSize);
 
-    stoneBox.expandByScalar(-0.3);
+    try { stoneBox.expandByScalar(-0.3); } catch (_) {}
 
     const boxCollision = stoneBox.intersectsBox(characterBox);
 
-    const stoneCenter = this.model.position.clone();
-    const horizontalDistance = Math.sqrt(
-      Math.pow(position.x - stoneCenter.x, 2) +
-        Math.pow(position.z - stoneCenter.z, 2)
-    );
+    const dx = position.x - this.model.position.x;
+    const dz = position.z - this.model.position.z;
+    const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
 
     const collisionRadius = Math.max(characterSize.x, characterSize.z) * 0.6;
 
     const distanceCollision = horizontalDistance < collisionRadius;
 
-    const stoneSize = stoneBox.getSize(new THREE.Vector3());
+    const sizeTmp = new THREE.Vector3();
+    const stoneSize = stoneBox.getSize(sizeTmp);
     const stoneRadius = Math.max(stoneSize.x, stoneSize.z) * 0.4;
     const characterRadius = Math.max(characterSize.x, characterSize.z) * 0.5;
     const proximityCollision =

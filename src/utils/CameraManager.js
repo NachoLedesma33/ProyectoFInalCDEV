@@ -35,6 +35,13 @@ export class CameraManager {
     this.controls = null;
     this.followTarget = null;
     this.followLag = 0.08;
+    this._tmpTargetPos = new THREE.Vector3();
+    this._prevTargetPos = new THREE.Vector3();
+    this._vel = new THREE.Vector3();
+    this._lookahead = new THREE.Vector3();
+    this._tmpDisp = new THREE.Vector3();
+    this._lookaheadFactor = 0.6;
+    this._lookaheadMax = 8;
     this.setupCamera();
     window.addEventListener('resize', this.onWindowResize.bind(this));
   }
@@ -106,12 +113,25 @@ export class CameraManager {
       this.controls.update(delta);
     }
     if (this.followTarget) {
-      const targetPos = new THREE.Vector3();
-      this.followTarget.getWorldPosition(targetPos);
-      const desired = targetPos.clone().add(this._isoOffset);
-      const t = Math.min(1, this.followLag * (delta * 60 || 1));
+      this.followTarget.getWorldPosition(this._tmpTargetPos);
+      this._tmpDisp.subVectors(this._tmpTargetPos, this._prevTargetPos);
+      const steps = delta ? delta * 60 : 1;
+      const vBase = 0.15;
+      const vT = 1 - Math.pow(1 - vBase, steps);
+      this._vel.lerp(this._tmpDisp, vT);
+      this._prevTargetPos.copy(this._tmpTargetPos);
+
+      this._lookahead.copy(this._vel);
+      this._lookahead.y = 0;
+      const len = this._lookahead.length();
+      if (len > this._lookaheadMax) this._lookahead.setLength(this._lookaheadMax);
+      this._lookahead.multiplyScalar(this._lookaheadFactor);
+
+      const desired = this._tmpTargetPos.clone().add(this._isoOffset).add(this._lookahead);
+      const base = Math.max(0, Math.min(1, this.followLag));
+      const t = 1 - Math.pow(1 - base, steps);
       this.camera.position.lerp(desired, t);
-      this.camera.lookAt(targetPos);
+      this.camera.lookAt(this._tmpTargetPos);
     }
   }
   setTarget(target, offset = new THREE.Vector3(0, 2, -2)) {
