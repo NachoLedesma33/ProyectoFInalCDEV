@@ -342,9 +342,6 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       if (typeof PauseMenu === "function") {
         pauseMenu = new PauseMenu({ container: document.body });
-        try {
-          if (pauseMenu && typeof pauseMenu.hide === "function") pauseMenu.hide();
-        } catch (_) {}
       }
     } catch (e) {
       return e;
