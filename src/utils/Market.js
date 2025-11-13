@@ -84,6 +84,24 @@ export class Market {
     this.allowEntry = true;
     this.roofMeshes = [];
     this.isPlayerInside = false;
+    this._resolveMarketImage = (p) => {
+      try {
+        const fname = (p || '').split('/').pop();
+        return `/src/assets/${encodeURIComponent(fname || '')}`;
+      } catch (_) {
+        return p;
+      }
+    };
+    this._getEmojiForItem = (name) => {
+      const n = (name || '').toLowerCase();
+      if (n.includes('núcleo')) return '⚛️';
+      if (n.includes('membrana')) return '🧪';
+      if (n.includes('chip')) return '📟';
+      if (n.includes('plasma')) return '🔬';
+      if (n.includes('llave')) return '🛠️';
+      if (n.includes('cristal')) return '🔮';
+      return name ? name.charAt(0) : '?';
+    };
   }
 
   createMarket() {
@@ -1002,7 +1020,7 @@ export class Market {
         width: 80px;
         height: 80px;
         margin: 0 auto 10px;
-        background: rgba(100, 100, 100, 0.3) url('${item.image}') no-repeat center center;
+        background: rgba(100, 100, 100, 0.3) url('${this._resolveMarketImage(item.image)}') no-repeat center center;
         background-size: contain;
         border-radius: 8px;
         display: flex;
@@ -1010,7 +1028,7 @@ export class Market {
         justify-content: center;
         font-size: 24px;
       `;
-      itemImage.textContent = item.name.charAt(0);
+      itemImage.textContent = this._getEmojiForItem(item.name);
       itemElement.appendChild(itemImage);
       const itemName = document.createElement("div");
       itemName.textContent = item.name;
@@ -1147,7 +1165,7 @@ export class Market {
     itemImage.style.cssText = `
       width: 200px;
       height: 200px;
-      background: rgba(100, 100, 100, 0.3) url('${item.image}') no-repeat center center;
+      background: rgba(100, 100, 100, 0.3) url('${this._resolveMarketImage(item.image)}') no-repeat center center;
       background-size: contain;
       border-radius: 10px;
       display: flex;
@@ -1157,7 +1175,7 @@ export class Market {
       flex-shrink: 0;
       border: 2px solid #4cff4c;
     `;
-    itemImage.textContent = item.name.charAt(0);
+    itemImage.textContent = this._getEmojiForItem(item.name);
     const itemInfo = document.createElement("div");
     itemInfo.style.cssText = `
       flex: 1;
