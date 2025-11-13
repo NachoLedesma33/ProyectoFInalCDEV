@@ -97,7 +97,8 @@ export class Lighting {
       const noonFactor = Math.sin(angle) * 0.5 + 0.5; 
       this.dirLight.color.copy(neutral).lerp(warm, 1 - Math.abs(noonFactor - 0.5) * 2);
 
-      this.dirLight.shadow.camera.updateProjectionMatrix();
+      this._tick = (this._tick || 0) + 1;
+      if ((this._tick % 30) === 0) this.dirLight.shadow.camera.updateProjectionMatrix();
     }
   }
 }

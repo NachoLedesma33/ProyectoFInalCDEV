@@ -9,8 +9,22 @@ export class ModelLoader {
     this.animations = [];
     this.actions = {};
     this.activeAction = null;
-    this.animationLoader = new FBXLoader();
-    this.modelLoader = new FBXLoader();
+    this.manager = new THREE.LoadingManager();
+    this.manager.setURLModifier((url) => {
+      try {
+        const lower = (url || "").toLowerCase();
+        if (lower.includes("walldiff.png")) return "/src/assets/wallDIFF.png";
+        if (lower.includes("windowdiff.png")) return "/src/assets/windowDIFF.png";
+        if (lower.includes("pilla") || lower.includes("pillar")) return "/src/assets/pillarDIFF.png";
+        if (lower.includes("concretediff.png")) return "/src/assets/concreteDIFF.png";
+        if (lower.includes("tvariant2_diffuse.png")) return "/src/assets/tvariant2_diffuse.png";
+        if (lower.includes("t_stones_metalic.png")) return "/src/assets/T_Stones_Metalic.png";
+        if (lower.includes("t_stones_roughness.png")) return "/src/assets/rock_face_diff_4k.jpg";
+      } catch (_) {}
+      return url;
+    });
+    this.animationLoader = new FBXLoader(this.manager);
+    this.modelLoader = new FBXLoader(this.manager);
     this.config = null;
   }
 

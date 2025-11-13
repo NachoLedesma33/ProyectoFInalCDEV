@@ -258,6 +258,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   storyManager.attachToPlayButton(playButton);
 
+  const scheduleIdle = (fn, timeout = 1500) => {
+    try {
+      if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
+        window.requestIdleCallback(fn, { timeout });
+      } else {
+        setTimeout(fn, Math.min(timeout, 300));
+      }
+    } catch (_) {
+      setTimeout(fn, Math.min(timeout, 300));
+    }
+  };
+
   try {
     if (!soundButton && playButton && playButton.parentNode) {
       soundButton = document.createElement("button");
@@ -275,25 +287,28 @@ document.addEventListener("DOMContentLoaded", () => {
     return e;
   }
 
-  try {
-    if (!window.audio) {
-      const earlyAudio = new AudioManager(null);
-      window.audio = earlyAudio;
-      earlyAudio.playMusic("main", { loop: true }).catch(() => {
-        const startMenuMusic = () => {
-          try {
-            window.audio && window.audio.playMusic("main", { loop: true });
-          } catch (_) {}
-          window.removeEventListener("pointerdown", startMenuMusic, true);
-          window.removeEventListener("keydown", startMenuMusic, true);
-        };
-        window.addEventListener("pointerdown", startMenuMusic, true);
-        window.addEventListener("keydown", startMenuMusic, true);
-      });
+  scheduleIdle(() => {
+    try {
+      if (!window.audio) {
+        const earlyAudio = new AudioManager(null);
+        window.audio = earlyAudio;
+        earlyAudio.playMusic("main", { loop: true }).catch(() => {
+          const startMenuMusic = () => {
+            try {
+              window.audio && window.audio.playMusic("main", { loop: true });
+            } catch (_) {}
+            window.removeEventListener("pointerdown", startMenuMusic, true);
+            window.removeEventListener("keydown", startMenuMusic, true);
+          };
+          window.addEventListener("pointerdown", startMenuMusic, true);
+          window.addEventListener("keydown", startMenuMusic, true);
+        });
+        try { earlyAudio.preloadSfx(["run","punch","uiClick","uiHover","milking"]); } catch (_) {}
+      }
+    } catch (e) {
+      return e;
     }
-  } catch (e) {
-    return e;
-  }
+  }, 1200);
 
   if (tutorialButton && typeof tutorialButton.addEventListener === "function") {
     tutorialButton.addEventListener("click", () => {
@@ -311,31 +326,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const soundHud =
-    typeof createSoundHUD === "function"
-      ? createSoundHUD({ container: document.body })
-      : null;
-  try {
-    if (soundHud) soundHud.style.display = "none";
-  } catch (_) {}
+  let soundHud = null;
+  scheduleIdle(() => {
+    try {
+      soundHud =
+        typeof createSoundHUD === "function"
+          ? createSoundHUD({ container: document.body })
+          : null;
+      if (soundHud) soundHud.style.display = "none";
+    } catch (_) {}
+  }, 1500);
 
   let pauseMenu = null;
-  try {
-    if (typeof PauseMenu === "function") {
-      pauseMenu = new PauseMenu({ container: document.body });
-      try {
-        if (pauseMenu && typeof pauseMenu.hide === "function") pauseMenu.hide();
-      } catch (_) {}
+  scheduleIdle(() => {
+    try {
+      if (typeof PauseMenu === "function") {
+        pauseMenu = new PauseMenu({ container: document.body });
+        try {
+          if (pauseMenu && typeof pauseMenu.hide === "function") pauseMenu.hide();
+        } catch (_) {}
+      }
+    } catch (e) {
+      return e;
     }
-  } catch (e) {
-    return e;
-  }
-  try {
-    window.pauseMenu = pauseMenu;
-  } catch (_) {}
-  try {
-    if (pauseMenu && typeof pauseMenu.hide === "function") pauseMenu.hide();
-  } catch (_) {}
+    try { window.pauseMenu = pauseMenu; } catch (_) {}
+  }, 1600);
 
   if (soundButton) {
     try {
@@ -1354,8 +1369,6 @@ async function init() {
 
 function setupEventListeners() {
   window.addEventListener("resize", onWindowResize);
-  window.addEventListener("keydown", (ev) => {
-  });
 }
 function createWaveCountdownElement() {
   if (waveCountdownEl) return waveCountdownEl;
@@ -1443,6 +1456,8 @@ let __perfAccumTime = 0;
 let __currentFps = 60;
 let __targetPixelRatio = 1.0;
 let __maxShadowPosts = 3; 
+let __lastShadowUpdateTick = 0;
+let __shadowActive = false;
 
 function animate(currentTime = 0) {
   requestAnimationFrame(animate);
@@ -1612,7 +1627,9 @@ function animate(currentTime = 0) {
           const lp = lightPosts[i];
           if (lp && typeof lp.setEnabled === "function") lp.setEnabled(factor);
         }
-        if (factor > 0.1 && farmerController && farmerController.model) {
+        const _should = __shadowActive ? factor > 0.08 : factor > 0.12;
+        if (_should !== __shadowActive) __shadowActive = _should;
+        if (__shadowActive && farmerController && farmerController.model) {
           const playerPos = farmerController.model.position;
           const entries = [];
           for (let i = 0; i < lightPosts.length; i++) {
@@ -1626,26 +1643,32 @@ function animate(currentTime = 0) {
           }
           entries.sort((a, b) => a.d2 - b.d2);
           const maxShadowLights = __maxShadowPosts; 
-          for (let idx = 0; idx < entries.length; idx++) {
-            const { lp } = entries[idx];
-            if (!lp || !lp.light) continue;
-            const enableShadow = idx < maxShadowLights;
-            try {
-              lp.light.castShadow = enableShadow;
-            } catch (_) {}
-            try {
+          if (frameCounter - __lastShadowUpdateTick >= 4) {
+            for (let idx = 0; idx < entries.length; idx++) {
+              const { lp } = entries[idx];
+              if (!lp || !lp.light) continue;
+              const enableShadow = idx < maxShadowLights;
               const size = enableShadow ? 1024 : 256;
-              lp.light.shadow.mapSize.width = size;
-              lp.light.shadow.mapSize.height = size;
-            } catch (_) {}
+              if (typeof lp.setShadow === "function") {
+                try { lp.setShadow(enableShadow, size); } catch (_) {}
+              } else {
+                try { lp.light.castShadow = enableShadow; } catch (_) {}
+                try {
+                  lp.light.shadow.mapSize.width = size;
+                  lp.light.shadow.mapSize.height = size;
+                } catch (_) {}
+              }
+            }
+            __lastShadowUpdateTick = frameCounter;
           }
         } else {
           for (let i = 0; i < lightPosts.length; i++) {
             const lp = lightPosts[i];
-            if (lp && lp.light) {
-              try {
-                lp.light.castShadow = false;
-              } catch (_) {}
+            if (!lp) continue;
+            if (typeof lp.setShadow === "function") {
+              try { lp.setShadow(false, 256); } catch (_) {}
+            } else if (lp.light) {
+              try { lp.light.castShadow = false; } catch (_) {}
             }
           }
         }

@@ -65,7 +65,7 @@ export class BuildingManager {
 				{ nameKeywords: ['wall', 'Wall'], file: 'wallDIFF.png' },
 				{ nameKeywords: ['window', 'Window'], file: 'windowDIFF.png' },
 				{ nameKeywords: ['concrete', 'Concrete'], file: 'concreteDIFF.png' },
-				{ nameKeywords: ['pilla', 'pilar', 'pillar', 'Pilla'], file: 'pillaDIFF.png' },
+				{ nameKeywords: ['pilla', 'pilar', 'pillar', 'Pilla'], file: 'pillarDIFF.png' },
 			],
 			alienPyramid: [
 				{ nameKeywords: ['pyramid', 'Pyramid', 'perm', 'permid', 'permId'], file: 'tvariant2_diffuse.png' },
@@ -75,7 +75,7 @@ export class BuildingManager {
 		if (!rules || rules.length === 0) return;
 		const texPromises = [];
 		for (const r of rules) {
-			texPromises.push(this._loadTextureCandidate(r.file).then((tex) => ({ rule: r, tex })));
+			texPromises.push(this._loadTextureCandidateSeq(r.file).then((tex) => ({ rule: r, tex })));
 		}
 		const results = await Promise.all(texPromises);
 		root.traverse((child) => {
@@ -98,6 +98,28 @@ export class BuildingManager {
 			}
 		});
 	}
+  _loadTextureCandidateSeq(filename) {
+    const loader = new THREE.TextureLoader();
+    const candidates = [
+      `src/assets/${filename}`,
+      `./src/assets/${filename}`,
+      `${this.basePath}textures/${filename}`,
+      `${this.basePath}${filename}`,
+    ];
+    return new Promise((resolve) => {
+      const tryNext = (index) => {
+        if (index >= candidates.length) { resolve(null); return; }
+        const url = candidates[index];
+        loader.load(
+          url,
+          (tex) => resolve(tex),
+          undefined,
+          () => tryNext(index + 1)
+        );
+      };
+      tryNext(0);
+    });
+  }
 	addStructure(type, options = {}) {
 		const proto = this.prototypes.get(type);
 		if (!proto) throw new Error(`Prototipo no registrado: ${type}`);

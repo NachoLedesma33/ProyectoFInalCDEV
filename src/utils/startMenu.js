@@ -39,6 +39,8 @@ export class StoryManager {
     this.currentSlide = 0;
     this.gameInitPromise = null;
     this.gameInitialized = false;
+    this.imageCache = new Array(this.storySlidesArg.length);
+    this._imagesPreloaded = false;
     this.playUIClick = () => {
       try {
         safePlaySfx("uiClick", { volume: 0.9 });
@@ -51,6 +53,31 @@ export class StoryManager {
     };
   }
 
+  preloadImages() {
+    if (this._imagesPreloaded) return;
+    this._imagesPreloaded = true;
+    const preloadOne = (idx) => {
+      try {
+        const src = this.storySlidesArg[idx] && this.storySlidesArg[idx].image;
+        if (!src) return;
+        const img = new Image();
+        img.decoding = "async";
+        img.loading = "eager";
+        img.src = src;
+        const done = () => {
+          this.imageCache[idx] = img;
+        };
+        if (typeof img.decode === "function") {
+          img.decode().then(done).catch(done);
+        } else {
+          img.addEventListener("load", done, { once: true });
+          img.addEventListener("error", done, { once: true });
+        }
+      } catch (_) {}
+    };
+    for (let i = 0; i < this.storySlidesArg.length; i++) preloadOne(i);
+  }
+
   updateCarousel() {
     const carouselImage = document.querySelector(".carousel-image img");
     const carouselText = document.querySelector(".carousel-text p");
@@ -58,14 +85,15 @@ export class StoryManager {
 
     carouselImage.style.opacity = "0";
     carouselText.style.opacity = "0";
-
-    setTimeout(() => {
-      carouselImage.src = this.storySlidesArg[this.currentSlide].image;
-      carouselText.textContent = this.storySlidesArg[this.currentSlide].text;
-      currentPageNum.textContent = (this.currentSlide + 1).toString();
+    const cached = this.imageCache[this.currentSlide];
+    const nextSrc = cached && cached.src ? cached.src : this.storySlidesArg[this.currentSlide].image;
+    carouselImage.src = nextSrc;
+    carouselText.textContent = this.storySlidesArg[this.currentSlide].text;
+    currentPageNum.textContent = (this.currentSlide + 1).toString();
+    requestAnimationFrame(() => {
       carouselImage.style.opacity = "1";
       carouselText.style.opacity = "1";
-    }, 300);
+    });
   }
 
   startGame() {
@@ -126,6 +154,18 @@ export class StoryManager {
     playButton.addEventListener("click", () => {
       this.playUIClick();
       try {
+        const sched = (fn) => {
+          try {
+            if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
+              window.requestIdleCallback(fn, { timeout: 2000 });
+            } else {
+              setTimeout(fn, 250);
+            }
+          } catch (_) { setTimeout(fn, 250); }
+        };
+        sched(() => this.preloadImages());
+      } catch (_) {}
+      try {
         const soundHudEl = document.getElementById("sound-hud");
         if (soundHudEl) soundHudEl.style.display = "none";
       } catch (_) {}
@@ -142,7 +182,9 @@ export class StoryManager {
         const nextButton = document.getElementById("next-slide");
         const skipButton = document.getElementById("skip-story");
 
-        if (!prevButton.onclick) {
+        if (prevButton && !prevButton._bound) {
+          prevButton._bound = true;
+          prevButton.addEventListener("pointerenter", () => this.playUIHover());
           prevButton.addEventListener("mouseenter", () => this.playUIHover());
           prevButton.addEventListener("click", () => {
             this.playUIClick();
@@ -151,7 +193,10 @@ export class StoryManager {
               this.updateCarousel();
             }
           });
-
+        }
+        if (nextButton && !nextButton._bound) {
+          nextButton._bound = true;
+          nextButton.addEventListener("pointerenter", () => this.playUIHover());
           nextButton.addEventListener("mouseenter", () => this.playUIHover());
           nextButton.addEventListener("click", () => {
             this.playUIClick();
@@ -162,7 +207,10 @@ export class StoryManager {
               this.startGame();
             }
           });
-
+        }
+        if (skipButton && !skipButton._bound) {
+          skipButton._bound = true;
+          skipButton.addEventListener("pointerenter", () => this.playUIHover());
           skipButton.addEventListener("mouseenter", () => this.playUIHover());
           skipButton.addEventListener("click", () => {
             this.playUIClick();

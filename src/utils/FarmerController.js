@@ -57,6 +57,11 @@ export class FarmerController {
     this.kneelingDuration = 8000; 
 
     this.characterSize = new THREE.Vector3(1, 1, 1);
+    this._charRadius = 0.5;
+    this._gridCellSize = 24;
+    this._stonesGrid = new Map();
+    this._crystalsGrid = new Map();
+    this._buildingsGrid = new Map();
     this.stoneCollisionSize = new THREE.Vector3(0.5, 0.5, 0.5);
     this.setupEventListeners();
     this.isAttacking = false; 
@@ -66,6 +71,9 @@ export class FarmerController {
     this._combatExitTimer = null; 
     this._combatIdleUntil = 0; 
     this._mixerFinishedListener = null; 
+    this._keysBound = false;
+    this._onKeyDown = null;
+    this._onKeyUp = null;
     
     this._onMouseDown = (event) => {
         if (event.button !== 0) return;
@@ -266,6 +274,27 @@ export class FarmerController {
     this._tmpQuat = new THREE.Quaternion();
     this._tmpMovementVec = new THREE.Vector3();
     this._tmpFinalPos = new THREE.Vector3();
+    this._tmpNewPos = new THREE.Vector3();
+    this._tmpXMovement = new THREE.Vector3();
+    this._tmpZMovement = new THREE.Vector3();
+    this._tmpXPos = new THREE.Vector3();
+    this._tmpZPos = new THREE.Vector3();
+    this._tmpBox3 = new THREE.Box3();
+    this._tmpPoint2 = new THREE.Vector2();
+    this._tmpCharDir = new THREE.Vector3();
+    this._tmpCamToChar = new THREE.Vector3();
+    this._zeroVec = new THREE.Vector3(0, 0, 0);
+    this._marketPolygon = [
+      new THREE.Vector2(-148.7, 51.5),
+      new THREE.Vector2(-154.7, 46.2),
+      new THREE.Vector2(-162.7, 55.3),
+      new THREE.Vector2(-156.5, 60.4),
+      new THREE.Vector2(-148.7, 51.5)
+    ];
+    this._marketAABB = { minX: -162.7, maxX: -148.7, minY: 46.2, maxY: 60.4 };
+    this._speedMultiplierSmoothed = 1.0;
+    this._speedChangeRate = 6.0;
+    this._crystalCharSize = this.characterSize.clone().multiplyScalar(0.9);
 
   this._autoExitActive = false;
   this._autoExitTarget = new THREE.Vector3();
@@ -464,7 +493,6 @@ export class FarmerController {
       return;
     }
 
-    this.stones = stones;
     const validStones = stones.filter((stone) => {
       const hasCheckCollision = typeof stone.checkCollision === "function";
       if (!hasCheckCollision) {
@@ -477,8 +505,38 @@ export class FarmerController {
       this.stones = null;
       return;
     }
-
-    this.stones = validStones;
+    const wrapped = [];
+    this._stonesGrid = new Map();
+    for (const s of validStones) {
+      let center = null;
+      let radius = null;
+      try {
+        const bbox = s.bbox || (s.object ? new THREE.Box3().setFromObject(s.object) : null);
+        if (bbox) {
+          center = new THREE.Vector3();
+          bbox.getCenter(center);
+          const size = new THREE.Vector3();
+          bbox.getSize(size);
+          radius = Math.max(size.x, size.z) * 0.5 + 0.5;
+        }
+      } catch (e) {}
+      const item = {
+        ref: s,
+        center,
+        radius,
+        checkCollision: (pos, size) => s.checkCollision(pos, size)
+      };
+      wrapped.push(item);
+      if (center) {
+        const cs = this._gridCellSize || 24;
+        const gx = Math.floor(center.x / cs);
+        const gz = Math.floor(center.z / cs);
+        const key = gx + ":" + gz;
+        const arr = this._stonesGrid.get(key);
+        if (arr) arr.push(item); else this._stonesGrid.set(key, [item]);
+      }
+    }
+    this.stones = wrapped;
   }
   setHouse(house) {
     if (!house) {
@@ -515,12 +573,8 @@ export class FarmerController {
   checkCorralCollision(newPosition) {
     if (!this.corral || !this.model) return false;
 
-    const characterBox = new THREE.Box3().setFromCenterAndSize(
-      newPosition,
-      this.characterSize
-    );
-
-    const collision = this.corral.checkCollision(characterBox);
+    this._tmpBox3.setFromCenterAndSize(newPosition, this.characterSize);
+    const collision = this.corral.checkCollision(this._tmpBox3);
     return collision !== null;
   }
 
@@ -532,12 +586,42 @@ export class FarmerController {
 
   checkStonesCollision(position) {
     if (!this.stones || !this.model) return false;
-
     const stoneCharacterSize = this.stoneCollisionSize;
-    
-    for (const stone of this.stones) {
-      if (stone.checkCollision(position, stoneCharacterSize)) {
-        return true;
+    const cs = this._gridCellSize || 24;
+    const gx = Math.floor(position.x / cs);
+    const gz = Math.floor(position.z / cs);
+    let searched = false;
+    for (let ix = -1; ix <= 1; ix++) {
+      for (let iz = -1; iz <= 1; iz++) {
+        const key = (gx + ix) + ":" + (gz + iz);
+        const arr = this._stonesGrid.get(key);
+        if (!arr) continue;
+        searched = true;
+        for (let i = 0; i < arr.length; i++) {
+          const stone = arr[i];
+          if (stone.center && stone.radius) {
+            const dx = position.x - stone.center.x;
+            const dz = position.z - stone.center.z;
+            const rr = stone.radius + this._charRadius;
+            if ((dx * dx + dz * dz) > (rr * rr)) continue;
+          }
+          if (stone.checkCollision(position, stoneCharacterSize)) {
+            return true;
+          }
+        }
+      }
+    }
+    if (!searched) {
+      for (const stone of this.stones) {
+        if (stone.center && stone.radius) {
+          const dx = position.x - stone.center.x;
+          const dz = position.z - stone.center.z;
+          const rr = stone.radius + this._charRadius;
+          if ((dx * dx + dz * dz) > (rr * rr)) continue;
+        }
+        if (stone.checkCollision(position, stoneCharacterSize)) {
+          return true;
+        }
       }
     }
     return false;
@@ -545,7 +629,13 @@ export class FarmerController {
 
   checkCowsCollision(position) {
     if (!this.cows || !this.model) return false;
+    this._tmpBox3.setFromCenterAndSize(position, this.characterSize);
     for (const cow of this.cows) {
+      try {
+        if (cow.bbox) {
+          if (!cow.bbox.intersectsBox(this._tmpBox3)) continue;
+        }
+      } catch (e) {}
       if (cow.checkCollision(position, this.characterSize)) {
         if (cow.hasExclamationMarkVisible()) {
           this.handleCowCollisionAnimation(cow);
@@ -699,40 +789,37 @@ export class FarmerController {
   }
 
   getStoneAdjustedMovement(currentPosition, movementVector) {
-    const newPosition = currentPosition.clone().add(movementVector);
+    this._tmpNewPos.copy(currentPosition).add(movementVector);
 
-    if (!this.checkStonesCollision(newPosition)) {
+    if (!this.checkStonesCollision(this._tmpNewPos)) {
       return movementVector;
     }
-    const xMovement = new THREE.Vector3(movementVector.x, 0, 0);
-    const xPosition = currentPosition.clone().add(xMovement);
+    this._tmpXMovement.set(movementVector.x, 0, 0);
+    this._tmpXPos.copy(currentPosition).add(this._tmpXMovement);
 
-    if (!this.checkStonesCollision(xPosition)) {
-      return xMovement; 
+    if (!this.checkStonesCollision(this._tmpXPos)) {
+      return this._tmpXMovement; 
     }
-    const zMovement = new THREE.Vector3(0, 0, movementVector.z);
-    const zPosition = currentPosition.clone().add(zMovement);
+    this._tmpZMovement.set(0, 0, movementVector.z);
+    this._tmpZPos.copy(currentPosition).add(this._tmpZMovement);
 
-    if (!this.checkStonesCollision(zPosition)) {
-      return zMovement; 
+    if (!this.checkStonesCollision(this._tmpZPos)) {
+      return this._tmpZMovement; 
     }
 
-    const reducedMovement = movementVector.clone().multiplyScalar(0.5);
-    const reducedPosition = currentPosition.clone().add(reducedMovement);
+    this._tmpMovementVec.copy(movementVector).multiplyScalar(0.5);
+    this._tmpNewPos.copy(currentPosition).add(this._tmpMovementVec);
 
-    if (!this.checkStonesCollision(reducedPosition)) {
-      return reducedMovement; 
+    if (!this.checkStonesCollision(this._tmpNewPos)) {
+      return this._tmpMovementVec; 
     }
-    return new THREE.Vector3(0, 0, 0);
+    return this._zeroVec;
   }
 
   checkHouseCollision(newPosition) {
     if (!this.house || !this.model) return false;
-    const characterBox = new THREE.Box3().setFromCenterAndSize(
-      newPosition,
-      this.characterSize
-    );
-    const collision = this.house.checkCollision(characterBox);
+    this._tmpBox3.setFromCenterAndSize(newPosition, this.characterSize);
+    const collision = this.house.checkCollision(this._tmpBox3);
     if (collision) {
       return true;
     }
@@ -742,50 +829,46 @@ export class FarmerController {
 
   getAdjustedMovement(currentPosition, movementVector) {
     if (this.isCollidingWithCow) {
-      return new THREE.Vector3(0, 0, 0);
+      return this._zeroVec;
     }
 
     if (this.crystals) {
-      const newPosition = currentPosition.clone().add(movementVector);
-      if (this.checkCrystalsCollision(newPosition)) {
+      this._tmpNewPos.copy(currentPosition).add(movementVector);
+      if (this.checkCrystalsCollision(this._tmpNewPos)) {
         const slidingMovement = this.getSlidingMovement(
           currentPosition,
           movementVector
         );
-        return slidingMovement.length() > 0
-          ? slidingMovement
-          : new THREE.Vector3(0, 0, 0);
+        return slidingMovement.length() > 0 ? slidingMovement : this._zeroVec;
       }
     }
 
-    const newPosition = currentPosition.clone().add(movementVector);
+    this._tmpNewPos.copy(currentPosition).add(movementVector);
 
-    if (this.market && this.checkMarketCollision(newPosition)) {
+    if (this.market && this.checkMarketCollision(this._tmpNewPos)) {
       const slidingMovement = this.getSlidingMovement(
         currentPosition,
         movementVector
       );
-      return slidingMovement.length() > 0
-        ? slidingMovement
-        : new THREE.Vector3(0, 0, 0);
+      return slidingMovement.length() > 0 ? slidingMovement : this._zeroVec;
     }
-    if (this.corral && this.checkCorralCollision(newPosition)) {
+    if (this.corral && this.checkCorralCollision(this._tmpNewPos)) {
       const adjustedMovement = this.getSlidingMovement(
         currentPosition,
         movementVector
       );
       if (adjustedMovement.length() === 0) {
-        return new THREE.Vector3(0, 0, 0);
+        return this._zeroVec;
       }
 
       return adjustedMovement;
     }
 
-    if (this.spaceShuttle && this.checkSpaceShuttleCollision(newPosition)) {
+    if (this.spaceShuttle && this.checkSpaceShuttleCollision(this._tmpNewPos)) {
       return this.getSlidingMovement(currentPosition, movementVector);
     }
 
-    if (this.stones && this.checkStonesCollision(newPosition)) {
+    if (this.stones && this.checkStonesCollision(this._tmpNewPos)) {
       const stoneAdjustedMovement = this.getStoneAdjustedMovement(
         currentPosition,
         movementVector
@@ -796,35 +879,32 @@ export class FarmerController {
 
       return stoneAdjustedMovement;
     }
-    if (this.house && this.checkHouseCollision(newPosition)) {
+    if (this.house && this.checkHouseCollision(this._tmpNewPos)) {
       return this.getSlidingMovement(currentPosition, movementVector);
     }
-    if (this.buildings && this.checkBuildingsCollision(newPosition)) {
+    if (this.buildings && this.checkBuildingsCollision(this._tmpNewPos)) {
       return this.getSlidingMovement(currentPosition, movementVector);
     }
 
-    if (this.cows && this.checkCowsCollision(newPosition)) {
-      return new THREE.Vector3(0, 0, 0); 
+    if (this.cows && this.checkCowsCollision(this._tmpNewPos)) {
+      return this._zeroVec; 
     }
 
     return movementVector;
   }
 
   getSlidingMovement(currentPosition, movementVector) {
-    const xMovement = new THREE.Vector3(movementVector.x, 0, 0);
-    const xPosition = currentPosition.clone().add(xMovement);
-
-    if (this.isPositionValid(xPosition)) {
-      return xMovement;
+    this._tmpXMovement.set(movementVector.x, 0, 0);
+    this._tmpXPos.copy(currentPosition).add(this._tmpXMovement);
+    if (this.isPositionValid(this._tmpXPos)) {
+      return this._tmpXMovement;
     }
-    const zMovement = new THREE.Vector3(0, 0, movementVector.z);
-    const zPosition = currentPosition.clone().add(zMovement);
-
-    if (this.isPositionValid(zPosition)) {
-      return zMovement;
+    this._tmpZMovement.set(0, 0, movementVector.z);
+    this._tmpZPos.copy(currentPosition).add(this._tmpZMovement);
+    if (this.isPositionValid(this._tmpZPos)) {
+      return this._tmpZMovement;
     }
-
-    return new THREE.Vector3(0, 0, 0);
+    return this._zeroVec;
   }
 
   isPositionValid(position) {
@@ -853,14 +933,12 @@ export class FarmerController {
     if (!this.market || !this.market.marketGroup) {
       return false;
     }
-    const marketPolygon = [
-      new THREE.Vector2(-148.7, 51.5),
-      new THREE.Vector2(-154.7, 46.2),
-      new THREE.Vector2(-162.7, 55.3),
-      new THREE.Vector2(-156.5, 60.4),
-      new THREE.Vector2(-148.7, 51.5), 
-    ];
-    const point = new THREE.Vector2(position.x, position.z);
+    const marketPolygon = this._marketPolygon;
+    this._tmpPoint2.set(position.x, position.z);
+    const bb = this._marketAABB;
+    if (this._tmpPoint2.x < bb.minX || this._tmpPoint2.x > bb.maxX || this._tmpPoint2.y < bb.minY || this._tmpPoint2.y > bb.maxY) {
+      return false;
+    }
     let inside = false;
     for (
       let i = 0, j = marketPolygon.length - 1;
@@ -874,8 +952,8 @@ export class FarmerController {
       if (yj === yi) continue;
 
       const intersect =
-        yi > point.y !== yj > point.y &&
-        point.x <= ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+        yi > this._tmpPoint2.y !== yj > this._tmpPoint2.y &&
+        this._tmpPoint2.x <= ((xj - xi) * (this._tmpPoint2.y - yi)) / (yj - yi) + xi;
 
       if (intersect) inside = !inside;
     }
@@ -887,16 +965,16 @@ export class FarmerController {
           typeof this.market.doorHeight === "number" &&
           this.market.marketGroup
         ) {
-          const localPoint = new THREE.Vector3(position.x, position.y, position.z);
-          this.market.marketGroup.worldToLocal(localPoint);
+          this._tmpVec.set(position.x, position.y, position.z);
+          this.market.marketGroup.worldToLocal(this._tmpVec);
 
           const halfDoor = this.market.doorWidth / 2;
           const depthFront = this.market.size.depth / 2;
           const entryDepth = 1.5;
           const margin = 0.2;
 
-          const withinX = localPoint.x >= -halfDoor - margin && localPoint.x <= halfDoor + margin;
-          const withinZ = localPoint.z <= depthFront + 0.5 && localPoint.z >= depthFront - entryDepth;
+          const withinX = this._tmpVec.x >= -halfDoor - margin && this._tmpVec.x <= halfDoor + margin;
+          const withinZ = this._tmpVec.z <= depthFront + 0.5 && this._tmpVec.z >= depthFront - entryDepth;
 
           if (withinX && withinZ) {
             return false;
@@ -922,27 +1000,38 @@ export class FarmerController {
       return;
     }
     const wrapped = [];
+    this._buildingsGrid = new Map();
     for (const b of buildings) {
       if (!b) continue;
-      if (typeof b.checkCollision === 'function') {
-        wrapped.push(b);
-        continue;
-      }
       const bbox = b.bbox || (b.object ? new THREE.Box3().setFromObject(b.object) : null);
-      wrapped.push({
+      const bboxExpanded = bbox ? bbox.clone().expandByScalar(0.01) : null;
+      let center = null;
+      let halfSize = null;
+      if (bbox) {
+        center = new THREE.Vector3();
+        bbox.getCenter(center);
+        const size = new THREE.Vector3();
+        bbox.getSize(size);
+        halfSize = new THREE.Vector3(size.x * 0.5, size.y * 0.5, size.z * 0.5);
+      }
+      const item = {
         id: b.id || null,
         type: b.type || 'building',
         bbox,
-        object: b.object || null,
-        checkCollision: (pos, size) => {
-          try {
-            if (!bbox) return false;
-            const charSize = size || new THREE.Vector3(1,1,1);
-            const characterBox = new THREE.Box3().setFromCenterAndSize(pos.clone(), charSize.clone());
-            return bbox.clone().expandByScalar(0.01).intersectsBox(characterBox);
-          } catch (e) { return false; }
-        }
-      });
+        bboxExpanded,
+        center,
+        halfSize,
+        object: b.object || null
+      };
+      wrapped.push(item);
+      if (center) {
+        const cs = this._gridCellSize || 24;
+        const gx = Math.floor(center.x / cs);
+        const gz = Math.floor(center.z / cs);
+        const key = gx + ":" + gz;
+        const arr = this._buildingsGrid.get(key);
+        if (arr) arr.push(item); else this._buildingsGrid.set(key, [item]);
+      }
     }
     this.buildings = wrapped;
     try {
@@ -967,15 +1056,77 @@ export class FarmerController {
       this.crystals = null;
       return;
     }
-
-    this.crystals = validCrystals;
+    const wrapped = [];
+    this._crystalsGrid = new Map();
+    for (const c of validCrystals) {
+      let center = null;
+      let radius = null;
+      try {
+        const bbox = c.bbox || (c.object ? new THREE.Box3().setFromObject(c.object) : null);
+        if (bbox) {
+          center = new THREE.Vector3();
+          bbox.getCenter(center);
+          const size = new THREE.Vector3();
+          bbox.getSize(size);
+          radius = Math.max(size.x, size.z) * 0.5 + 0.4;
+        }
+      } catch (e) {}
+      const item = {
+        ref: c,
+        center,
+        radius,
+        checkCollision: (pos, size) => c.checkCollision(pos, size)
+      };
+      wrapped.push(item);
+      if (center) {
+        const cs = this._gridCellSize || 24;
+        const gx = Math.floor(center.x / cs);
+        const gz = Math.floor(center.z / cs);
+        const key = gx + ":" + gz;
+        const arr = this._crystalsGrid.get(key);
+        if (arr) arr.push(item); else this._crystalsGrid.set(key, [item]);
+      }
+    }
+    this.crystals = wrapped;
   }
   checkCrystalsCollision(position) {
     if (!this.crystals || !this.model) return false;
-    const crystalCollisionSize = this.characterSize.clone().multiplyScalar(0.9);
-    for (const crystal of this.crystals) {
-      if (crystal.checkCollision(position, crystalCollisionSize)) {
-        return true; 
+    const crystalCollisionSize = this._crystalCharSize;
+    const cs = this._gridCellSize || 24;
+    const gx = Math.floor(position.x / cs);
+    const gz = Math.floor(position.z / cs);
+    let searched = false;
+    for (let ix = -1; ix <= 1; ix++) {
+      for (let iz = -1; iz <= 1; iz++) {
+        const key = (gx + ix) + ":" + (gz + iz);
+        const arr = this._crystalsGrid.get(key);
+        if (!arr) continue;
+        searched = true;
+        for (let i = 0; i < arr.length; i++) {
+          const crystal = arr[i];
+          if (crystal.center && crystal.radius) {
+            const dx = position.x - crystal.center.x;
+            const dz = position.z - crystal.center.z;
+            const rr = crystal.radius + this._charRadius;
+            if ((dx * dx + dz * dz) > (rr * rr)) continue;
+          }
+          if (crystal.checkCollision(position, crystalCollisionSize)) {
+            return true; 
+          }
+        }
+      }
+    }
+    if (!searched) {
+      for (const crystal of this.crystals) {
+        if (crystal.center && crystal.radius) {
+          const dx = position.x - crystal.center.x;
+          const dz = position.z - crystal.center.z;
+          const rr = crystal.radius + this._charRadius;
+          if ((dx * dx + dz * dz) > (rr * rr)) continue;
+        }
+        if (crystal.checkCollision(position, crystalCollisionSize)) {
+          return true; 
+        }
       }
     }
     return false; 
@@ -983,52 +1134,87 @@ export class FarmerController {
 
   checkBuildingsCollision(position) {
     if (!this.buildings || !this.model) return false;
-    for (const b of this.buildings) {
-      try {
-        if (typeof b.checkCollision === 'function') {
-          const hit = b.checkCollision(position, this.characterSize);
-          if (hit) {
-            return true;
+    this._tmpBox3.setFromCenterAndSize(position, this.characterSize);
+    const cs = this._gridCellSize || 24;
+    const gx = Math.floor(position.x / cs);
+    const gz = Math.floor(position.z / cs);
+    let searched = false;
+    for (let ix = -1; ix <= 1; ix++) {
+      for (let iz = -1; iz <= 1; iz++) {
+        const key = (gx + ix) + ":" + (gz + iz);
+        const arr = this._buildingsGrid.get(key);
+        if (!arr) continue;
+        searched = true;
+        for (let i = 0; i < arr.length; i++) {
+          const b = arr[i];
+          const bb = b.bboxExpanded || b.bbox;
+          if (!bb) continue;
+          if (b.center && b.halfSize) {
+            const dx = Math.abs(position.x - b.center.x);
+            const dz = Math.abs(position.z - b.center.z);
+            const mx = this.characterSize.x * 0.5 + 1.0;
+            const mz = this.characterSize.z * 0.5 + 1.0;
+            if (dx > b.halfSize.x + mx || dz > b.halfSize.z + mz) continue;
           }
+          try {
+            if (bb.intersectsBox(this._tmpBox3)) return true;
+          } catch (e) { return e; }
         }
-      } catch (e) { return e; }
+      }
+    }
+    if (!searched) {
+      for (const b of this.buildings) {
+        const bb = b.bboxExpanded || b.bbox;
+        if (!bb) continue;
+        if (b.center && b.halfSize) {
+          const dx = Math.abs(position.x - b.center.x);
+          const dz = Math.abs(position.z - b.center.z);
+          const mx = this.characterSize.x * 0.5 + 1.0;
+          const mz = this.characterSize.z * 0.5 + 1.0;
+          if (dx > b.halfSize.x + mx || dz > b.halfSize.z + mz) continue;
+        }
+        try {
+          if (bb.intersectsBox(this._tmpBox3)) return true;
+        } catch (e) { return e; }
+      }
     }
     return false;
   }
 
   isFacingCamera() {
     if (!this.camera || !this.model) return false;
-    const characterDirection = new THREE.Vector3(
+    this._tmpCharDir.set(
       Math.sin(this.model.rotation.y),
       0,
       Math.cos(this.model.rotation.y)
     );
-    const cameraToCharacter = new THREE.Vector3()
-      .subVectors(this.model.position, this.camera.position)
-      .normalize();
-    cameraToCharacter.y = 0;
-    const dotProduct = characterDirection.dot(cameraToCharacter);
+    this._tmpCamToChar.subVectors(this.model.position, this.camera.position).normalize();
+    this._tmpCamToChar.y = 0;
+    const dotProduct = this._tmpCharDir.dot(this._tmpCamToChar);
     return dotProduct <= 0;
   }
 
   setupEventListeners() {
-    document.addEventListener("keydown", (event) => {
-      const key = event.key.toLowerCase();
-      if (key in this.keys) {
+    if (this._keysBound) return;
+    this._onKeyDown = (event) => {
+      const raw = event && event.key ? event.key : "";
+      const key = typeof raw === "string" ? raw.toLowerCase() : "";
+      let prop = null;
+      if (raw && (raw in this.keys)) prop = raw;
+      else if (key && (key in this.keys)) prop = key;
+      if (prop) {
         if (!this.inputEnabled) return;
-        if ((key === "s" || key === "arrowdown") && !this.keys[key]) {
+        if ((key === "s" || key === "arrowdown") && !this.keys[prop]) {
           this.originalRotation = this.model.rotation.y;
           this.model.rotation.y += Math.PI;
           this.isRotatedForBackward = true;
         }
-
         const movementKeys = ["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"];
         if (movementKeys.includes(key)) {
           try { this._clearCombatExitTimer(); } catch (e) {}
           this._isInMeleeSequence = false;
         }
-
-        this.keys[key] = true;
+        this.keys[prop] = true;
         this.updateAnimationState();
         if (key === "1") {
           if (this.isEquipped) {
@@ -1041,22 +1227,28 @@ export class FarmerController {
         this.keys.shift = true;
         this.updateAnimationState();
       }
-    });
-    document.addEventListener("keyup", (event) => {
-      const key = event.key.toLowerCase();
-      if (key in this.keys) {
+    };
+    this._onKeyUp = (event) => {
+      const raw = event && event.key ? event.key : "";
+      const key = typeof raw === "string" ? raw.toLowerCase() : "";
+      let prop = null;
+      if (raw && (raw in this.keys)) prop = raw;
+      else if (key && (key in this.keys)) prop = key;
+      if (prop) {
         if ((key === "s" || key === "arrowdown") && this.isRotatedForBackward) {
           this.model.rotation.y = this.originalRotation;
           this.isRotatedForBackward = false;
         }
-
-        this.keys[key] = false;
+        this.keys[prop] = false;
         this.updateAnimationState();
       } else if (key === "shift") {
         this.keys.shift = false;
         this.updateAnimationState();
       }
-    });
+    };
+    document.addEventListener("keydown", this._onKeyDown);
+    document.addEventListener("keyup", this._onKeyUp);
+    this._keysBound = true;
   }
 
   setInputEnabled(enabled) {
@@ -1467,7 +1659,7 @@ export class FarmerController {
       this.keys.ArrowRight;
     const isRunning = this.keys.shift;
     try {
-      const shouldPlayRunSfx = !!isMoving;
+      const shouldPlayRunSfx = !!isMoving && !!isRunning;
       if (shouldPlayRunSfx && !this._runAudio) {
         try {
           if (window.audio && typeof window.audio.playSFX === 'function' && this.model) {
@@ -1629,12 +1821,7 @@ export class FarmerController {
     }
   }
   getSpeedMultiplier() {
-    let multiplier = 1.0;
-    if (this.keys.shift) {
-      multiplier *= this.config.runMultiplier;
-    }
-
-    return multiplier;
+    return this._speedMultiplierSmoothed ?? (this.keys.shift ? this.config.runMultiplier : 1.0);
   }
 
   update(delta) {
@@ -1753,6 +1940,11 @@ export class FarmerController {
       return;
     }
     const baseSpeed = this.config.moveSpeed * 60 * delta;
+    this._charRadius = Math.max(this.characterSize.x, this.characterSize.z) * 0.5;
+    const targetMult = this.keys.shift ? this.config.runMultiplier : 1.0;
+    const rate = this._speedChangeRate || 6.0;
+    const t = Math.min(1, rate * delta);
+    this._speedMultiplierSmoothed = (this._speedMultiplierSmoothed ?? 1.0) + (targetMult - (this._speedMultiplierSmoothed ?? 1.0)) * t;
     const speedMultiplier = this.getSpeedMultiplier();
     const currentMoveSpeed = baseSpeed * speedMultiplier;
 
@@ -1760,15 +1952,17 @@ export class FarmerController {
     let moveZ = 0;
     let moved = false;
 
+    const sinY = Math.sin(this.model.rotation.y);
+    const cosY = Math.cos(this.model.rotation.y);
     if (this.keys.w || this.keys.ArrowUp) {
-      moveX += Math.sin(this.model.rotation.y);
-      moveZ += Math.cos(this.model.rotation.y);
+      moveX += sinY;
+      moveZ += cosY;
       moved = true;
     }
 
     if (this.keys.s || this.keys.ArrowDown) {
-      moveX += Math.sin(this.model.rotation.y);
-      moveZ += Math.cos(this.model.rotation.y);
+      moveX += sinY;
+      moveZ += cosY;
       moved = true;
     }
 
@@ -1776,14 +1970,14 @@ export class FarmerController {
 
     if (this.keys.a || this.keys.ArrowLeft) {
       const directionMultiplier = shouldInvertControls ? -1 : 1;
-      moveX += Math.cos(this.model.rotation.y) * directionMultiplier;
-      moveZ -= Math.sin(this.model.rotation.y) * directionMultiplier;
+      moveX += cosY * directionMultiplier;
+      moveZ -= sinY * directionMultiplier;
       moved = true;
     }
     if (this.keys.d || this.keys.ArrowRight) {
       const directionMultiplier = shouldInvertControls ? -1 : 1;
-      moveX -= Math.cos(this.model.rotation.y) * directionMultiplier;
-      moveZ += Math.sin(this.model.rotation.y) * directionMultiplier;
+      moveX -= cosY * directionMultiplier;
+      moveZ += sinY * directionMultiplier;
       moved = true;
     }
     if (moved) {
@@ -1854,8 +2048,11 @@ export class FarmerController {
   }
 
   dispose() {
-    document.removeEventListener("keydown", this.handleKeyDown);
-    document.removeEventListener("keyup", this.handleKeyUp);
+    try { if (this._onKeyDown) document.removeEventListener("keydown", this._onKeyDown); } catch (e) {}
+    try { if (this._onKeyUp) document.removeEventListener("keyup", this._onKeyUp); } catch (e) {}
+    this._onKeyDown = null;
+    this._onKeyUp = null;
+    this._keysBound = false;
     try {
       if (this._onMouseDown) document.removeEventListener("mousedown", this._onMouseDown);
       if (this._onMouseUp) document.removeEventListener("mouseup", this._onMouseUp);

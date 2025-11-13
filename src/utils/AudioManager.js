@@ -446,6 +446,20 @@ export class AudioManager {
     }
   }
 
+  async preloadSfx(keyOrKeys) {
+    try {
+      const keys = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
+      for (const k of keys) {
+        const src = AUDIO.sfx[k];
+        if (!src) continue;
+        const urls = Array.isArray(src) ? src : [src];
+        for (const u of urls) {
+          try { await this._loadBuffer(u); } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
   stopAllSfx() {
     for (const a of this.activeSfx) {
       try { if (a.isPlaying) a.stop(); } catch (_) {}

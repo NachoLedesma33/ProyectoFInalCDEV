@@ -63,6 +63,8 @@ export default class LightPost {
     this.group.add(light.target);
 
     this.light = light;
+    this._shadowEnabled = true;
+    this._shadowSize = 1024;
 
     this.group.position.set(this.position.x, this.position.y, this.position.z);
     this.scene.add(this.group);
@@ -84,5 +86,21 @@ export default class LightPost {
         this.bulb.material.needsUpdate = true;
       }
     } catch (_) {}
+  }
+
+  setShadow(enable, size) {
+    if (!this.light || !this.light.shadow) return;
+    if (this._shadowEnabled !== !!enable) {
+      this.light.castShadow = !!enable;
+      this._shadowEnabled = !!enable;
+    }
+    const targetSize = size || this._shadowSize || 1024;
+    const w = this.light.shadow.mapSize.width;
+    if (w !== targetSize) {
+      this.light.shadow.mapSize.width = targetSize;
+      this.light.shadow.mapSize.height = targetSize;
+      this.light.shadow.needsUpdate = true;
+      this._shadowSize = targetSize;
+    }
   }
 }

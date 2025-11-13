@@ -18,7 +18,16 @@ export class Stone {
   }
 
   init() {
-    const loader = new FBXLoader();
+    const manager = new THREE.LoadingManager();
+    manager.setURLModifier((url) => {
+      try {
+        const lower = (url || "").toLowerCase();
+        if (lower.includes("t_stones_metalic.png")) return "/src/assets/T_Stones_Metalic.png";
+        if (lower.includes("t_stones_roughness.png")) return "/src/assets/rock_face_diff_4k.jpg";
+      } catch (_) {}
+      return url;
+    });
+    const loader = new FBXLoader(manager);
 
     const modelPath =
       this.modelType === 1
@@ -56,8 +65,14 @@ export class Stone {
         });
 
         const textureLoader = new THREE.TextureLoader();
+        let rockPath;
+        try {
+          rockPath = new URL('../assets/rock_face_diff_4k.jpg', import.meta.url).href;
+        } catch (e) {
+          rockPath = '/src/assets/rock_face_diff_4k.jpg';
+        }
         textureLoader.load(
-          "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rock_face/rock_face_diff_4k.jpg",
+          rockPath,
           (texture) => {
             // Ajustes de compatibilidad Three r161
             if (texture.colorSpace !== undefined) {
