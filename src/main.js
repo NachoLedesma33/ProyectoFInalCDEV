@@ -1052,25 +1052,48 @@ async function init() {
     }
 
     const spawnCorralHealthbar = () => {
+      const createHud = () => {
+        try {
+          if (window.corralHealthBar) return;
+          const hb = new HealthBar({
+            id: "corral-healthbar",
+            position: "top-left",
+            x: 20,
+            y: 56,
+            width: 320,
+            height: 24,
+            label: "corral",
+          });
+          hb.attachTo(corralHealth, {
+            position: "top-left",
+            x: 20,
+            y: 56,
+            label: "corral",
+          });
+          window.corralHealthBar = hb;
+        } catch (_) {}
+      };
+
       try {
-        if (window.corralHealthBar) return;
-        const hb = new HealthBar({
-          id: "corral-healthbar",
-          position: "top-left",
-          x: 20,
-          y: 56,
-          width: 320,
-          height: 24,
-          label: "corral",
-        });
-        hb.attachTo(corralHealth, {
-          position: "top-left",
-          x: 20,
-          y: 56,
-          label: "corral",
-        });
-        window.corralHealthBar = hb;
-      } catch (_) {}
+        if (window.playerHealthBar) {
+          createHud();
+        } else {
+          const waitForPlayerHud = () => {
+            try {
+              if (window.playerHealthBar) {
+                createHud();
+              } else {
+                setTimeout(waitForPlayerHud, 100);
+              }
+            } catch (_) {
+              setTimeout(waitForPlayerHud, 100);
+            }
+          };
+          waitForPlayerHud();
+        }
+      } catch (_) {
+        createHud();
+      }
     };
 
     try {

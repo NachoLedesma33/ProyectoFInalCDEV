@@ -41,6 +41,9 @@ export class StoryManager {
     this.gameInitialized = false;
     this.imageCache = new Array(this.storySlidesArg.length);
     this._imagesPreloaded = false;
+    this.loadingOverlay = null;
+    this._loadingStyleInjected = false;
+    this._loadingPoll = null;
     this.playUIClick = () => {
       try {
         safePlaySfx("uiClick", { volume: 0.9 });
@@ -51,6 +54,76 @@ export class StoryManager {
         safePlaySfx("uiHover", { volume: 0.6 });
       } catch (_) {}
     };
+  }
+
+  _ensureLoadingOverlay() {
+    if (this.loadingOverlay && document.body.contains(this.loadingOverlay)) return this.loadingOverlay;
+    const overlay = document.createElement("div");
+    overlay.id = "game-loading-overlay";
+    overlay.style.position = "fixed";
+    overlay.style.left = "0";
+    overlay.style.top = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.display = "none";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.background = "rgba(0,0,0,0.35)";
+    overlay.style.zIndex = "9999";
+    overlay.style.backdropFilter = "blur(1px)";
+    const box = document.createElement("div");
+    box.style.display = "flex";
+    box.style.flexDirection = "column";
+    box.style.alignItems = "center";
+    box.style.gap = "12px";
+    const spinner = document.createElement("div");
+    spinner.style.width = "64px";
+    spinner.style.height = "64px";
+    spinner.style.border = "6px solid rgba(255,255,255,0.25)";
+    spinner.style.borderTop = "6px solid #ffffff";
+    spinner.style.borderRadius = "50%";
+    spinner.style.animation = "pf_spin 0.9s linear infinite";
+    const label = document.createElement("div");
+    label.textContent = "Cargando juego…";
+    label.style.color = "#fff";
+    label.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    label.style.fontSize = "16px";
+    label.style.textShadow = "0 1px 2px rgba(0,0,0,0.5)";
+    box.appendChild(spinner);
+    box.appendChild(label);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    if (!this._loadingStyleInjected) {
+      const style = document.createElement("style");
+      style.id = "game-loading-style";
+      style.textContent = "@keyframes pf_spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}";
+      document.head.appendChild(style);
+      this._loadingStyleInjected = true;
+    }
+    this.loadingOverlay = overlay;
+    return overlay;
+  }
+
+  showLoadingOverlay() {
+    const ov = this._ensureLoadingOverlay();
+    ov.style.display = "flex";
+  }
+
+  hideLoadingOverlay() {
+    if (this.loadingOverlay) this.loadingOverlay.style.display = "none";
+    if (this._loadingPoll) { clearTimeout(this._loadingPoll); this._loadingPoll = null; }
+  }
+
+  _waitForGameInit() {
+    const tick = () => {
+      if (this.gameInitialized) {
+        this.hideLoadingOverlay();
+        document.getElementById("game-container").style.display = "block";
+      } else {
+        this._loadingPoll = setTimeout(tick, 100);
+      }
+    };
+    tick();
   }
 
   preloadImages() {
@@ -135,14 +208,25 @@ export class StoryManager {
         document.getElementById("controls-hud").style.display = "none";
 
         if (this.gameInitialized) {
+          this.hideLoadingOverlay();
           document.getElementById("game-container").style.display = "block";
           return;
         }
 
-        if (this.gameInitPromise) {
-          this.gameInitPromise.then(() => {
-            document.getElementById("game-container").style.display = "block";
-          });
+        this.showLoadingOverlay();
+
+        if (this.gameInitPromise && typeof this.gameInitPromise.then === "function") {
+          this.gameInitPromise
+            .then(() => {
+              this.hideLoadingOverlay();
+              document.getElementById("game-container").style.display = "block";
+            })
+            .catch(() => {
+              this.hideLoadingOverlay();
+              document.getElementById("game-container").style.display = "block";
+            });
+        } else {
+          this._waitForGameInit();
         }
       };
     }
